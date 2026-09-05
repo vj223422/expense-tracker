@@ -10,7 +10,7 @@ import com.expensetracker.app.data.local.dao.ExpenseDao
 @Database(
     entities = [ExpenseEntity::class, BudgetLimitEntity::class],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
