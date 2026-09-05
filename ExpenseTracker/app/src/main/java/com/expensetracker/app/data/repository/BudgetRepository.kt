@@ -5,9 +5,9 @@ import com.expensetracker.app.data.model.ExpenseCategory
 import kotlinx.coroutines.flow.Flow
 
 interface BudgetRepository {
-    fun observeLimits(): Flow<List<BudgetLimit>>
+    fun observeLimits(profileId: Long): Flow<List<BudgetLimit>>
 
     /** null = the overall monthly limit rather than a per-category one. */
-    suspend fun setLimit(category: ExpenseCategory?, limitMinor: Long)
-    suspend fun clearLimit(category: ExpenseCategory?)
+    suspend fun setLimit(profileId: Long, category: ExpenseCategory?, limitMinor: Long)
+    suspend fun clearLimit(profileId: Long, category: ExpenseCategory?)
 }

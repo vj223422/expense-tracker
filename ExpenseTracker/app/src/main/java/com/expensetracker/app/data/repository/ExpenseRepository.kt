@@ -13,11 +13,19 @@ sealed interface AddExpenseResult {
 }
 
 interface ExpenseRepository {
-    fun observeAllExpenses(): Flow<List<Expense>>
-    fun observeExpensesForMonth(yearMonth: YearMonth): Flow<List<Expense>>
-    fun observeCategoryTotals(yearMonth: YearMonth): Flow<Map<ExpenseCategory, Long>>
-    fun observeMonthlyTotal(yearMonth: YearMonth): Flow<Long>
+    fun observeAllExpenses(profileId: Long): Flow<List<Expense>>
+    fun observeExpensesForMonth(profileId: Long, yearMonth: YearMonth): Flow<List<Expense>>
+    fun observeCategoryTotals(profileId: Long, yearMonth: YearMonth): Flow<Map<ExpenseCategory, Long>>
+    fun observeMonthlyTotal(profileId: Long, yearMonth: YearMonth): Flow<Long>
 
-    suspend fun addExpense(amountMinor: Long, category: ExpenseCategory, note: String, date: LocalDate): AddExpenseResult
+    suspend fun addExpense(
+        profileId: Long,
+        amountMinor: Long,
+        category: ExpenseCategory,
+        note: String,
+        date: LocalDate,
+    ): AddExpenseResult
+
+    /** [expense] already carries its own profileId — deletion doesn't need a separate one. */
     suspend fun deleteExpense(expense: Expense)
 }

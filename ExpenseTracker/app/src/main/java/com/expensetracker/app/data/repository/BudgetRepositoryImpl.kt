@@ -15,12 +15,13 @@ class BudgetRepositoryImpl(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : BudgetRepository {
 
-    override fun observeLimits(): Flow<List<BudgetLimit>> =
-        budgetLimitDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+    override fun observeLimits(profileId: Long): Flow<List<BudgetLimit>> =
+        budgetLimitDao.observeAll(profileId).map { entities -> entities.map { it.toDomain() } }
 
-    override suspend fun setLimit(category: ExpenseCategory?, limitMinor: Long) = withContext(ioDispatcher) {
+    override suspend fun setLimit(profileId: Long, category: ExpenseCategory?, limitMinor: Long) = withContext(ioDispatcher) {
         budgetLimitDao.upsert(
             BudgetLimitEntity(
+                profileId = profileId,
                 categoryKey = BudgetLimit(category, limitMinor).categoryKey(),
                 limitMinor = limitMinor,
                 updatedAtEpochMillis = System.currentTimeMillis(),
@@ -28,7 +29,7 @@ class BudgetRepositoryImpl(
         )
     }
 
-    override suspend fun clearLimit(category: ExpenseCategory?) = withContext(ioDispatcher) {
-        budgetLimitDao.delete(BudgetLimit(category, 0L).categoryKey())
+    override suspend fun clearLimit(profileId: Long, category: ExpenseCategory?) = withContext(ioDispatcher) {
+        budgetLimitDao.delete(profileId, BudgetLimit(category, 0L).categoryKey())
     }
 }

@@ -10,6 +10,7 @@ import java.time.LocalDate
 
 internal fun ExpenseEntity.toDomain(): Expense = Expense(
     id = id,
+    profileId = profileId,
     amountMinor = amountMinor,
     category = category,
     note = note,
@@ -19,6 +20,7 @@ internal fun ExpenseEntity.toDomain(): Expense = Expense(
 
 internal fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
     id = id,
+    profileId = profileId,
     amountMinor = amountMinor,
     category = category,
     note = note,

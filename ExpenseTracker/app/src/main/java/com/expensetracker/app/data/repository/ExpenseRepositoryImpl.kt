@@ -30,21 +30,22 @@ class ExpenseRepositoryImpl(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ExpenseRepository {
 
-    override fun observeAllExpenses(): Flow<List<Expense>> =
-        expenseDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+    override fun observeAllExpenses(profileId: Long): Flow<List<Expense>> =
+        expenseDao.observeAll(profileId).map { entities -> entities.map { it.toDomain() } }
 
-    override fun observeExpensesForMonth(yearMonth: YearMonth): Flow<List<Expense>> =
-        expenseDao.observeBetween(yearMonth.startEpochDay, yearMonth.endEpochDay)
+    override fun observeExpensesForMonth(profileId: Long, yearMonth: YearMonth): Flow<List<Expense>> =
+        expenseDao.observeBetween(profileId, yearMonth.startEpochDay, yearMonth.endEpochDay)
             .map { entities -> entities.map { it.toDomain() } }
 
-    override fun observeCategoryTotals(yearMonth: YearMonth): Flow<Map<ExpenseCategory, Long>> =
-        expenseDao.observeCategoryTotals(yearMonth.startEpochDay, yearMonth.endEpochDay)
+    override fun observeCategoryTotals(profileId: Long, yearMonth: YearMonth): Flow<Map<ExpenseCategory, Long>> =
+        expenseDao.observeCategoryTotals(profileId, yearMonth.startEpochDay, yearMonth.endEpochDay)
             .map { totals -> totals.associate { it.category to it.totalMinor } }
 
-    override fun observeMonthlyTotal(yearMonth: YearMonth): Flow<Long> =
-        observeCategoryTotals(yearMonth).map { totals -> totals.values.sum() }
+    override fun observeMonthlyTotal(profileId: Long, yearMonth: YearMonth): Flow<Long> =
+        observeCategoryTotals(profileId, yearMonth).map { totals -> totals.values.sum() }
 
     override suspend fun addExpense(
+        profileId: Long,
         amountMinor: Long,
         category: ExpenseCategory,
         note: String,
@@ -53,6 +54,7 @@ class ExpenseRepositoryImpl(
         try {
             expenseDao.insert(
                 ExpenseEntity(
+                    profileId = profileId,
                     amountMinor = amountMinor,
                     category = category,
                     note = note,
@@ -60,7 +62,7 @@ class ExpenseRepositoryImpl(
                     createdAtEpochMillis = System.currentTimeMillis(),
                 ),
             )
-            AddExpenseResult.Success(evaluateAndNotify(YearMonth.from(date), category))
+            AddExpenseResult.Success(evaluateAndNotify(profileId, YearMonth.from(date), category))
         } catch (e: SQLiteException) {
             AddExpenseResult.Error("Couldn't save expense — local storage error.")
         }
@@ -70,24 +72,30 @@ class ExpenseRepositoryImpl(
         expenseDao.delete(expense.toEntity())
     }
 
-    /** Notifies at most once per (period, scope, tier) — see AppPreferences.getLastNotifiedTier. */
-    private suspend fun evaluateAndNotify(yearMonth: YearMonth, changedCategory: ExpenseCategory): List<LimitAlert> {
+    /** Notifies at most once per (profile, period, scope) for WARNING; see maybeAlert for CRITICAL. */
+    private suspend fun evaluateAndNotify(profileId: Long, yearMonth: YearMonth, changedCategory: ExpenseCategory): List<LimitAlert> {
         val alerts = mutableListOf<LimitAlert>()
-        val periodPrefix = yearMonth.toString()
+        val periodPrefix = "${profileId}_$yearMonth"
 
-        budgetLimitDao.getByKey(changedCategory.name)?.let { limit ->
-            val spent = expenseDao.getCategoryTotal(changedCategory, yearMonth.startEpochDay, yearMonth.endEpochDay)
+        budgetLimitDao.getByKey(profileId, changedCategory.name)?.let { limit ->
+            val spent = expenseDao.getCategoryTotal(profileId, changedCategory, yearMonth.startEpochDay, yearMonth.endEpochDay)
             maybeAlert("${periodPrefix}_${changedCategory.name}", changedCategory, spent, limit.limitMinor)
                 ?.let(alerts::add)
         }
-        budgetLimitDao.getByKey(OVERALL_BUDGET_KEY)?.let { limit ->
-            val spent = expenseDao.getOverallTotal(yearMonth.startEpochDay, yearMonth.endEpochDay)
+        budgetLimitDao.getByKey(profileId, OVERALL_BUDGET_KEY)?.let { limit ->
+            val spent = expenseDao.getOverallTotal(profileId, yearMonth.startEpochDay, yearMonth.endEpochDay)
             maybeAlert("${periodPrefix}_$OVERALL_BUDGET_KEY", null, spent, limit.limitMinor)
                 ?.let(alerts::add)
         }
         return alerts
     }
 
+    /**
+     * WARNING notifies once per (period, scope) — suppressed once that tier is already recorded.
+     * CRITICAL notifies unconditionally on every call: once spending is at or past 80% of the
+     * limit, every further expense in that scope this month is worth a fresh alert, not just the
+     * first crossing — including every expense after 100% is passed too.
+     */
     private suspend fun maybeAlert(
         periodKey: String,
         category: ExpenseCategory?,
@@ -96,9 +104,14 @@ class ExpenseRepositoryImpl(
     ): LimitAlert? {
         val tier = LimitAlertEvaluator.tierFor(spentMinor, limitMinor)
         if (tier == AlertTier.NONE) return null
-        if (tier.ordinal <= appPreferences.getLastNotifiedTier(periodKey)) return null
 
-        appPreferences.setLastNotifiedTier(periodKey, tier.ordinal)
+        val previousTier = appPreferences.getLastNotifiedTier(periodKey)
+        val shouldNotify = tier == AlertTier.CRITICAL || tier.ordinal > previousTier
+        if (!shouldNotify) return null
+
+        if (tier.ordinal > previousTier) {
+            appPreferences.setLastNotifiedTier(periodKey, tier.ordinal)
+        }
         val alert = LimitAlert(category, tier, spentMinor, limitMinor)
         notificationHelper.notify(alert)
         return alert

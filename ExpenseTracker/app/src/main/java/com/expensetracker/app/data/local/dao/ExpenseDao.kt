@@ -19,30 +19,30 @@ interface ExpenseDao {
     @Delete
     suspend fun delete(expense: ExpenseEntity)
 
-    @Query("SELECT * FROM expenses ORDER BY epochDay DESC, createdAtEpochMillis DESC")
-    fun observeAll(): Flow<List<ExpenseEntity>>
+    @Query("SELECT * FROM expenses WHERE profileId = :profileId ORDER BY epochDay DESC, createdAtEpochMillis DESC")
+    fun observeAll(profileId: Long): Flow<List<ExpenseEntity>>
 
     @Query(
-        "SELECT * FROM expenses WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay " +
+        "SELECT * FROM expenses WHERE profileId = :profileId AND epochDay BETWEEN :startEpochDay AND :endEpochDay " +
             "ORDER BY epochDay DESC, createdAtEpochMillis DESC",
     )
-    fun observeBetween(startEpochDay: Long, endEpochDay: Long): Flow<List<ExpenseEntity>>
+    fun observeBetween(profileId: Long, startEpochDay: Long, endEpochDay: Long): Flow<List<ExpenseEntity>>
 
     @Query(
         "SELECT category, SUM(amountMinor) AS totalMinor FROM expenses " +
-            "WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay GROUP BY category",
+            "WHERE profileId = :profileId AND epochDay BETWEEN :startEpochDay AND :endEpochDay GROUP BY category",
     )
-    fun observeCategoryTotals(startEpochDay: Long, endEpochDay: Long): Flow<List<CategoryTotal>>
+    fun observeCategoryTotals(profileId: Long, startEpochDay: Long, endEpochDay: Long): Flow<List<CategoryTotal>>
 
     @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM expenses " +
-            "WHERE category = :category AND epochDay BETWEEN :startEpochDay AND :endEpochDay",
+            "WHERE profileId = :profileId AND category = :category AND epochDay BETWEEN :startEpochDay AND :endEpochDay",
     )
-    suspend fun getCategoryTotal(category: ExpenseCategory, startEpochDay: Long, endEpochDay: Long): Long
+    suspend fun getCategoryTotal(profileId: Long, category: ExpenseCategory, startEpochDay: Long, endEpochDay: Long): Long
 
     @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM expenses " +
-            "WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay",
+            "WHERE profileId = :profileId AND epochDay BETWEEN :startEpochDay AND :endEpochDay",
     )
-    suspend fun getOverallTotal(startEpochDay: Long, endEpochDay: Long): Long
+    suspend fun getOverallTotal(profileId: Long, startEpochDay: Long, endEpochDay: Long): Long
 }

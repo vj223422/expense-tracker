@@ -6,10 +6,13 @@ import com.expensetracker.app.core.util.parseAmountToMinorUnits
 import com.expensetracker.app.data.model.ExpenseCategory
 import com.expensetracker.app.data.repository.AddExpenseResult
 import com.expensetracker.app.data.repository.ExpenseRepository
+import com.expensetracker.app.data.repository.ProfileRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -17,6 +20,7 @@ import java.time.LocalDate
 
 class AddExpenseViewModel(
     private val expenseRepository: ExpenseRepository,
+    private val profileRepository: ProfileRepository,
 ) : ViewModel(), AddExpenseActions {
 
     private val _uiState = MutableStateFlow(AddExpenseUiState())
@@ -55,8 +59,10 @@ class AddExpenseViewModel(
 
         _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
+            val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
             when (
                 val result = expenseRepository.addExpense(
+                    profileId = profileId,
                     amountMinor = amountMinor,
                     category = state.selectedCategory,
                     note = state.note.trim(),

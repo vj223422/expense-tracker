@@ -7,7 +7,9 @@ import java.util.Locale
  * All money in the app is a [Long] in minor units (e.g. cents) — see data/entity — so sums are
  * exact integer arithmetic and never accumulate floating-point rounding error.
  */
-private val currencyFormat: NumberFormat = NumberFormat.getCurrencyInstance(Locale("en","IN"))
+// Fixed to India rather than Locale.getDefault() — a personal expense tracker's currency
+// shouldn't drift with the device's region setting; this also gives ₹ with lakh/crore grouping.
+private val currencyFormat: NumberFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
 
 fun Long.formatAsCurrency(): String = currencyFormat.format(this / 100.0)
 

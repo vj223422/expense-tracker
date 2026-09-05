@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +27,7 @@ class AppPreferences(private val context: Context) {
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
+        val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
         fun lastNotifiedTier(periodCategoryKey: String) = intPreferencesKey("alert_tier_$periodCategoryKey")
     }
 
@@ -39,12 +41,19 @@ class AppPreferences(private val context: Context) {
 
     val dynamicColorEnabled: Flow<Boolean> = safeData.map { prefs -> prefs[Keys.DYNAMIC_COLOR] ?: true }
 
+    /** null until ProfileRepository.ensureDefaultProfile() has run at least once (see App.kt). */
+    val activeProfileId: Flow<Long?> = safeData.map { prefs -> prefs[Keys.ACTIVE_PROFILE_ID] }
+
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }
     }
 
     suspend fun setDynamicColorEnabled(enabled: Boolean) {
         context.dataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled }
+    }
+
+    suspend fun setActiveProfileId(profileId: Long) {
+        context.dataStore.edit { it[Keys.ACTIVE_PROFILE_ID] = profileId }
     }
 
     /** 0 = none notified yet for this period+scope; see LimitAlertEvaluator.Tier.ordinal. */

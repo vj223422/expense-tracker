@@ -4,6 +4,7 @@ import java.time.LocalDate
 
 data class Expense(
     val id: Long,
+    val profileId: Long,
     val amountMinor: Long,
     val category: ExpenseCategory,
     val note: String,

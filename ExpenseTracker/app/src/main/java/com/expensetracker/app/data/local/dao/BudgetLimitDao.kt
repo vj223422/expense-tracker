@@ -9,15 +9,15 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface BudgetLimitDao {
 
-    @Query("SELECT * FROM budget_limits")
-    fun observeAll(): Flow<List<BudgetLimitEntity>>
+    @Query("SELECT * FROM budget_limits WHERE profileId = :profileId")
+    fun observeAll(profileId: Long): Flow<List<BudgetLimitEntity>>
 
-    @Query("SELECT * FROM budget_limits WHERE categoryKey = :categoryKey")
-    suspend fun getByKey(categoryKey: String): BudgetLimitEntity?
+    @Query("SELECT * FROM budget_limits WHERE profileId = :profileId AND categoryKey = :categoryKey")
+    suspend fun getByKey(profileId: Long, categoryKey: String): BudgetLimitEntity?
 
     @Upsert
     suspend fun upsert(limit: BudgetLimitEntity)
 
-    @Query("DELETE FROM budget_limits WHERE categoryKey = :categoryKey")
-    suspend fun delete(categoryKey: String)
+    @Query("DELETE FROM budget_limits WHERE profileId = :profileId AND categoryKey = :categoryKey")
+    suspend fun delete(profileId: Long, categoryKey: String)
 }
