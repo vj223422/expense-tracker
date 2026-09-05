@@ -16,16 +16,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Ensure required Android SDK components are installed
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      # This repo's gradle/wrapper/gradle-wrapper.jar was never committed (it's a compiled binary
-      # that can't be hand-authored) — regenerate it here from the pinned version in
-      # gradle/wrapper/gradle-wrapper.properties using the runner's preinstalled Gradle.
       - name: Regenerate Gradle wrapper jar
         run: gradle wrapper --gradle-version 8.11.1 --distribution-type bin
 
@@ -33,10 +32,13 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
+        with:
+          name: expense-tracker-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
         with:
           name: expense-tracker-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
