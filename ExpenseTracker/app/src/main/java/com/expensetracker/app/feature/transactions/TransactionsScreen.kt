@@ -146,14 +146,13 @@ private fun TransactionsContent(
                             DateGroupHeader(
                                 date = group.date,
                                 totalMinor = group.totalMinor,
-                                modifier = Modifier.animateItem().padding(vertical = 8.dp),
+                                modifier = Modifier.padding(vertical = 8.dp),
                             )
                         }
                         items(items = group.expenses, key = { it.id }) { expense ->
                             SwipeToDeleteExpenseItem(
                                 expense = expense,
                                 onDelete = actions::onDeleteExpense,
-                                modifier = Modifier.animateItem(),
                             )
                         }
                     }
