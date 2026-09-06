@@ -98,7 +98,6 @@ private fun DashboardContent(
             items(topCategories, key = { "category_${it.category.name}" }) { categorySpend ->
                 CategoryProgressRow(
                     categorySpend = categorySpend,
-                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -123,7 +122,6 @@ private fun DashboardContent(
             items(uiState.recentExpenses, key = { "expense_${it.id}" }) { expense ->
                 ExpenseListItem(
                     expense = expense,
-                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -144,7 +142,7 @@ private fun DashboardHero(uiState: DashboardUiState, modifier: Modifier = Modifi
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(modifier = Modifier.size(220.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.size(180.dp), contentAlignment = Alignment.Center) {
             CategoryDonutChart(
                 segments = segments,
                 modifier = Modifier.fillMaxSize(),
@@ -168,10 +166,11 @@ private fun DashboardHero(uiState: DashboardUiState, modifier: Modifier = Modifi
 
         val overallLimitMinor = uiState.overallLimitMinor
         if (overallLimitMinor != null) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top,
             ) {
                 StatCard(label = "Spent", modifier = Modifier.weight(1f)) {
                     AnimatedAmountText(
