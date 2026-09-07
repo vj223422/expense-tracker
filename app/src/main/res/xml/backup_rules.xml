@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Room's .db/.db-shm/.db-wal live under databases/ and are safe to include — this is the only user data the app holds. -->
-<full-backup-content>
-    <include domain="database" path="." />
-    <include domain="sharedpref" path="." />
-</full-backup-content>
