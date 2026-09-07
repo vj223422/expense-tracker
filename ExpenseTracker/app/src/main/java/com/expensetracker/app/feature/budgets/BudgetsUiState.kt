@@ -1,5 +1,6 @@
 package com.expensetracker.app.feature.budgets
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.expensetracker.app.data.model.CategorySpend
 import com.expensetracker.app.data.model.ExpenseCategory
@@ -9,6 +10,8 @@ sealed interface EditTarget {
     data class Category(val category: ExpenseCategory) : EditTarget
 }
 
+/** @Immutable — see data/model/Expense.kt. */
+@Immutable
 data class BudgetsUiState(
     val overallLimitMinor: Long? = null,
     val overallSpentMinor: Long = 0L,

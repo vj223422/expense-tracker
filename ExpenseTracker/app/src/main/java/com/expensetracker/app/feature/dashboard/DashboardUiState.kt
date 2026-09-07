@@ -1,9 +1,12 @@
 package com.expensetracker.app.feature.dashboard
 
+import androidx.compose.runtime.Immutable
 import com.expensetracker.app.data.model.CategorySpend
 import com.expensetracker.app.data.model.Expense
 import java.time.YearMonth
 
+/** @Immutable — see data/model/Expense.kt; also holds a java.time.YearMonth field, same issue. */
+@Immutable
 data class DashboardUiState(
     val yearMonth: YearMonth = YearMonth.now(),
     val totalSpentMinor: Long = 0L,

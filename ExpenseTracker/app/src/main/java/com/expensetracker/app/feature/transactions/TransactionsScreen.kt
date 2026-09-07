@@ -51,7 +51,6 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun TransactionsScreen(
-    onAddExpenseClick: () -> Unit,
     viewModel: TransactionsViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -128,9 +127,9 @@ private fun TransactionsContent(
                         icon = Icons.Filled.ReceiptLong,
                         title = if (hasFilter) "No matching expenses" else "No transactions yet",
                         message = if (hasFilter) {
-                            "Try a different category filter, or tap the + button to add one."
+                            "Try a different category filter."
                         } else {
-                            "Tap the + button to add your first expense."
+                            "Add an expense from the Home tab to see it here."
                         },
                     )
                 }
@@ -142,17 +141,18 @@ private fun TransactionsContent(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     uiState.expensesByDate.forEach { group ->
-                        item(key = "header-${group.date}") {
+                        item(key = "header-${group.date}", contentType = "date_header") {
                             DateGroupHeader(
                                 date = group.date,
                                 totalMinor = group.totalMinor,
-                                modifier = Modifier.padding(vertical = 8.dp),
+                                modifier = Modifier.animateItem().padding(vertical = 8.dp),
                             )
                         }
-                        items(items = group.expenses, key = { it.id }) { expense ->
+                        items(items = group.expenses, key = { it.id }, contentType = { "expense_row" }) { expense ->
                             SwipeToDeleteExpenseItem(
                                 expense = expense,
                                 onDelete = actions::onDeleteExpense,
+                                modifier = Modifier.animateItem(),
                             )
                         }
                     }

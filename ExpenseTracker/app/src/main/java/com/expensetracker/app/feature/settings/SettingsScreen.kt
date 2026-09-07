@@ -157,7 +157,7 @@ private fun SettingsContent(
                         .padding(horizontal = 16.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text(text = "ExpenseLite", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Kanakku", style = MaterialTheme.typography.titleMedium)
                     Text(
                         text = "A lightweight, fully offline expense tracker.",
                         style = MaterialTheme.typography.bodyMedium,

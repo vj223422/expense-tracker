@@ -1,10 +1,13 @@
 package com.expensetracker.app.feature.addexpense
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.expensetracker.app.core.util.parseAmountToMinorUnits
 import com.expensetracker.app.data.model.ExpenseCategory
 import java.time.LocalDate
 
+/** @Immutable — holds a java.time.LocalDate field; see data/model/Expense.kt. */
+@Immutable
 data class AddExpenseUiState(
     // 1. Editable input
     val amountText: String = "",

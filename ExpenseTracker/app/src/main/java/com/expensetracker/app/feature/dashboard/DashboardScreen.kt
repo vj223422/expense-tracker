@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.IntrinsicSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -88,16 +90,17 @@ private fun DashboardContent(
         }
 
         item(key = "hero") {
-            DashboardHero(uiState = uiState)
+            DashboardHero(uiState = uiState, onAddExpenseClick = onAddExpenseClick)
         }
 
         if (topCategories.isNotEmpty()) {
             item(key = "top_categories_header") {
                 SectionHeader(title = "Top categories")
             }
-            items(topCategories, key = { "category_${it.category.name}" }) { categorySpend ->
+            items(topCategories, key = { it.category.name }, contentType = { "category_row" }) { categorySpend ->
                 CategoryProgressRow(
                     categorySpend = categorySpend,
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -115,13 +118,14 @@ private fun DashboardContent(
                 EmptyState(
                     icon = Icons.Filled.ReceiptLong,
                     title = "No expenses yet",
-                    message = "Tap the + button to add your first expense.",
+                    message = "Tap the Spent card above to add your first expense.",
                 )
             }
         } else {
-            items(uiState.recentExpenses, key = { "expense_${it.id}" }) { expense ->
+            items(uiState.recentExpenses, key = { it.id }, contentType = { "expense_item" }) { expense ->
                 ExpenseListItem(
                     expense = expense,
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
@@ -129,7 +133,11 @@ private fun DashboardContent(
 }
 
 @Composable
-private fun DashboardHero(uiState: DashboardUiState, modifier: Modifier = Modifier) {
+private fun DashboardHero(
+    uiState: DashboardUiState,
+    onAddExpenseClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val segments = uiState.categorySpends.map { spend ->
         DonutSegment(
             value = spend.spentMinor.toFloat(),
@@ -142,7 +150,7 @@ private fun DashboardHero(uiState: DashboardUiState, modifier: Modifier = Modifi
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(modifier = Modifier.size(180.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.size(220.dp), contentAlignment = Alignment.Center) {
             CategoryDonutChart(
                 segments = segments,
                 modifier = Modifier.fillMaxSize(),
@@ -164,22 +172,29 @@ private fun DashboardHero(uiState: DashboardUiState, modifier: Modifier = Modifi
             )
         }
 
-        val overallLimitMinor = uiState.overallLimitMinor
-        if (overallLimitMinor != null) {
-            Spacer(modifier = Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Top,
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            // height(IntrinsicSize.Max) + fillMaxHeight() on each child: Remaining has an
+            // extra progress-bar line Spent doesn't, so without this the two cards' Surfaces
+            // would size to their own (different) content heights instead of matching. Always
+            // shown (no limit/spend gate) so a fresh, empty profile still reads as "₹0 spent /
+            // ₹0 remaining" rather than the row just vanishing.
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Tapping Spent opens Add Expense — this replaces the FAB that used to float over
+            // the Recent list; it covered the last row or two of it, especially on short screens.
+            StatCard(
+                label = "Spent",
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                onClick = onAddExpenseClick,
             ) {
-                StatCard(label = "Spent", modifier = Modifier.weight(1f)) {
-                    AnimatedAmountText(
-                        amountMinor = uiState.totalSpentMinor,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                }
-                RemainingStatCard(uiState = uiState, modifier = Modifier.weight(1f))
+                AnimatedAmountText(
+                    amountMinor = uiState.totalSpentMinor,
+                    style = MaterialTheme.typography.titleLarge,
+                )
             }
+            RemainingStatCard(uiState = uiState, modifier = Modifier.weight(1f).fillMaxHeight())
         }
     }
 }

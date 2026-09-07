@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -73,7 +72,6 @@ fun ExpenseTrackerApp() {
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
         val showChrome = currentRoute != Destination.AddExpense.route
-        val fabRoutes = setOf(Destination.Dashboard.route, Destination.Transactions.route)
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -109,13 +107,6 @@ fun ExpenseTrackerApp() {
                     }
                 }
             },
-            floatingActionButton = {
-                if (showChrome && currentRoute in fabRoutes) {
-                    FloatingActionButton(onClick = { navController.navigate(Destination.AddExpense.route) }) {
-                        Icon(imageVector = Icons.Filled.Add, contentDescription = "Add expense")
-                    }
-                }
-            },
         ) { innerPadding ->
             NavHost(
                 navController = navController,
@@ -135,7 +126,7 @@ fun ExpenseTrackerApp() {
                     )
                 }
                 composable(Destination.Transactions.route) {
-                    TransactionsScreen(onAddExpenseClick = { navController.navigate(Destination.AddExpense.route) })
+                    TransactionsScreen()
                 }
                 composable(Destination.Budgets.route) {
                     BudgetsScreen()
@@ -168,7 +159,7 @@ private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinV
     var showCreateDialog by remember { mutableStateOf(false) }
 
     TopAppBar(
-        title = { Text("ExpenseLite") },
+        title = { Text("Kanakku") },
         actions = {
             Box {
                 ProfileAvatar(

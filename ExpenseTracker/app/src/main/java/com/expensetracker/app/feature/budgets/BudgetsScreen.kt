@@ -97,6 +97,7 @@ private fun BudgetsContent(
                     items(
                         items = uiState.categorySpends,
                         key = { it.category.name },
+                        contentType = { "category_row" },
                     ) { categorySpend ->
                         CategoryProgressRow(
                             categorySpend = categorySpend,

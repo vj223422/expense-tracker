@@ -1,5 +1,9 @@
 package com.expensetracker.app.data.model
 
+import androidx.compose.runtime.Immutable
+
+/** @Immutable — see data/model/Expense.kt; this one is passed straight into CategoryProgressRow. */
+@Immutable
 data class CategorySpend(
     val category: ExpenseCategory,
     val spentMinor: Long,
@@ -10,12 +14,14 @@ data class CategorySpend(
         get() = if (limitMinor != null && limitMinor > 0) spentMinor.toFloat() / limitMinor.toFloat() else 0f
 }
 
+@Immutable
 data class BudgetLimit(
     /** null = the overall monthly limit rather than a per-category one. */
     val category: ExpenseCategory?,
     val limitMinor: Long,
 )
 
+@Immutable
 data class MonthlySummary(
     val totalSpentMinor: Long,
     val overallLimitMinor: Long?,

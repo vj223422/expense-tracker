@@ -1,5 +1,6 @@
 package com.expensetracker.app.feature.profileswitcher
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.expensetracker.app.data.model.Profile
@@ -10,6 +11,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/** @Immutable — see data/model/Expense.kt. */
+@Immutable
 data class ProfileSwitcherUiState(
     val profiles: List<Profile> = emptyList(),
     val activeProfileId: Long? = null,
