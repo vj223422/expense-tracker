@@ -24,14 +24,23 @@ data class UpiPayee(
 
 private val HANDLED_UPI_PARAMS = setOf("pa", "pn", "am", "cu", "tn")
 
+/** The rest of the NPCI UPI Linking Specification's known fields — everything else in a scanned
+ * QR's query string is dropped rather than blindly forwarded into the Intent we launch, since a
+ * QR code is untrusted external input and there's no reason to carry through a key we don't
+ * recognize. */
+private val KNOWN_UPI_EXTRA_PARAMS = setOf("mc", "tr", "tid", "url", "mode", "purpose", "orgid", "sign", "refurl", "minamount")
+
 /** Returns null if [rawValue] isn't a UPI payment link or has no payee address. */
 fun parseUpiQr(rawValue: String): UpiPayee? {
     val uri = runCatching { Uri.parse(rawValue) }.getOrNull() ?: return null
     if (uri.scheme?.lowercase() != "upi" || uri.host?.lowercase() != "pay") return null
     val vpa = uri.getQueryParameter("pa")?.takeIf { it.isNotBlank() } ?: return null
+    // Keys normalized to lowercase (the NPCI-spec form every real QR uses) so a later exact-match
+    // lookup like `"tr" !in extraParams` in buildUpiPaymentUri is reliable regardless of how a
+    // given QR happens to capitalize its own parameter names.
     val extraParams = uri.queryParameterNames
-        .filter { it !in HANDLED_UPI_PARAMS }
-        .associateWith { key -> uri.getQueryParameter(key).orEmpty() }
+        .filter { it.lowercase() !in HANDLED_UPI_PARAMS && it.lowercase() in KNOWN_UPI_EXTRA_PARAMS }
+        .associate { key -> key.lowercase() to uri.getQueryParameter(key).orEmpty() }
     return UpiPayee(
         vpa = vpa,
         payeeName = uri.getQueryParameter("pn")?.takeIf { it.isNotBlank() },
