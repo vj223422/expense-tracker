@@ -3,6 +3,7 @@ package com.expensetracker.app.core.util
 import android.app.Activity
 import android.net.Uri
 import java.util.Locale
+import java.util.UUID
 
 /** A UPI payee parsed out of a scanned `upi://pay?...` QR code. */
 data class UpiPayee(
@@ -50,6 +51,16 @@ fun buildUpiPaymentUri(payee: UpiPayee, amountMinor: Long, note: String): Uri {
         .appendQueryParameter("pn", payee.payeeName ?: payee.vpa)
     // Carry through whatever merchant-specific fields the original QR had — see extraParams.
     payee.extraParams.forEach { (key, value) -> builder.appendQueryParameter(key, value) }
+    if ("tr" !in payee.extraParams) {
+        // A P2M (merchant) UPI intent with no unique transaction reference is commonly flagged
+        // by the receiving PSP app as a duplicate/invalid request — surfacing as a generic
+        // "exceeded limit" error regardless of the actual amount. Static merchant QR stickers
+        // essentially never embed their own tr (it's meant to be unique per payment attempt, not
+        // baked into a reusable sticker), so whoever is paying is responsible for generating one;
+        // GPay's own scanner does this invisibly, which is why the same QR pays fine there but
+        // not through an intent that omits it.
+        builder.appendQueryParameter("tr", UUID.randomUUID().toString().replace("-", ""))
+    }
     return builder
         .appendQueryParameter("am", amount)
         .appendQueryParameter("cu", "INR")
