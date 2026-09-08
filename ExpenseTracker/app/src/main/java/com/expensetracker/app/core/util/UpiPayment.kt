@@ -9,17 +9,33 @@ data class UpiPayee(
     val vpa: String,
     val payeeName: String?,
     val suggestedAmount: String?,
+    /**
+     * Every other query parameter from the scanned QR (e.g. `mc` merchant category code, `tr`/
+     * `tid` transaction/terminal id, `mode`, `purpose`, a `sign` signature) preserved as-is.
+     * Many merchant (P2M) VPAs — especially aggregator/PSP-issued ones like `...@paytm`/`...@rzp`
+     * used by small-merchant QR stickers — only resolve on the bank/NPCI side *with* this extra
+     * context attached; rebuilding the payment link from just pa/pn/am strips it and can fail
+     * with "receiver's UPI ID or VPA was unavailable" even though the same QR pays fine when
+     * scanned directly in a UPI app that keeps the full original string.
+     */
+    val extraParams: Map<String, String> = emptyMap(),
 )
+
+private val HANDLED_UPI_PARAMS = setOf("pa", "pn", "am", "cu", "tn")
 
 /** Returns null if [rawValue] isn't a UPI payment link or has no payee address. */
 fun parseUpiQr(rawValue: String): UpiPayee? {
     val uri = runCatching { Uri.parse(rawValue) }.getOrNull() ?: return null
     if (uri.scheme?.lowercase() != "upi" || uri.host?.lowercase() != "pay") return null
     val vpa = uri.getQueryParameter("pa")?.takeIf { it.isNotBlank() } ?: return null
+    val extraParams = uri.queryParameterNames
+        .filter { it !in HANDLED_UPI_PARAMS }
+        .associateWith { key -> uri.getQueryParameter(key).orEmpty() }
     return UpiPayee(
         vpa = vpa,
         payeeName = uri.getQueryParameter("pn")?.takeIf { it.isNotBlank() },
         suggestedAmount = uri.getQueryParameter("am")?.takeIf { it.isNotBlank() },
+        extraParams = extraParams,
     )
 }
 
@@ -27,11 +43,14 @@ fun parseUpiQr(rawValue: String): UpiPayee? {
 fun buildUpiPaymentUri(payee: UpiPayee, amountMinor: Long, note: String): Uri {
     // UPI requires a '.'-decimal amount regardless of device locale.
     val amount = String.format(Locale.US, "%.2f", amountMinor / 100.0)
-    return Uri.Builder()
+    val builder = Uri.Builder()
         .scheme("upi")
         .authority("pay")
         .appendQueryParameter("pa", payee.vpa)
         .appendQueryParameter("pn", payee.payeeName ?: payee.vpa)
+    // Carry through whatever merchant-specific fields the original QR had — see extraParams.
+    payee.extraParams.forEach { (key, value) -> builder.appendQueryParameter(key, value) }
+    return builder
         .appendQueryParameter("am", amount)
         .appendQueryParameter("cu", "INR")
         .appendQueryParameter("tn", note)
