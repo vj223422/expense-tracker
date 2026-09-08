@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Room's .db/.db-shm/.db-wal live under databases/ and are safe to include — this is the only user data the app holds. -->
+<!-- Legacy Auto Backup (API 26-30 only — API 31+ uses data_extraction_rules.xml instead), which
+     always goes to the user's Google account. Same reasoning as data_extraction_rules.xml's
+     cloud-backup block: the database holds financial history, so it's excluded here too.
+     Preferences DataStore backs up under domain="file" (see data_extraction_rules.xml) — included
+     here for the same reason: no financial data, just the active-profile pointer/alert ledger/theme. -->
 <full-backup-content>
-    <include domain="database" path="." />
+    <exclude domain="database" path="." />
     <include domain="sharedpref" path="." />
+    <include domain="file" path="." />
 </full-backup-content>

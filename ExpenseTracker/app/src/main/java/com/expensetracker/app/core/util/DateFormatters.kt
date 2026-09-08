@@ -7,12 +7,15 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val dayMonthFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+private val dayMonthYearFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())
 private val monthYearFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
 
 fun LocalDate.toRelativeOrFormatted(today: LocalDate = LocalDate.now()): String = when (this) {
     today -> "Today"
     today.minusDays(1) -> "Yesterday"
-    else -> format(dayMonthFormatter)
+    // Without the year, an expense from any prior year renders identically to one from this
+    // year on the same day/month — indistinguishable once history spans more than ~12 months.
+    else -> format(if (year == today.year) dayMonthFormatter else dayMonthYearFormatter)
 }
 
 fun YearMonth.toDisplayString(): String = format(monthYearFormatter)

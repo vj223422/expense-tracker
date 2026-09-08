@@ -10,6 +10,10 @@ sealed interface EditTarget {
     data class Category(val category: ExpenseCategory) : EditTarget
 }
 
+sealed interface BudgetsEffect {
+    data class ShowMessage(val message: String) : BudgetsEffect
+}
+
 /** @Immutable — see data/model/Expense.kt. */
 @Immutable
 data class BudgetsUiState(
@@ -20,8 +24,9 @@ data class BudgetsUiState(
     val isLoading: Boolean = true,
     val editingTarget: EditTarget? = null,
 ) {
+    // Double, not Float — see LimitAlertEvaluator.tierFor / CategorySpend.progress for why.
     val overallProgress: Float
-        get() = if (overallLimitMinor != null && overallLimitMinor > 0) overallSpentMinor.toFloat() / overallLimitMinor else 0f
+        get() = if (overallLimitMinor != null && overallLimitMinor > 0) (overallSpentMinor.toDouble() / overallLimitMinor.toDouble()).toFloat() else 0f
 }
 
 @Stable

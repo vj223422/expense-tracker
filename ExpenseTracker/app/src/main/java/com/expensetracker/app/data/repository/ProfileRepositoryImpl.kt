@@ -42,13 +42,18 @@ class ProfileRepositoryImpl(
     }
 
     override suspend fun deleteProfile(profileId: Long): Boolean = withContext(ioDispatcher) {
-        val remaining = profileDao.observeAll().first()
-        if (remaining.size <= 1) return@withContext false
+        val deleted = profileDao.deleteIfNotLast(profileId)
+        if (!deleted) return@withContext false
 
-        profileDao.delete(profileId)
+        appPreferences.clearAlertTiersForProfile(profileId)
+
         if (appPreferences.activeProfileId.first() == profileId) {
-            val fallback = remaining.first { it.id != profileId }
-            appPreferences.setActiveProfileId(fallback.id)
+            // Re-query rather than reuse the pre-delete list — that snapshot could be stale if
+            // another delete happened concurrently, and could name a profile that's now also gone.
+            val fallback = profileDao.observeAll().first().firstOrNull()
+            if (fallback != null) {
+                appPreferences.setActiveProfileId(fallback.id)
+            }
         }
         true
     }

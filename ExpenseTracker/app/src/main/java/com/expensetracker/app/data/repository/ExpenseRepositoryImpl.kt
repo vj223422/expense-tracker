@@ -62,14 +62,60 @@ class ExpenseRepositoryImpl(
                     createdAtEpochMillis = System.currentTimeMillis(),
                 ),
             )
-            AddExpenseResult.Success(evaluateAndNotify(profileId, YearMonth.from(date), category))
         } catch (e: SQLiteException) {
-            AddExpenseResult.Error("Couldn't save expense — local storage error.")
+            return@withContext AddExpenseResult.Error("Couldn't save expense — local storage error.")
         }
+
+        // The expense is already committed at this point, so a failure here is a lost/duplicate
+        // alert at worst — it must never be reported back as a failed save, or the caller (and
+        // user) may retry and insert the same expense twice.
+        val alerts = try {
+            evaluateAndNotify(profileId, YearMonth.from(date), category)
+        } catch (e: SQLiteException) {
+            emptyList()
+        }
+        AddExpenseResult.Success(alerts)
+    }
+
+    override suspend fun getExpenseById(id: Long, profileId: Long): Expense? = withContext(ioDispatcher) {
+        expenseDao.getById(id, profileId)?.toDomain()
+    }
+
+    override suspend fun updateExpense(expense: Expense): AddExpenseResult = withContext(ioDispatcher) {
+        try {
+            expenseDao.update(expense.toEntity())
+        } catch (e: SQLiteException) {
+            return@withContext AddExpenseResult.Error("Couldn't update expense — local storage error.")
+        }
+
+        val alerts = try {
+            evaluateAndNotify(expense.profileId, YearMonth.from(expense.date), expense.category)
+        } catch (e: SQLiteException) {
+            emptyList()
+        }
+        AddExpenseResult.Success(alerts)
     }
 
     override suspend fun deleteExpense(expense: Expense) = withContext(ioDispatcher) {
         expenseDao.delete(expense.toEntity())
+    }
+
+    override suspend fun restoreExpense(expense: Expense): AddExpenseResult = withContext(ioDispatcher) {
+        try {
+            // expense.toEntity() carries the original id/createdAtEpochMillis (unlike building a
+            // fresh ExpenseEntity the way addExpense does), so the restored row keeps its original
+            // identity and position instead of jumping to the top of its date group as "new".
+            expenseDao.insert(expense.toEntity())
+        } catch (e: SQLiteException) {
+            return@withContext AddExpenseResult.Error("Couldn't restore expense — local storage error.")
+        }
+
+        val alerts = try {
+            evaluateAndNotify(expense.profileId, YearMonth.from(expense.date), expense.category)
+        } catch (e: SQLiteException) {
+            emptyList()
+        }
+        AddExpenseResult.Success(alerts)
     }
 
     /** Notifies at most once per (profile, period, scope) for WARNING; see maybeAlert for CRITICAL. */
@@ -79,12 +125,12 @@ class ExpenseRepositoryImpl(
 
         budgetLimitDao.getByKey(profileId, changedCategory.name)?.let { limit ->
             val spent = expenseDao.getCategoryTotal(profileId, changedCategory, yearMonth.startEpochDay, yearMonth.endEpochDay)
-            maybeAlert("${periodPrefix}_${changedCategory.name}", changedCategory, spent, limit.limitMinor)
+            maybeAlert(profileId, "${periodPrefix}_${changedCategory.name}", changedCategory, spent, limit.limitMinor)
                 ?.let(alerts::add)
         }
         budgetLimitDao.getByKey(profileId, OVERALL_BUDGET_KEY)?.let { limit ->
             val spent = expenseDao.getOverallTotal(profileId, yearMonth.startEpochDay, yearMonth.endEpochDay)
-            maybeAlert("${periodPrefix}_$OVERALL_BUDGET_KEY", null, spent, limit.limitMinor)
+            maybeAlert(profileId, "${periodPrefix}_$OVERALL_BUDGET_KEY", null, spent, limit.limitMinor)
                 ?.let(alerts::add)
         }
         return alerts
@@ -97,6 +143,7 @@ class ExpenseRepositoryImpl(
      * first crossing — including every expense after 100% is passed too.
      */
     private suspend fun maybeAlert(
+        profileId: Long,
         periodKey: String,
         category: ExpenseCategory?,
         spentMinor: Long,
@@ -112,7 +159,7 @@ class ExpenseRepositoryImpl(
         if (tier.ordinal > previousTier) {
             appPreferences.setLastNotifiedTier(periodKey, tier.ordinal)
         }
-        val alert = LimitAlert(category, tier, spentMinor, limitMinor)
+        val alert = LimitAlert(profileId, category, tier, spentMinor, limitMinor)
         notificationHelper.notify(alert)
         return alert
     }

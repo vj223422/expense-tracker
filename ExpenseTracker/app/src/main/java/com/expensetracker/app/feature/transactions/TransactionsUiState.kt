@@ -21,11 +21,16 @@ data class TransactionsUiState(
 
 sealed interface TransactionsEffect {
     data class ShowUndoDelete(val expense: Expense) : TransactionsEffect
+    data class ShowMessage(val message: String) : TransactionsEffect
+    data class ShowError(val message: String) : TransactionsEffect
 }
 
 @Stable
 interface TransactionsActions {
     fun onFilterChange(category: ExpenseCategory?)
-    fun onDeleteExpense(expense: Expense)
+
+    /** Returns whether the delete actually succeeded — SwipeToDeleteExpenseItem awaits this to
+     * know whether to reset the swiped-away row back to visible on failure. */
+    suspend fun onDeleteExpense(expense: Expense): Boolean
     fun onUndoDelete(expense: Expense)
 }

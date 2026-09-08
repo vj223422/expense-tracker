@@ -35,6 +35,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,12 +77,15 @@ import com.expensetracker.app.data.model.ExpenseCategory
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun AddExpenseScreen(
     onNavigateBack: () -> Unit,
-    viewModel: AddExpenseViewModel = koinViewModel(),
+    expenseId: Long? = null,
+    viewModel: AddExpenseViewModel = koinViewModel(parameters = { parametersOf(expenseId) }),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -107,6 +111,7 @@ fun AddExpenseScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             AddExpenseTopBar(
+                isEditMode = uiState.isEditMode,
                 canSave = uiState.canSave,
                 isSaving = uiState.isSaving,
                 onClose = viewModel::onDismiss,
@@ -114,18 +119,28 @@ fun AddExpenseScreen(
             )
         },
     ) { innerPadding ->
-        AddExpenseContent(
-            uiState = uiState,
-            actions = viewModel,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        )
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            AddExpenseContent(
+                uiState = uiState,
+                actions = viewModel,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+        }
     }
 }
 
 @Composable
 private fun AddExpenseTopBar(
+    isEditMode: Boolean,
     canSave: Boolean,
     isSaving: Boolean,
     onClose: () -> Unit,
@@ -142,7 +157,7 @@ private fun AddExpenseTopBar(
             Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
         }
         Text(
-            text = "Add Expense",
+            text = if (isEditMode) "Edit Expense" else "Add Expense",
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier
                 .weight(1f)
@@ -359,7 +374,16 @@ private fun DateSection(
     modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
-    val today = remember { LocalDate.now() }
+    // Re-checked every minute rather than captured once — see DashboardViewModel.currentYearMonth
+    // for the same reasoning: without this, opening this screen before midnight and returning
+    // after (or just leaving it open) keeps showing the previous day as "Today".
+    var today by remember { mutableStateOf(LocalDate.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            today = LocalDate.now()
+        }
+    }
 
     Column(modifier = modifier) {
         Text(
@@ -394,8 +418,15 @@ private fun DateSection(
     }
 
     if (showDatePicker) {
+        // An expense can't happen in the future — without this, a date picked past today would
+        // silently miss the current month's totals/budget alerts (both are scoped to "this month")
+        // until that future month actually arrives.
+        val maxSelectableEpochMillis = today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis <= maxSelectableEpochMillis
+            },
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },

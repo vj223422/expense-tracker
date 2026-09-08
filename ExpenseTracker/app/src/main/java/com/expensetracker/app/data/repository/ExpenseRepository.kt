@@ -26,6 +26,19 @@ interface ExpenseRepository {
         date: LocalDate,
     ): AddExpenseResult
 
+    suspend fun getExpenseById(id: Long, profileId: Long): Expense?
+
+    /** [expense] already carries its own id/profileId — the fields on it are the new values. */
+    suspend fun updateExpense(expense: Expense): AddExpenseResult
+
     /** [expense] already carries its own profileId — deletion doesn't need a separate one. */
     suspend fun deleteExpense(expense: Expense)
+
+    /**
+     * Re-inserts a just-deleted [expense] (undo) at its original id/createdAt instead of
+     * fabricating a new row — unlike [addExpense], which always mints a fresh id and "now" as the
+     * creation time, appropriate for a genuinely new expense but not for restoring one that was
+     * only ever meant to look untouched by the delete-then-undo round trip.
+     */
+    suspend fun restoreExpense(expense: Expense): AddExpenseResult
 }

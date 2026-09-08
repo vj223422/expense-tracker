@@ -14,6 +14,7 @@ import com.expensetracker.app.feature.addexpense.AddExpenseViewModel
 import com.expensetracker.app.feature.budgets.BudgetsViewModel
 import com.expensetracker.app.feature.dashboard.DashboardViewModel
 import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
+import com.expensetracker.app.feature.scanpay.ScanPayViewModel
 import com.expensetracker.app.feature.settings.SettingsViewModel
 import com.expensetracker.app.feature.transactions.TransactionsViewModel
 import org.koin.android.ext.koin.androidContext
@@ -23,7 +24,11 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-            .fallbackToDestructiveMigration()
+            .addMigrations(ExpenseDatabase.MIGRATION_1_2)
+            // Only a downgrade (e.g. reinstalling an older build) destructively rebuilds; any
+            // future *upgrade* that forgets to add a real Migration now throws loudly instead of
+            // silently wiping a user's expense history.
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
     single { get<ExpenseDatabase>().expenseDao() }
@@ -42,7 +47,8 @@ val dataModule = module {
 val viewModelModule = module {
     viewModel { DashboardViewModel(get(), get(), get()) }
     viewModel { TransactionsViewModel(get(), get()) }
-    viewModel { AddExpenseViewModel(get(), get()) }
+    viewModel { (expenseId: Long?) -> AddExpenseViewModel(get(), get(), expenseId) }
+    viewModel { ScanPayViewModel(get(), get(), get()) }
     viewModel { BudgetsViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { ProfileSwitcherViewModel(get()) }

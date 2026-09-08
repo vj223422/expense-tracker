@@ -63,4 +63,15 @@ class AppPreferences(private val context: Context) {
     suspend fun setLastNotifiedTier(periodCategoryKey: String, tier: Int) {
         context.dataStore.edit { it[Keys.lastNotifiedTier(periodCategoryKey)] = tier }
     }
+
+    /** Call when a profile is deleted — its alert-tier keys aren't scoped by any FK cascade
+     * (they live in DataStore, not Room), so they'd otherwise accumulate here forever. */
+    suspend fun clearAlertTiersForProfile(profileId: Long) {
+        val prefix = "alert_tier_${profileId}_"
+        context.dataStore.edit { prefs ->
+            prefs.asMap().keys
+                .filter { it.name.startsWith(prefix) }
+                .forEach { prefs.remove(it) }
+        }
+    }
 }

@@ -15,12 +15,14 @@ data class AddExpenseUiState(
     val note: String = "",
     val date: LocalDate = LocalDate.now(),
     // 4. Transient UI-only
+    val isEditMode: Boolean = false,
+    val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val amountError: String? = null,
 ) {
     // 2. Derived
     val canSave: Boolean
-        get() = !isSaving && (amountText.parseAmountToMinorUnits() ?: 0L) > 0L
+        get() = !isSaving && !isLoading && (amountText.parseAmountToMinorUnits() ?: 0L) > 0L
 }
 
 sealed interface AddExpenseEffect {

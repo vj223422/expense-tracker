@@ -39,10 +39,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.expensetracker.app.core.designsystem.CreateProfileDialog
 import com.expensetracker.app.core.theme.ExpenseTrackerTheme
 import com.expensetracker.app.data.prefs.AppPreferences
@@ -51,6 +53,7 @@ import com.expensetracker.app.feature.addexpense.AddExpenseScreen
 import com.expensetracker.app.feature.budgets.BudgetsScreen
 import com.expensetracker.app.feature.dashboard.DashboardScreen
 import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
+import com.expensetracker.app.feature.scanpay.ScanPayScreen
 import com.expensetracker.app.feature.settings.SettingsScreen
 import com.expensetracker.app.feature.transactions.TransactionsScreen
 import org.koin.androidx.compose.koinViewModel
@@ -115,7 +118,10 @@ fun ExpenseTrackerApp() {
             ) {
                 composable(Destination.Dashboard.route) {
                     DashboardScreen(
-                        onAddExpenseClick = { navController.navigate(Destination.AddExpense.route) },
+                        onAddExpenseClick = { navController.navigate(Destination.AddExpense.routeForAdd()) },
+                        onEditExpenseClick = { expenseId ->
+                            navController.navigate(Destination.AddExpense.routeForEdit(expenseId))
+                        },
                         onSeeAllTransactionsClick = {
                             navController.navigate(Destination.Transactions.route) {
                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -126,7 +132,14 @@ fun ExpenseTrackerApp() {
                     )
                 }
                 composable(Destination.Transactions.route) {
-                    TransactionsScreen()
+                    TransactionsScreen(
+                        onEditExpenseClick = { expenseId ->
+                            navController.navigate(Destination.AddExpense.routeForEdit(expenseId))
+                        },
+                    )
+                }
+                composable(Destination.ScanPay.route) {
+                    ScanPayScreen()
                 }
                 composable(Destination.Budgets.route) {
                     BudgetsScreen()
@@ -136,14 +149,23 @@ fun ExpenseTrackerApp() {
                 }
                 composable(
                     route = Destination.AddExpense.route,
+                    arguments = listOf(
+                        navArgument(Destination.AddExpense.ARG_EXPENSE_ID) {
+                            type = NavType.LongType
+                            defaultValue = Destination.AddExpense.NO_EXPENSE_ID
+                        },
+                    ),
                     enterTransition = {
                         slideInVertically(animationSpec = tween(350)) { height -> height / 4 } + fadeIn(tween(250))
                     },
                     exitTransition = {
                         slideOutVertically(animationSpec = tween(300)) { height -> height / 4 } + fadeOut(tween(200))
                     },
-                ) {
-                    AddExpenseScreen(onNavigateBack = { navController.popBackStack() })
+                ) { backStackEntry ->
+                    val expenseId = backStackEntry.arguments
+                        ?.getLong(Destination.AddExpense.ARG_EXPENSE_ID)
+                        ?.takeIf { it != Destination.AddExpense.NO_EXPENSE_ID }
+                    AddExpenseScreen(expenseId = expenseId, onNavigateBack = { navController.popBackStack() })
                 }
             }
         }
@@ -197,6 +219,7 @@ private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinV
 
     if (showCreateDialog) {
         CreateProfileDialog(
+            existingNames = uiState.profiles.map { it.name },
             onConfirm = { name ->
                 profileSwitcherViewModel.onCreateProfile(name)
                 showCreateDialog = false
@@ -204,6 +227,15 @@ private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinV
             onDismiss = { showCreateDialog = false },
         )
     }
+}
+
+/** `take(1)` grabs one UTF-16 code unit, which slices a surrogate pair (most emoji) in half and
+ * renders as a mangled glyph — this takes one whole Unicode code point instead. */
+private fun String.firstGraphemeOrPlaceholder(): String {
+    val trimmed = trim()
+    if (trimmed.isEmpty()) return "?"
+    val codePoint = trimmed.codePointAt(0)
+    return String(Character.toChars(codePoint)).uppercase()
 }
 
 @Composable
@@ -218,7 +250,7 @@ private fun ProfileAvatar(name: String, onClick: () -> Unit, modifier: Modifier 
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = name.take(1).uppercase().ifEmpty { "?" },
+            text = name.firstGraphemeOrPlaceholder(),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )

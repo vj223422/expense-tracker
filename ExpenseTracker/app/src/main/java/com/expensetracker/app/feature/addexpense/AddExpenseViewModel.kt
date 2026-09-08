@@ -1,9 +1,13 @@
 package com.expensetracker.app.feature.addexpense
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.expensetracker.app.core.util.parseAmountToMinorUnits
+import com.expensetracker.app.core.util.toAmountInputText
+import com.expensetracker.app.data.model.Expense
 import com.expensetracker.app.data.model.ExpenseCategory
+import com.expensetracker.app.data.notification.toSnackbarMessage
 import com.expensetracker.app.data.repository.AddExpenseResult
 import com.expensetracker.app.data.repository.ExpenseRepository
 import com.expensetracker.app.data.repository.ProfileRepository
@@ -21,13 +25,46 @@ import java.time.LocalDate
 class AddExpenseViewModel(
     private val expenseRepository: ExpenseRepository,
     private val profileRepository: ProfileRepository,
+    private val expenseId: Long?,
 ) : ViewModel(), AddExpenseActions {
 
-    private val _uiState = MutableStateFlow(AddExpenseUiState())
+    private val _uiState = MutableStateFlow(AddExpenseUiState(isEditMode = expenseId != null, isLoading = expenseId != null))
     val uiState: StateFlow<AddExpenseUiState> = _uiState.asStateFlow()
 
     private val _effects = Channel<AddExpenseEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
+
+    /** Set once the existing expense loads — carries the id/profileId/createdAt that onSaveClick
+     * needs but never shows in the form. Null in add mode, or if the load below hasn't (or can't) resolve. */
+    private var loadedExpense: Expense? = null
+
+    init {
+        if (expenseId != null) {
+            viewModelScope.launch {
+                val expense = try {
+                    val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
+                    expenseRepository.getExpenseById(expenseId, profileId)
+                } catch (e: SQLiteException) {
+                    null
+                }
+                if (expense == null) {
+                    _effects.send(AddExpenseEffect.ShowMessage("Expense not found"))
+                    _effects.send(AddExpenseEffect.NavigateBack)
+                    return@launch
+                }
+                loadedExpense = expense
+                _uiState.update {
+                    it.copy(
+                        amountText = expense.amountMinor.toAmountInputText(),
+                        selectedCategory = expense.category,
+                        note = expense.note,
+                        date = expense.date,
+                        isLoading = false,
+                    )
+                }
+            }
+        }
+    }
 
     override fun onAmountChange(value: String) {
         _uiState.update { it.copy(amountText = value, amountError = null) }
@@ -51,6 +88,7 @@ class AddExpenseViewModel(
 
     override fun onSaveClick() {
         val state = _uiState.value
+        if (state.isSaving) return
         val amountMinor = state.amountText.parseAmountToMinorUnits()
         if (amountMinor == null || amountMinor <= 0L) {
             _uiState.update { it.copy(amountError = "Enter a valid amount") }
@@ -59,18 +97,34 @@ class AddExpenseViewModel(
 
         _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
-            val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
-            when (
-                val result = expenseRepository.addExpense(
+            val existing = loadedExpense
+            val result = if (existing != null) {
+                expenseRepository.updateExpense(
+                    existing.copy(
+                        amountMinor = amountMinor,
+                        category = state.selectedCategory,
+                        note = state.note.trim(),
+                        date = state.date,
+                    ),
+                )
+            } else {
+                val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
+                expenseRepository.addExpense(
                     profileId = profileId,
                     amountMinor = amountMinor,
                     category = state.selectedCategory,
                     note = state.note.trim(),
                     date = state.date,
                 )
-            ) {
+            }
+            when (result) {
                 is AddExpenseResult.Success -> {
-                    _effects.send(AddExpenseEffect.ShowMessage("Expense added"))
+                    val baseMessage = if (existing != null) "Expense updated" else "Expense added"
+                    // The system push notification for this alert (if any) is silently skipped
+                    // when POST_NOTIFICATIONS was declined, so this is the only feedback some
+                    // users would otherwise get for crossing a budget threshold: none at all.
+                    val message = result.newAlerts.firstOrNull()?.let { "$baseMessage. ${it.toSnackbarMessage()}" } ?: baseMessage
+                    _effects.send(AddExpenseEffect.ShowMessage(message))
                     _effects.send(AddExpenseEffect.NavigateBack)
                 }
                 is AddExpenseResult.Error -> {

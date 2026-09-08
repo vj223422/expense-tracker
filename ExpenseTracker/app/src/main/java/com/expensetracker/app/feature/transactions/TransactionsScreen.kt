@@ -51,6 +51,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun TransactionsScreen(
+    onEditExpenseClick: (Long) -> Unit,
     viewModel: TransactionsViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,6 +73,14 @@ fun TransactionsScreen(
                             viewModel.onUndoDelete(effect.expense)
                         }
                     }
+
+                    is TransactionsEffect.ShowMessage -> {
+                        snackbarHostState.showSnackbar(message = effect.message, duration = SnackbarDuration.Short)
+                    }
+
+                    is TransactionsEffect.ShowError -> {
+                        snackbarHostState.showSnackbar(message = effect.message, duration = SnackbarDuration.Short)
+                    }
                 }
             }
         }
@@ -87,6 +96,7 @@ fun TransactionsScreen(
         TransactionsContent(
             uiState = uiState,
             actions = viewModel,
+            onEditExpenseClick = onEditExpenseClick,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -98,6 +108,7 @@ fun TransactionsScreen(
 private fun TransactionsContent(
     uiState: TransactionsUiState,
     actions: TransactionsActions,
+    onEditExpenseClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -152,6 +163,7 @@ private fun TransactionsContent(
                             SwipeToDeleteExpenseItem(
                                 expense = expense,
                                 onDelete = actions::onDeleteExpense,
+                                onClick = { onEditExpenseClick(expense.id) },
                                 modifier = Modifier.animateItem(),
                             )
                         }

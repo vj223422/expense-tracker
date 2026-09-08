@@ -1,12 +1,14 @@
 package com.expensetracker.app
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import com.expensetracker.app.navigation.ExpenseTrackerApp
 
 class MainActivity : ComponentActivity() {
@@ -18,14 +20,27 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestHighestRefreshRate()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        requestNotificationPermissionIfNeeded()
 
         setContent {
             ExpenseTrackerApp()
         }
+    }
+
+    /**
+     * Only asks once per process — without [hasRequestedNotificationPermission] this re-launches
+     * on every onCreate, including every rotation, re-showing the system dialog each time until
+     * the user permanently denies it.
+     */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || hasRequestedNotificationPermission) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        hasRequestedNotificationPermission = true
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     /**
@@ -47,5 +62,9 @@ class MainActivity : ComponentActivity() {
         window.attributes = window.attributes.apply {
             preferredDisplayModeId = bestMode.modeId
         }
+    }
+
+    private companion object {
+        private var hasRequestedNotificationPermission = false
     }
 }

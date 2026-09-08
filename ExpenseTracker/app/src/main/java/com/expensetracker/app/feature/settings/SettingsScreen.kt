@@ -62,6 +62,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
 
     when (val dialog = uiState.profileDialog) {
         is ProfileDialog.CreateProfile -> CreateProfileDialog(
+            existingNames = uiState.profiles.map { it.name },
             onConfirm = viewModel::onCreateProfileConfirm,
             onDismiss = viewModel::onProfileDialogDismiss,
         )

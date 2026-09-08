@@ -10,8 +10,15 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 private val LightColors = lightColorScheme(
     primary = primaryLight,
@@ -95,9 +102,7 @@ fun ExpenseTrackerTheme(
     } else {
         ExtendedColors(safe = safeLight, warning = warningLight, danger = dangerLight, category = categoryPaletteLight)
     }
-    val reduceMotion = remember {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-    }
+    val reduceMotion = rememberReducedMotion()
 
     CompositionLocalProvider(
         LocalExtendedColors provides extendedColors,
@@ -110,4 +115,31 @@ fun ExpenseTrackerTheme(
             content = content,
         )
     }
+}
+
+private fun readReducedMotionSetting(context: android.content.Context): Boolean =
+    Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+
+/**
+ * Re-checks the system "Remove animations" setting on every resume, not just once at first
+ * composition — a plain `remember` would miss the user toggling it in system Settings and
+ * returning to the app without the Activity actually recreating (e.g. no rotation in between).
+ */
+@Composable
+private fun rememberReducedMotion(): Boolean {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var reduceMotion by remember { mutableStateOf(readReducedMotionSetting(context)) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                reduceMotion = readReducedMotionSetting(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    return reduceMotion
 }

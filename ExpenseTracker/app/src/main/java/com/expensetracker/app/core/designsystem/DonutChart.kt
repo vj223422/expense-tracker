@@ -55,7 +55,9 @@ fun CategoryDonutChart(
             var startAngle = -90f
             for (segment in segments) {
                 val sweep = (segment.value / total) * 360f * animatedProgress.value
-                val drawnSweep = (sweep - gapDegrees).coerceAtLeast(0f)
+                // Cap the gap at half the segment's own sweep so a category with a tiny share of
+                // spend still draws a visible sliver instead of the fixed gap swallowing it whole.
+                val drawnSweep = (sweep - minOf(gapDegrees, sweep / 2f)).coerceAtLeast(0f)
                 if (drawnSweep > 0f) {
                     drawArc(
                         color = segment.color,

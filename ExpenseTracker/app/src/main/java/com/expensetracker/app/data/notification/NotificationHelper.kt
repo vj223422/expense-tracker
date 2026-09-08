@@ -36,7 +36,8 @@ class NotificationHelper(private val context: Context) {
         if (!hasPermission) return
 
         val scopeLabel = alert.category?.displayName ?: "Overall"
-        val overLimit = alert.spentMinor >= alert.limitMinor
+        // Strictly greater than: spending exactly the limit means it's been reached, not exceeded.
+        val overLimit = alert.spentMinor > alert.limitMinor
         val title = when {
             overLimit -> "$scopeLabel budget exceeded"
             alert.tier == AlertTier.CRITICAL -> "$scopeLabel budget almost exceeded"
@@ -55,10 +56,15 @@ class NotificationHelper(private val context: Context) {
         // CRITICAL repeats on every qualifying expense (see maybeAlert) — key it by the running
         // total so each one lands as its own notification instead of silently overwriting the
         // last. WARNING only ever fires once, so a stable per-scope id is fine there.
+        val warningNotificationId = "${alert.profileId}_$scopeLabel".hashCode()
         val notificationId = if (alert.tier == AlertTier.CRITICAL) {
-            (scopeLabel + alert.spentMinor).hashCode()
+            // The one-shot WARNING notification for this scope is now stale information (spend
+            // has moved past "halfway" into CRITICAL territory) — cancel it instead of leaving it
+            // sitting in the shade alongside the new, more urgent one.
+            NotificationManagerCompat.from(context).cancel(warningNotificationId)
+            "${alert.profileId}_${scopeLabel}_${alert.spentMinor}".hashCode()
         } else {
-            scopeLabel.hashCode()
+            warningNotificationId
         }
         NotificationManagerCompat.from(context).notify(notificationId, notification)
     }

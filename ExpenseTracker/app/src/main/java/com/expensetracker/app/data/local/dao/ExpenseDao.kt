@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.expensetracker.app.data.entity.ExpenseEntity
 import com.expensetracker.app.data.model.ExpenseCategory
 import kotlinx.coroutines.flow.Flow
@@ -16,8 +17,14 @@ interface ExpenseDao {
     @Insert
     suspend fun insert(expense: ExpenseEntity): Long
 
+    @Update
+    suspend fun update(expense: ExpenseEntity)
+
     @Delete
     suspend fun delete(expense: ExpenseEntity)
+
+    @Query("SELECT * FROM expenses WHERE id = :id AND profileId = :profileId")
+    suspend fun getById(id: Long, profileId: Long): ExpenseEntity?
 
     @Query("SELECT * FROM expenses WHERE profileId = :profileId ORDER BY epochDay DESC, createdAtEpochMillis DESC")
     fun observeAll(profileId: Long): Flow<List<ExpenseEntity>>

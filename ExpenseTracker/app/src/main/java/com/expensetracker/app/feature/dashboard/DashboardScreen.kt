@@ -19,23 +19,33 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.expensetracker.app.core.designsystem.AnimatedAmountText
 import com.expensetracker.app.core.designsystem.CategoryDonutChart
 import com.expensetracker.app.core.designsystem.CategoryProgressRow
 import com.expensetracker.app.core.designsystem.DonutSegment
 import com.expensetracker.app.core.designsystem.EmptyState
-import com.expensetracker.app.core.designsystem.ExpenseListItem
 import com.expensetracker.app.core.designsystem.SectionHeader
 import com.expensetracker.app.core.designsystem.StatCard
+import com.expensetracker.app.core.designsystem.SwipeToDeleteExpenseItem
 import com.expensetracker.app.core.designsystem.color
 import com.expensetracker.app.core.theme.LocalExtendedColors
 import com.expensetracker.app.core.theme.LocalReducedMotion
@@ -43,34 +53,81 @@ import com.expensetracker.app.core.theme.MotionDurations
 import com.expensetracker.app.core.theme.MotionEasing
 import com.expensetracker.app.core.util.formatAsCurrency
 import com.expensetracker.app.core.util.toDisplayString
+import com.expensetracker.app.data.model.Expense
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun DashboardScreen(
     onAddExpenseClick: () -> Unit,
+    onEditExpenseClick: (Long) -> Unit,
     onSeeAllTransactionsClick: () -> Unit,
     viewModel: DashboardViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-    DashboardContent(
-        uiState = uiState,
-        onAddExpenseClick = onAddExpenseClick,
-        onSeeAllTransactionsClick = onSeeAllTransactionsClick,
-    )
+    LaunchedEffect(Unit) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.effects.collect { effect ->
+                when (effect) {
+                    is DashboardEffect.ShowUndoDelete -> {
+                        val label = effect.expense.note.ifBlank { effect.expense.category.displayName }
+                        val result = snackbarHostState.showSnackbar(
+                            message = "Deleted \"$label\"",
+                            actionLabel = "Undo",
+                            duration = SnackbarDuration.Short,
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            viewModel.onUndoDelete(effect.expense)
+                        }
+                    }
+
+                    is DashboardEffect.ShowMessage -> {
+                        snackbarHostState.showSnackbar(message = effect.message, duration = SnackbarDuration.Short)
+                    }
+
+                    is DashboardEffect.ShowError -> {
+                        snackbarHostState.showSnackbar(message = effect.message, duration = SnackbarDuration.Short)
+                    }
+                }
+            }
+        }
+    }
+
+    // A nested Scaffold here only hosts the undo-delete snackbar; see TransactionsScreen for the
+    // same pattern/reasoning.
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+    ) { innerPadding ->
+        DashboardContent(
+            uiState = uiState,
+            onAddExpenseClick = onAddExpenseClick,
+            onEditExpenseClick = onEditExpenseClick,
+            onDeleteExpense = viewModel::onDeleteExpense,
+            onSeeAllTransactionsClick = onSeeAllTransactionsClick,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        )
+    }
 }
 
 @Composable
 private fun DashboardContent(
     uiState: DashboardUiState,
     onAddExpenseClick: () -> Unit,
+    onEditExpenseClick: (Long) -> Unit,
+    onDeleteExpense: suspend (Expense) -> Boolean,
     onSeeAllTransactionsClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val topCategories = uiState.categorySpends.take(5)
     val showEmptyRecent = uiState.recentExpenses.isEmpty() && !uiState.isLoading
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
@@ -123,8 +180,10 @@ private fun DashboardContent(
             }
         } else {
             items(uiState.recentExpenses, key = { it.id }, contentType = { "expense_item" }) { expense ->
-                ExpenseListItem(
+                SwipeToDeleteExpenseItem(
                     expense = expense,
+                    onDelete = onDeleteExpense,
+                    onClick = { onEditExpenseClick(expense.id) },
                     modifier = Modifier.animateItem(),
                 )
             }
@@ -203,10 +262,11 @@ private fun DashboardHero(
 private fun RemainingStatCard(uiState: DashboardUiState, modifier: Modifier = Modifier) {
     val extended = LocalExtendedColors.current
     val reduceMotion = LocalReducedMotion.current
-    val remaining = uiState.remainingMinor ?: 0L
+    val remainingMinor = uiState.remainingMinor
     val progress = uiState.overallProgress
     val remainingColor = when {
-        remaining < 0L || progress >= 1f -> extended.danger
+        remainingMinor == null -> MaterialTheme.colorScheme.onSurface
+        remainingMinor < 0L || progress >= 1f -> extended.danger
         progress >= 0.8f -> extended.warning
         else -> MaterialTheme.colorScheme.onSurface
     }
@@ -222,17 +282,21 @@ private fun RemainingStatCard(uiState: DashboardUiState, modifier: Modifier = Mo
     StatCard(label = "Remaining", modifier = modifier) {
         Column {
             Text(
-                text = remaining.formatAsCurrency(),
+                // null means no overall limit is configured at all — distinct from "₹0.00 left",
+                // which would wrongly read as an exhausted budget the user never actually set.
+                text = remainingMinor?.formatAsCurrency() ?: "No limit set",
                 style = MaterialTheme.typography.titleLarge,
                 color = remainingColor,
             )
             Spacer(modifier = Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = { animatedProgress },
-                modifier = Modifier.fillMaxWidth().height(4.dp),
-                color = remainingColor,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            )
+            if (remainingMinor != null) {
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                    color = remainingColor,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                )
+            }
         }
     }
 }
