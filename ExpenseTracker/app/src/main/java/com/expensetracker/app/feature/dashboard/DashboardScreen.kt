@@ -1,5 +1,5 @@
 package com.expensetracker.app.feature.dashboard
-
+import androidx.compose.foundation.layout.padding
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
