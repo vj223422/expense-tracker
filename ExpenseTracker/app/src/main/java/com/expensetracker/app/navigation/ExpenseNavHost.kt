@@ -104,7 +104,7 @@ fun ExpenseTrackerApp() {
                                         contentDescription = item.label,
                                     )
                                 },
-                                label = { Text(item.label) },
+                                
                             )
                         }
                     }
