@@ -11,8 +11,10 @@ data class UpiPayee(
     val payeeName: String?,
     val suggestedAmount: String?,
     /**
-     * Every other query parameter from the scanned QR (e.g. `mc` merchant category code, `tr`/
-     * `tid` transaction/terminal id, `mode`, `purpose`, a `sign` signature) preserved as-is.
+     * Every other recognized query parameter from the scanned QR (e.g. `mc` merchant category
+     * code, `tid` terminal id, `mode`, `purpose`, a `sign` signature) preserved as-is — see
+     * KNOWN_UPI_EXTRA_PARAMS. Notably excludes `tr`: see buildUpiPaymentUri, which always mints
+     * its own fresh transaction reference per attempt rather than trusting the QR's.
      * Many merchant (P2M) VPAs — especially aggregator/PSP-issued ones like `...@paytm`/`...@rzp`
      * used by small-merchant QR stickers — only resolve on the bank/NPCI side *with* this extra
      * context attached; rebuilding the payment link from just pa/pn/am strips it and can fail
@@ -27,8 +29,10 @@ private val HANDLED_UPI_PARAMS = setOf("pa", "pn", "am", "cu", "tn")
 /** The rest of the NPCI UPI Linking Specification's known fields — everything else in a scanned
  * QR's query string is dropped rather than blindly forwarded into the Intent we launch, since a
  * QR code is untrusted external input and there's no reason to carry through a key we don't
- * recognize. */
-private val KNOWN_UPI_EXTRA_PARAMS = setOf("mc", "tr", "tid", "url", "mode", "purpose", "orgid", "sign", "refurl", "minamount")
+ * recognize. `tr` is deliberately excluded here even though it's a real spec field — see
+ * buildUpiPaymentUri, which always mints its own fresh one instead of reusing whatever (if
+ * anything) the QR happened to contain. */
+private val KNOWN_UPI_EXTRA_PARAMS = setOf("mc", "tid", "url", "mode", "purpose", "orgid", "sign", "refurl", "minamount")
 
 /** Returns null if [rawValue] isn't a UPI payment link or has no payee address. */
 fun parseUpiQr(rawValue: String): UpiPayee? {
@@ -60,16 +64,15 @@ fun buildUpiPaymentUri(payee: UpiPayee, amountMinor: Long, note: String): Uri {
         .appendQueryParameter("pn", payee.payeeName ?: payee.vpa)
     // Carry through whatever merchant-specific fields the original QR had — see extraParams.
     payee.extraParams.forEach { (key, value) -> builder.appendQueryParameter(key, value) }
-    if ("tr" !in payee.extraParams) {
-        // A P2M (merchant) UPI intent with no unique transaction reference is commonly flagged
-        // by the receiving PSP app as a duplicate/invalid request — surfacing as a generic
-        // "exceeded limit" error regardless of the actual amount. Static merchant QR stickers
-        // essentially never embed their own tr (it's meant to be unique per payment attempt, not
-        // baked into a reusable sticker), so whoever is paying is responsible for generating one;
-        // GPay's own scanner does this invisibly, which is why the same QR pays fine there but
-        // not through an intent that omits it.
-        builder.appendQueryParameter("tr", UUID.randomUUID().toString().replace("-", ""))
-    }
+    // Always a fresh one per attempt, never whatever (if anything) the scanned QR itself
+    // contained — tr identifies this specific payment attempt, not the payee, so it's the
+    // payer's app's job to mint it, not something to trust from external QR content. A P2M
+    // intent with no tr — or worse, one reused across retries of the same QR — is commonly
+    // flagged by the receiving PSP app as an invalid/duplicate request, surfacing as a generic
+    // "exceeded limit" error regardless of the actual amount. GPay's own scanner generates one
+    // invisibly on every scan, which is why the same QR can pay fine there but not through a
+    // reconstructed intent that omits it or repeats it.
+    builder.appendQueryParameter("tr", UUID.randomUUID().toString().replace("-", ""))
     return builder
         .appendQueryParameter("am", amount)
         .appendQueryParameter("cu", "INR")
