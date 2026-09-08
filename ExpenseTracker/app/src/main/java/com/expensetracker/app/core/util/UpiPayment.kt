@@ -3,7 +3,6 @@ package com.expensetracker.app.core.util
 import android.app.Activity
 import android.net.Uri
 import java.util.Locale
-import java.util.UUID
 
 /** A UPI payee parsed out of a scanned `upi://pay?...` QR code. */
 data class UpiPayee(
@@ -30,8 +29,6 @@ fun parseUpiQr(rawValue: String): UpiPayee? {
     if (uri.scheme?.lowercase() != "upi" || uri.host?.lowercase() != "pay") return null
     val vpa = uri.getQueryParameter("pa")?.takeIf { it.isNotBlank() } ?: return null
     
-    // Keys normalized to lowercase so exact-match lookups are reliable regardless of 
-    // how a given QR happens to capitalize its own parameter names.
     val extraParams = uri.queryParameterNames
         .filter { it.lowercase() !in HANDLED_UPI_PARAMS && it.lowercase() in KNOWN_UPI_EXTRA_PARAMS }
         .associate { key -> key.lowercase() to uri.getQueryParameter(key).orEmpty() }
@@ -46,40 +43,36 @@ fun parseUpiQr(rawValue: String): UpiPayee? {
 
 /** Builds the `upi://pay` deep link that hands [amountMinor] (paise) and [note] off to an installed UPI app. */
 fun buildUpiPaymentUri(payee: UpiPayee, amountMinor: Long, note: String): Uri {
-    // UPI requires a '.'-decimal amount regardless of device locale.
     val amount = String.format(Locale.US, "%.2f", amountMinor / 100.0)
     val builder = Uri.Builder()
         .scheme("upi")
         .authority("pay")
         .appendQueryParameter("pa", payee.vpa)
-        .appendQueryParameter("pn", payee.payeeName ?: payee.vpa)
+        
+    // Fix 1: Ensure 'pn' never contains an '@' symbol if the name is missing, 
+    // as banks like Axis will reject the format.
+    val safePayeeName = payee.payeeName?.takeIf { it.isNotBlank() } ?: payee.vpa.substringBefore("@")
+    builder.appendQueryParameter("pn", safePayeeName)
 
-    // Carry through merchant-specific fields the original QR had, filtering out 'tr' 
-    // since we handle it explicitly below to ensure it is only added once.
+    // Fix 2: Carry through all extra params (including 'tr' if the dynamic QR had it).
+    // CRITICAL: We NO LONGER mint a random UUID for 'tr'. If we pass an unauthorized fake 'tr', 
+    // the bank switch rejects it for security. If it's missing, GPay will securely mint a valid one.
     payee.extraParams.forEach { (key, value) -> 
-        if (key != "tr") {
-            builder.appendQueryParameter(key, value) 
+        if (value.isNotBlank()) {
+            builder.appendQueryParameter(key, value)
         }
     }
 
-    // Only append a 'tr' if the QR provided one, OR if it's a merchant payment (has 'mc')
-    val existingTr = payee.extraParams["tr"]
-    val hasMerchantCode = payee.extraParams.containsKey("mc")
-
-    if (!existingTr.isNullOrBlank()) {
-        // Trust the merchant's expected reference for dynamic QRs
-        builder.appendQueryParameter("tr", existingTr)
-    } else if (hasMerchantCode) {
-        // Mint a fresh fallback UUID for Static QRs (stickers) that have an 'mc' but forgot a 'tr'
-        builder.appendQueryParameter("tr", UUID.randomUUID().toString().replace("-", ""))
-    }
-    // If it is a P2P transaction (no 'mc' and no existing 'tr'), do NOT append a 'tr' at all.
+    builder.appendQueryParameter("am", amount)
+    builder.appendQueryParameter("cu", "INR")
     
-    return builder
-        .appendQueryParameter("am", amount)
-        .appendQueryParameter("cu", "INR")
-        .appendQueryParameter("tn", note)
-        .build()
+    // Fix 3: Never append an empty 'tn' parameter. 
+    // '&tn=' triggers a format rejection on Axis and HDFC switches.
+    if (note.isNotBlank()) {
+        builder.appendQueryParameter("tn", note)
+    }
+
+    return builder.build()
 }
 
 sealed interface UpiPaymentOutcome {
@@ -91,8 +84,7 @@ sealed interface UpiPaymentOutcome {
 
 /**
  * UPI apps report their outcome via a `response` extra shaped like
- * `"Status=SUCCESS&txnId=..&txnRef=.."` — an ad hoc key=value&key=value string, not a URI —
- * so this parses that format directly instead of going through [Uri].
+ * `"Status=SUCCESS&txnId=..&txnRef=.."`
  */
 fun parseUpiResponse(resultCode: Int, responseExtra: String?): UpiPaymentOutcome {
     if (resultCode == Activity.RESULT_CANCELED && responseExtra.isNullOrBlank()) {
