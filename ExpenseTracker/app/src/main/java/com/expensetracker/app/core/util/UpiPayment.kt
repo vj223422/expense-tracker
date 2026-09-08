@@ -62,15 +62,18 @@ fun buildUpiPaymentUri(payee: UpiPayee, amountMinor: Long, note: String): Uri {
         }
     }
 
-    // Preserve existing 'tr' for Dynamic QRs (so merchant backend can track the order)
-    // or mint a fresh fallback UUID for Static QRs (to prevent duplicate/limit errors).
+    // Only append a 'tr' if the QR provided one, OR if it's a merchant payment (has 'mc')
     val existingTr = payee.extraParams["tr"]
-    val trToUse = if (!existingTr.isNullOrBlank()) {
-        existingTr
-    } else {
-        UUID.randomUUID().toString().replace("-", "")
+    val hasMerchantCode = payee.extraParams.containsKey("mc")
+
+    if (!existingTr.isNullOrBlank()) {
+        // Trust the merchant's expected reference for dynamic QRs
+        builder.appendQueryParameter("tr", existingTr)
+    } else if (hasMerchantCode) {
+        // Mint a fresh fallback UUID for Static QRs (stickers) that have an 'mc' but forgot a 'tr'
+        builder.appendQueryParameter("tr", UUID.randomUUID().toString().replace("-", ""))
     }
-    builder.appendQueryParameter("tr", trToUse)
+    // If it is a P2P transaction (no 'mc' and no existing 'tr'), do NOT append a 'tr' at all.
     
     return builder
         .appendQueryParameter("am", amount)
