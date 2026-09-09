@@ -81,9 +81,20 @@ fun parseUpiQr(rawValue: String): UpiPayee? {
 
     val parameterNames = uri.queryParameterNames
 
-    val isDynamic = parameterNames.any {
-        it.lowercase() in DYNAMIC_UPI_PARAMS
-    }
+    val suggestedAmount = uri
+        .getQueryParameter("am")
+        ?.takeIf { it.isNotBlank() }
+
+    /*
+     * Only lock a transaction-bound QR when it supplies an amount.  Merchant
+     * QRs with no `am` are free-form payment requests: the payer must be able
+     * to provide both the amount and note before launching their UPI app.
+     */
+    val isDynamic =
+        !suggestedAmount.isNullOrBlank() &&
+            parameterNames.any {
+                it.lowercase() in DYNAMIC_UPI_PARAMS
+            }
 
     /*
      * Keep only harmless parameters for static merchant QR codes.
@@ -117,9 +128,7 @@ fun parseUpiQr(rawValue: String): UpiPayee? {
             .getQueryParameter("pn")
             ?.takeIf { it.isNotBlank() },
 
-        suggestedAmount = uri
-            .getQueryParameter("am")
-            ?.takeIf { it.isNotBlank() },
+        suggestedAmount = suggestedAmount,
 
         isDynamic = isDynamic,
 
