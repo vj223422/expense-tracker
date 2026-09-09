@@ -208,13 +208,34 @@ class ScanPayViewModel(
                 amountText =
                     payee.suggestedAmount.orEmpty(),
 
-                note =
-                    payee.payeeName.orEmpty(),
+                /*
+                 * A note is optional and must be user-provided.  Do not
+                 * manufacture a `tn` parameter from the QR display name.
+                 */
+                note = "",
 
                 amountError = null,
 
                 amountPrefilledFromQr =
                     !payee.suggestedAmount.isNullOrBlank(),
+            )
+        }
+    }
+
+    override fun onQrImageReadFailed() {
+
+        if (
+            _uiState.value.stage
+                !is ScanPayStage.Scanning
+        ) {
+            return
+        }
+
+        viewModelScope.launch {
+            _effects.send(
+                ScanPayEffect.ShowMessage(
+                    "Couldn't read a UPI QR code from that image",
+                ),
             )
         }
     }

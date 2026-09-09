@@ -83,6 +83,72 @@ fun ScanPayScreen(
     val lifecycle =
         LocalLifecycleOwner.current.lifecycle
 
+    val context =
+        LocalContext.current
+
+    val imageQrScanner =
+        remember {
+            BarcodeScanning.getClient(
+                BarcodeScannerOptions
+                    .Builder()
+                    .setBarcodeFormats(
+                        Barcode.FORMAT_QR_CODE,
+                    )
+                    .build(),
+            )
+        }
+
+    DisposableEffect(imageQrScanner) {
+        onDispose {
+            imageQrScanner.close()
+        }
+    }
+
+    val imagePickerLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent(),
+        ) { imageUri ->
+
+            imageUri?.let { selectedImageUri ->
+
+                val image =
+                    runCatching {
+                        InputImage.fromFilePath(
+                            context,
+                            selectedImageUri,
+                        )
+                    }.getOrNull()
+
+                if (image == null) {
+
+                    viewModel.onQrImageReadFailed()
+
+                } else {
+
+                    imageQrScanner
+                        .process(image)
+                        .addOnSuccessListener { barcodes ->
+
+                            val rawValue =
+                                barcodes
+                                    .firstOrNull {
+                                        it.rawValue != null
+                                    }
+                                    ?.rawValue
+
+                            if (rawValue == null) {
+                                viewModel.onQrImageReadFailed()
+                            } else {
+                                viewModel.onQrDetected(rawValue)
+                            }
+                        }
+                        .addOnFailureListener {
+                            viewModel.onQrImageReadFailed()
+                        }
+                }
+            }
+        }
+
     /*
      * Launches the selected UPI application using
      * the standard `upi://pay` ACTION_VIEW intent.
@@ -177,6 +243,30 @@ fun ScanPayScreen(
 
             val stage =
                 uiState.stage
+
+            if (stage is ScanPayStage.Scanning) {
+
+                Surface(
+
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(16.dp),
+
+                    shape = RoundedCornerShape(24.dp),
+
+                    tonalElevation = 4.dp,
+                ) {
+
+                    TextButton(
+                        onClick = {
+                            imagePickerLauncher.launch("image/*")
+                        },
+                    ) {
+                        Text("Upload QR image")
+                    }
+                }
+            }
 
             if (
                 stage is ScanPayStage.Confirming
@@ -615,179 +705,100 @@ private fun ConfirmPaymentSheet(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-
-    val isDynamicQr =
-        payee.isDynamic
+    val isDynamicQr = payee.isDynamic
 
     Surface(
-
-        modifier =
-            modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(
-                topStart = 24.dp,
-                topEnd = 24.dp,
-            ),
-
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+        ),
         tonalElevation = 4.dp,
     ) {
-
         Column(
-
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .imePadding()
-                    .padding(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .padding(20.dp),
         ) {
-
-            /*
-             * The VPA is shown prominently rather than relying
-             * only on the QR display name.
-             */
             Text(
-
                 text = "Pay to",
-
-                style =
-                    MaterialTheme.typography.labelMedium,
-
-                color =
-                    MaterialTheme.colorScheme
-                        .onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-
             Text(
-
-                text =
-                    payee.vpa,
-
-                style =
-                    MaterialTheme.typography.titleLarge,
-
-                fontWeight =
-                    FontWeight.Bold,
+                text = payee.vpa,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
             )
-
-            if (
-                !payee.payeeName
-                    .isNullOrBlank()
-            ) {
-
+            if (!payee.payeeName.isNullOrBlank()) {
                 Text(
-
-                    text =
-                        "Claims to be \"${payee.payeeName}\" — unverified, read from the QR",
-
-                    style =
-                        MaterialTheme.typography.bodySmall,
-
-                    color =
-                        MaterialTheme.colorScheme
-                            .onSurfaceVariant,
+                    text = "Claims to be \"${payee.payeeName}\" — unverified, read from the QR",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            Spacer(
-                modifier =
-                    Modifier.height(16.dp),
-            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
-
-                value =
-                    amountText,
-
-                onValueChange =
-                    onAmountChange,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text("Amount")
-                },
-
-                enabled =
-                    !isDynamicQr,
-
-                isError =
-                    amountError != null,
-
+                value = amountText,
+                onValueChange = onAmountChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Amount") },
+                enabled = !isDynamicQr,
+                isError = amountError != null,
                 supportingText = {
-
-                    if (
-                        amountError != null
-                    ) {
-
-                        Text(
-                            amountError,
-                        )
-
-                    } else if (
-                        isDynamicQr
-                    ) {
-
-                        Text(
-                            "Amount is fixed by the merchant QR",
-                        )
-
-                    } else if (
-                        amountPrefilledFromQr
-                    ) {
-
-                        Text(
+                    when {
+                        amountError != null -> Text(amountError)
+                        isDynamicQr -> Text("Amount is fixed by the merchant QR")
+                        amountPrefilledFromQr -> Text(
                             "Pre-filled from the QR — double-check before paying",
                         )
                     }
                 },
-
-                keyboardOptions =
-                    KeyboardOptions(
-                        keyboardType =
-                            KeyboardType.Decimal,
-                    ),
-
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                ),
                 singleLine = true,
             )
 
-            Spacer(
-                modifier =
-                    Modifier.height(12.dp),
-            )
+            Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
-
-                value =
-                    note,
-
-                onValueChange =
-                    onNoteChange,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text("Note")
-                },
-
-                enabled =
-                    !isDynamicQr,
-
+                value = note,
+                onValueChange = onNoteChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Note") },
+                enabled = !isDynamicQr,
                 supportingText = {
-
                     if (isDynamicQr) {
-
-                        Text(
-                            "Merchant QR details will be sent unchanged",
-                        )
+                        Text("Merchant QR details will be sent unchanged")
                     }
                 },
-
                 singleLine = true,
             )
 
-            Spacer(
-                modifier =
- 
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = onPayClick,
+                    enabled = canPay,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Pay")
+                }
+            }
+        }
+    }
+}
