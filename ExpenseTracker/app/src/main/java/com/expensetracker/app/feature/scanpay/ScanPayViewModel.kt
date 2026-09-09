@@ -208,8 +208,11 @@ class ScanPayViewModel(
                 amountText =
                     payee.suggestedAmount.orEmpty(),
 
-                note =
-                    payee.payeeName.orEmpty(),
+                /*
+                 * A note is optional and must be user-provided.  Do not
+                 * manufacture a `tn` parameter from the QR display name.
+                 */
+                note = "",
 
                 amountError = null,
 
