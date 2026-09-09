@@ -33,6 +33,7 @@ sealed interface ScanPayEffect {
 @Stable
 interface ScanPayActions {
     fun onQrDetected(rawValue: String)
+    fun onQrImageReadFailed()
     fun onAmountChange(value: String)
     fun onNoteChange(value: String)
     fun onPayClick()

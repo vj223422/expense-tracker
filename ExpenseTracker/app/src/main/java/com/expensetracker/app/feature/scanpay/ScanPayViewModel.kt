@@ -222,6 +222,24 @@ class ScanPayViewModel(
         }
     }
 
+    override fun onQrImageReadFailed() {
+
+        if (
+            _uiState.value.stage
+                !is ScanPayStage.Scanning
+        ) {
+            return
+        }
+
+        viewModelScope.launch {
+            _effects.send(
+                ScanPayEffect.ShowMessage(
+                    "Couldn't read a UPI QR code from that image",
+                ),
+            )
+        }
+    }
+
     override fun onAmountChange(
         value: String,
     ) {

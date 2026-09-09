@@ -83,6 +83,72 @@ fun ScanPayScreen(
     val lifecycle =
         LocalLifecycleOwner.current.lifecycle
 
+    val context =
+        LocalContext.current
+
+    val imageQrScanner =
+        remember {
+            BarcodeScanning.getClient(
+                BarcodeScannerOptions
+                    .Builder()
+                    .setBarcodeFormats(
+                        Barcode.FORMAT_QR_CODE,
+                    )
+                    .build(),
+            )
+        }
+
+    DisposableEffect(imageQrScanner) {
+        onDispose {
+            imageQrScanner.close()
+        }
+    }
+
+    val imagePickerLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent(),
+        ) { imageUri ->
+
+            imageUri?.let { selectedImageUri ->
+
+                val image =
+                    runCatching {
+                        InputImage.fromFilePath(
+                            context,
+                            selectedImageUri,
+                        )
+                    }.getOrNull()
+
+                if (image == null) {
+
+                    viewModel.onQrImageReadFailed()
+
+                } else {
+
+                    imageQrScanner
+                        .process(image)
+                        .addOnSuccessListener { barcodes ->
+
+                            val rawValue =
+                                barcodes
+                                    .firstOrNull {
+                                        it.rawValue != null
+                                    }
+                                    ?.rawValue
+
+                            if (rawValue == null) {
+                                viewModel.onQrImageReadFailed()
+                            } else {
+                                viewModel.onQrDetected(rawValue)
+                            }
+                        }
+                        .addOnFailureListener {
+                            viewModel.onQrImageReadFailed()
+                        }
+                }
+            }
+        }
+
     /*
      * Launches the selected UPI application using
      * the standard `upi://pay` ACTION_VIEW intent.
@@ -177,6 +243,30 @@ fun ScanPayScreen(
 
             val stage =
                 uiState.stage
+
+            if (stage is ScanPayStage.Scanning) {
+
+                Surface(
+
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(16.dp),
+
+                    shape = RoundedCornerShape(24.dp),
+
+                    tonalElevation = 4.dp,
+                ) {
+
+                    TextButton(
+                        onClick = {
+                            imagePickerLauncher.launch("image/*")
+                        },
+                    ) {
+                        Text("Upload QR image")
+                    }
+                }
+            }
 
             if (
                 stage is ScanPayStage.Confirming
