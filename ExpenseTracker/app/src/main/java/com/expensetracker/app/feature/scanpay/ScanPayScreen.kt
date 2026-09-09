@@ -25,9 +25,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -59,6 +64,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.expensetracker.app.core.util.UpiPayee
+import com.expensetracker.app.data.model.ExpenseCategory
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -289,6 +295,9 @@ fun ScanPayScreen(
                     note =
                         uiState.note,
 
+                    selectedCategory =
+                        uiState.selectedCategory,
+
                     canPay =
                         uiState.canPay,
 
@@ -297,6 +306,9 @@ fun ScanPayScreen(
 
                     onNoteChange =
                         viewModel::onNoteChange,
+
+                    onCategoryChange =
+                        viewModel::onCategoryChange,
 
                     onPayClick =
                         viewModel::onPayClick,
@@ -698,9 +710,11 @@ private fun ConfirmPaymentSheet(
     amountError: String?,
     amountPrefilledFromQr: Boolean,
     note: String,
+    selectedCategory: ExpenseCategory,
     canPay: Boolean,
     onAmountChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
+    onCategoryChange: (ExpenseCategory) -> Unit,
     onPayClick: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
@@ -719,6 +733,7 @@ private fun ConfirmPaymentSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(20.dp),
         ) {
             Text(
@@ -778,6 +793,32 @@ private fun ConfirmPaymentSheet(
                 },
                 singleLine = true,
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Category",
+                style = MaterialTheme.typography.labelLarge,
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(
+                    items = ExpenseCategory.entries,
+                    key = { it.name },
+                ) { category ->
+                    FilterChip(
+                        selected = category == selectedCategory,
+                        onClick = {
+                            onCategoryChange(category)
+                        },
+                        label = {
+                            Text(category.displayName)
+                        },
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 

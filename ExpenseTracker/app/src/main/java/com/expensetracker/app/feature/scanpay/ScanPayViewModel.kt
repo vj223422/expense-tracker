@@ -37,6 +37,9 @@ private const val KEY_PENDING_AMOUNT_TEXT =
 private const val KEY_PENDING_NOTE =
     "scanpay_pending_note"
 
+private const val KEY_PENDING_CATEGORY =
+    "scanpay_pending_category"
+
 private const val KEY_PENDING_PROFILE_ID =
     "scanpay_pending_profile_id"
 
@@ -123,6 +126,15 @@ class ScanPayViewModel(
                 savedStateHandle[
                     KEY_PENDING_NOTE
                 ] ?: "",
+            selectedCategory =
+                savedStateHandle
+                    .get<String>(KEY_PENDING_CATEGORY)
+                    ?.let { categoryName ->
+                        ExpenseCategory.entries.firstOrNull {
+                            it.name == categoryName
+                        }
+                    }
+                    ?: ExpenseCategory.OTHER,
         )
     }
 
@@ -142,6 +154,10 @@ class ScanPayViewModel(
 
         savedStateHandle[
             KEY_PENDING_NOTE
+        ] = null
+
+        savedStateHandle[
+            KEY_PENDING_CATEGORY
         ] = null
 
         savedStateHandle[
@@ -213,6 +229,8 @@ class ScanPayViewModel(
                  * manufacture a `tn` parameter from the QR display name.
                  */
                 note = "",
+
+                selectedCategory = ExpenseCategory.OTHER,
 
                 amountError = null,
 
@@ -295,6 +313,17 @@ class ScanPayViewModel(
         }
     }
 
+    override fun onCategoryChange(
+        category: ExpenseCategory,
+    ) {
+
+        _uiState.update {
+            it.copy(
+                selectedCategory = category,
+            )
+        }
+    }
+
     override fun onPayClick() {
 
         val state =
@@ -353,6 +382,10 @@ class ScanPayViewModel(
         savedStateHandle[
             KEY_PENDING_NOTE
         ] = state.note
+
+        savedStateHandle[
+            KEY_PENDING_CATEGORY
+        ] = state.selectedCategory.name
 
         /*
          * Preserve the exact QR URI so a process restart can
@@ -553,7 +586,7 @@ class ScanPayViewModel(
                     amountMinor = amountMinor,
 
                     category =
-                        ExpenseCategory.OTHER,
+                        state.selectedCategory,
 
                     note = note,
 
