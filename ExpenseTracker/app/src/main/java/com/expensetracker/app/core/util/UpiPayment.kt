@@ -172,6 +172,21 @@ fun parseUpiQr(rawValue: String): UpiPayee? {
  * - Does not modify/remove transaction references.
  * - Does not invalidate merchant signatures.
  */
+
+/**
+ * Builds the UPI payment URI.
+ *
+ * Static/P2P QR:
+ * - Allows the user to select the amount.
+ * - Allows a note.
+ * - Preserves harmless merchant classification parameters.
+ *
+ * Dynamic/signed merchant QR:
+ * - Returns the EXACT URI scanned from the QR.
+ * - Does not modify the amount.
+ * - Does not modify/remove transaction references.
+ * - Does not invalidate merchant signatures.
+ */
 fun buildUpiPaymentUri(
     payee: UpiPayee,
     amountMinor: Long,
@@ -234,7 +249,10 @@ fun buildUpiPaymentUri(
         builder.appendQueryParameter("tn", note)
     }
 
-    return builder.build()
+    // THE FIX: Intercept the built URI and swap the URL-encoded '%40' back to a raw '@'
+    val uri = builder.build()
+    val finalUriString = uri.toString().replace("%40", "@")
+    return Uri.parse(finalUriString)
 }
 
 sealed interface UpiPaymentOutcome {
