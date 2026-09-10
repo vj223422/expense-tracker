@@ -397,23 +397,32 @@ fun ScanPayScreen(
                     "${it.activityInfo.packageName}/${it.activityInfo.name}"
                 }
 
-            val debugText = paymentUriDebugText(
-                payee = payee,
-                amount = uiState.amountText,
-                note = uiState.note,
-                finalUri = finalUri,
-            ) +
-                "\n\nIntent action: ${debugIntent.action}" +
-                "\nIntent data: ${debugIntent.dataString}" +
-                "\nIntent type: ${debugIntent.type ?: "null"}" +
-                "\nIntent flags: ${debugIntent.flags}" +
-                "\nResolved activity: ${resolvedActivity?.flattenToString() ?: "None"}" +
-                "\nAvailable UPI handlers:\n" +
+            val debugText = buildString {
+                appendLine(
+                    paymentUriDebugText(
+                        payee = payee,
+                        amount = uiState.amountText,
+                        note = uiState.note,
+                        finalUri = finalUri,
+                    ),
+                )
+                appendLine()
+                appendLine("Intent action: ${debugIntent.action}")
+                appendLine("Intent data: ${debugIntent.dataString}")
+                appendLine("Intent type: ${debugIntent.type ?: "null"}")
+                appendLine("Intent flags: ${debugIntent.flags}")
+                appendLine(
+                    "Resolved activity: ${resolvedActivity?.flattenToString() ?: "None"}",
+                )
+                appendLine("Available UPI handlers:")
                 if (availableHandlers.isEmpty()) {
-                    "None"
+                    appendLine("None")
                 } else {
-                    availableHandlers.joinToString("\n")
+                    availableHandlers.forEach { handler ->
+                        appendLine(handler)
+                    }
                 }
+            }
 
             AlertDialog(
                 onDismissRequest = {
@@ -677,18 +686,4 @@ private fun QrCodeCamera(
         bindingFailed = false
 
         val executor =
-            Executors.newSingleThreadExecutor()
-
-        val scanner =
-            BarcodeScanning.getClient(
-
-                BarcodeScannerOptions
-                    .Builder()
-                    .setBarcodeFormats(
-                        Barcode.FORMAT_QR_CODE,
-                    )
-                    .build(),
-            )
-
-        val cameraProviderFuture =
- 
+            Executors.newSingleThreadExecutor(
