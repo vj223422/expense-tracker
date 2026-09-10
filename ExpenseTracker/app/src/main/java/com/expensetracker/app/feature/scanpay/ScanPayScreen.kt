@@ -3,6 +3,9 @@ package com.expensetracker.app.feature.scanpay
 import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -25,9 +28,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -42,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -59,11 +69,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.expensetracker.app.core.util.UpiPayee
+import com.expensetracker.app.data.model.ExpenseCategory
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -83,6 +95,86 @@ fun ScanPayScreen(
     val lifecycle =
         LocalLifecycleOwner.current.lifecycle
 
+    val context =
+        LocalContext.current
+
+    var showScannedQrDebug by remember {
+        mutableStateOf(false)
+    }
+
+    var pendingDebugPaymentUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+    var resultDebugText by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    val imageQrScanner =
+        remember {
+            BarcodeScanning.getClient(
+                BarcodeScannerOptions
+                    .Builder()
+                    .setBarcodeFormats(
+                        Barcode.FORMAT_QR_CODE,
+                    )
+                    .build(),
+            )
+        }
+
+    DisposableEffect(imageQrScanner) {
+        onDispose {
+            imageQrScanner.close()
+        }
+    }
+
+    val imagePickerLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent(),
+        ) { imageUri ->
+
+            imageUri?.let { selectedImageUri ->
+
+                val image =
+                    runCatching {
+                        InputImage.fromFilePath(
+                            context,
+                            selectedImageUri,
+                        )
+                    }.getOrNull()
+
+                if (image == null) {
+
+                    viewModel.onQrImageReadFailed()
+
+                } else {
+
+                    imageQrScanner
+                        .process(image)
+                        .addOnSuccessListener { barcodes ->
+
+                            val rawValue =
+                                barcodes
+                                    .firstOrNull {
+                                        it.rawValue != null
+                                    }
+                                    ?.rawValue
+
+                            if (rawValue == null) {
+                                viewModel.onQrImageReadFailed()
+                            } else {
+                                viewModel.onQrDetected(rawValue)
+                            }
+                        }
+                        .addOnFailureListener {
+                            viewModel.onQrImageReadFailed()
+                        }
+                }
+            }
+        }
+
     /*
      * Launches the selected UPI application using
      * the standard `upi://pay` ACTION_VIEW intent.
@@ -91,6 +183,11 @@ fun ScanPayScreen(
         rememberLauncherForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) { result ->
+
+            resultDebugText = upiResultDebugText(
+                resultCode = result.resultCode,
+                responseExtra = result.data?.getStringExtra("response"),
+            )
 
             viewModel.onPaymentActivityResult(
                 result.resultCode,
@@ -118,29 +215,7 @@ fun ScanPayScreen(
                     }
 
                     is ScanPayEffect.LaunchUpiApp -> {
-
-                        try {
-
-                            paymentLauncher.launch(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    effect.uri,
-                                ),
-                            )
-
-                        } catch (
-                            e: ActivityNotFoundException
-                        ) {
-
-                            viewModel.onPaymentActivityResult(
-                                Activity.RESULT_CANCELED,
-                                null,
-                            )
-
-                            snackbarHostState.showSnackbar(
-                                "No UPI app found on this device",
-                            )
-                        }
+                        pendingDebugPaymentUri = effect.uri
                     }
                 }
             }
@@ -178,6 +253,30 @@ fun ScanPayScreen(
             val stage =
                 uiState.stage
 
+            if (stage is ScanPayStage.Scanning) {
+
+                Surface(
+
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(16.dp),
+
+                    shape = RoundedCornerShape(24.dp),
+
+                    tonalElevation = 4.dp,
+                ) {
+
+                    TextButton(
+                        onClick = {
+                            imagePickerLauncher.launch("image/*")
+                        },
+                    ) {
+                        Text("Upload QR image")
+                    }
+                }
+            }
+
             if (
                 stage is ScanPayStage.Confirming
             ) {
@@ -199,6 +298,9 @@ fun ScanPayScreen(
                     note =
                         uiState.note,
 
+                    selectedCategory =
+                        uiState.selectedCategory,
+
                     canPay =
                         uiState.canPay,
 
@@ -207,6 +309,13 @@ fun ScanPayScreen(
 
                     onNoteChange =
                         viewModel::onNoteChange,
+
+                    onCategoryChange =
+                        viewModel::onCategoryChange,
+
+                    onDebugClick = {
+                        showScannedQrDebug = true
+                    },
 
                     onPayClick =
                         viewModel::onPayClick,
@@ -221,6 +330,167 @@ fun ScanPayScreen(
                 )
             }
         }
+    }
+
+    val debugPayee = when (val stage = uiState.stage) {
+        is ScanPayStage.Confirming -> stage.payee
+        is ScanPayStage.LaunchingPayment -> stage.payee
+        ScanPayStage.Scanning -> null
+    }
+
+    if (showScannedQrDebug && debugPayee != null) {
+        val debugText = scannedQrDebugText(debugPayee)
+
+        AlertDialog(
+            onDismissRequest = {
+                showScannedQrDebug = false
+            },
+            title = {
+                Text("UPI Debug — Scanned QR")
+            },
+            text = {
+                Text(
+                    text = debugText,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        copyDebugText(context, debugText)
+                    },
+                ) {
+                    Text("Copy")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showScannedQrDebug = false
+                    },
+                ) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    pendingDebugPaymentUri?.let { finalUri ->
+        val payee = debugPayee
+
+        if (payee != null) {
+            val debugText = paymentUriDebugText(
+                payee = payee,
+                amount = uiState.amountText,
+                note = uiState.note,
+                finalUri = finalUri,
+            )
+
+            AlertDialog(
+                onDismissRequest = {
+                    pendingDebugPaymentUri = null
+                    viewModel.onPaymentActivityResult(
+                        Activity.RESULT_CANCELED,
+                        null,
+                    )
+                },
+                title = {
+                    Text("UPI Debug — Payment URI")
+                },
+                text = {
+                    Text(
+                        text = debugText,
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            pendingDebugPaymentUri = null
+
+                            try {
+                                paymentLauncher.launch(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        finalUri,
+                                    ),
+                                )
+                            } catch (e: ActivityNotFoundException) {
+                                viewModel.onPaymentActivityResult(
+                                    Activity.RESULT_CANCELED,
+                                    null,
+                                )
+
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        "No UPI app found on this device",
+                                    )
+                                }
+                            }
+                        },
+                    ) {
+                        Text("Continue")
+                    }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(
+                            onClick = {
+                                copyDebugText(context, debugText)
+                            },
+                        ) {
+                            Text("Copy")
+                        }
+                        TextButton(
+                            onClick = {
+                                pendingDebugPaymentUri = null
+                                viewModel.onPaymentActivityResult(
+                                    Activity.RESULT_CANCELED,
+                                    null,
+                                )
+                            },
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                },
+            )
+        }
+    }
+
+    resultDebugText?.let { debugText ->
+        AlertDialog(
+            onDismissRequest = {
+                resultDebugText = null
+            },
+            title = {
+                Text("UPI Result Debug")
+            },
+            text = {
+                Text(
+                    text = debugText,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        copyDebugText(context, debugText)
+                    },
+                ) {
+                    Text("Copy")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        resultDebugText = null
+                    },
+                ) {
+                    Text("Close")
+                }
+            },
+        )
     }
 }
 
@@ -608,186 +878,223 @@ private fun ConfirmPaymentSheet(
     amountError: String?,
     amountPrefilledFromQr: Boolean,
     note: String,
+    selectedCategory: ExpenseCategory,
     canPay: Boolean,
     onAmountChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
+    onCategoryChange: (ExpenseCategory) -> Unit,
+    onDebugClick: () -> Unit,
     onPayClick: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-
-    val isDynamicQr =
-        payee.isDynamic
+    val isDynamicQr = payee.isDynamic
 
     Surface(
-
-        modifier =
-            modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(
-                topStart = 24.dp,
-                topEnd = 24.dp,
-            ),
-
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+        ),
         tonalElevation = 4.dp,
     ) {
-
         Column(
-
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .imePadding()
-                    .padding(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
         ) {
-
-            /*
-             * The VPA is shown prominently rather than relying
-             * only on the QR display name.
-             */
             Text(
-
                 text = "Pay to",
-
-                style =
-                    MaterialTheme.typography.labelMedium,
-
-                color =
-                    MaterialTheme.colorScheme
-                        .onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-
             Text(
-
-                text =
-                    payee.vpa,
-
-                style =
-                    MaterialTheme.typography.titleLarge,
-
-                fontWeight =
-                    FontWeight.Bold,
+                text = payee.vpa,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
             )
-
-            if (
-                !payee.payeeName
-                    .isNullOrBlank()
-            ) {
-
+            if (!payee.payeeName.isNullOrBlank()) {
                 Text(
-
-                    text =
-                        "Claims to be \"${payee.payeeName}\" — unverified, read from the QR",
-
-                    style =
-                        MaterialTheme.typography.bodySmall,
-
-                    color =
-                        MaterialTheme.colorScheme
-                            .onSurfaceVariant,
+                    text = "Claims to be \"${payee.payeeName}\" — unverified, read from the QR",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            Spacer(
-                modifier =
-                    Modifier.height(16.dp),
-            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
-
-                value =
-                    amountText,
-
-                onValueChange =
-                    onAmountChange,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text("Amount")
-                },
-
-                enabled =
-                    !isDynamicQr,
-
-                isError =
-                    amountError != null,
-
+                value = amountText,
+                onValueChange = onAmountChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Amount") },
+                enabled = !isDynamicQr,
+                isError = amountError != null,
                 supportingText = {
-
-                    if (
-                        amountError != null
-                    ) {
-
-                        Text(
-                            amountError,
-                        )
-
-                    } else if (
-                        isDynamicQr
-                    ) {
-
-                        Text(
-                            "Amount is fixed by the merchant QR",
-                        )
-
-                    } else if (
-                        amountPrefilledFromQr
-                    ) {
-
-                        Text(
+                    when {
+                        amountError != null -> Text(amountError)
+                        isDynamicQr -> Text("Amount is fixed by the merchant QR")
+                        amountPrefilledFromQr -> Text(
                             "Pre-filled from the QR — double-check before paying",
                         )
                     }
                 },
-
-                keyboardOptions =
-                    KeyboardOptions(
-                        keyboardType =
-                            KeyboardType.Decimal,
-                    ),
-
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                ),
                 singleLine = true,
             )
 
-            Spacer(
-                modifier =
-                    Modifier.height(12.dp),
-            )
+            Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
-
-                value =
-                    note,
-
-                onValueChange =
-                    onNoteChange,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text("Note")
-                },
-
-                enabled =
-                    !isDynamicQr,
-
+                value = note,
+                onValueChange = onNoteChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Note") },
+                enabled = !isDynamicQr,
                 supportingText = {
-
                     if (isDynamicQr) {
-
-                        Text(
-                            "Merchant QR details will be sent unchanged",
-                        )
+                        Text("Merchant QR details will be sent unchanged")
                     }
                 },
-
                 singleLine = true,
             )
 
-            Spacer(
-                modifier =
- 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Category",
+                style = MaterialTheme.typography.labelLarge,
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(
+                    items = ExpenseCategory.entries,
+                    key = { it.name },
+                ) { category ->
+                    FilterChip(
+                        selected = category == selectedCategory,
+                        onClick = {
+                            onCategoryChange(category)
+                        },
+                        label = {
+                            Text(category.displayName)
+                        },
+                    )
+                }
+            }
+
+            TextButton(
+                onClick = onDebugClick,
+            ) {
+                Text("UPI Debug")
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = onPayClick,
+                    enabled = canPay,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Pay")
+                }
+            }
+        }
+    }
+}
+
+private fun scannedQrDebugText(
+    payee: UpiPayee,
+): String {
+    val rawUri = payee.originalUri.orEmpty()
+    val uri = Uri.parse(rawUri)
+
+    return buildString {
+        appendLine("Raw scanned QR URI: $rawUri")
+        appendLine("UPI ID (pa): ${payee.vpa}")
+        appendLine("Payee name (pn): ${payee.payeeName.orEmpty()}")
+        appendLine("QR amount (am): ${payee.suggestedAmount.orEmpty()}")
+        appendLine("Currency (cu): ${uri.getQueryParameter("cu").orEmpty()}")
+        appendLine("Merchant category (mc): ${uri.getQueryParameter("mc").orEmpty()}")
+        appendLine("isDynamic: ${payee.isDynamic}")
+        append("originalUri: ${payee.originalUri.orEmpty()}")
+    }
+}
+
+private fun paymentUriDebugText(
+    payee: UpiPayee,
+    amount: String,
+    note: String,
+    finalUri: Uri,
+): String = buildString {
+    appendLine("Original scanned QR URI: ${payee.originalUri.orEmpty()}")
+    appendLine("UPI ID (pa): ${payee.vpa}")
+    appendLine("Payee name (pn): ${payee.payeeName.orEmpty()}")
+    appendLine("Original QR amount (am): ${payee.suggestedAmount.orEmpty()}")
+    appendLine("User-entered amount: $amount")
+    appendLine("User-entered note: $note")
+    appendLine("isDynamic: ${payee.isDynamic}")
+    appendLine("Final URI: $finalUri")
+    appendLine()
+    appendLine("Final URI query parameters:")
+
+    finalUri.queryParameterNames
+        .sorted()
+        .forEach { key ->
+            appendLine("$key=${finalUri.getQueryParameter(key).orEmpty()}")
+        }
+}
+
+private fun upiResultDebugText(
+    resultCode: Int,
+    responseExtra: String?,
+): String {
+    val fields = responseExtra
+        .orEmpty()
+        .split('&')
+        .mapNotNull { field ->
+            field.split('=', limit = 2)
+                .takeIf { it.size == 2 }
+                ?.let { (key, value) -> key.lowercase() to value }
+        }
+        .toMap()
+
+    return buildString {
+        appendLine("resultCode: $resultCode")
+        appendLine("Raw response extra: ${responseExtra.orEmpty()}")
+        appendLine("Status: ${fields["status"].orEmpty()}")
+        appendLine("error: ${fields["error"].orEmpty()}")
+        appendLine("txnId: ${fields["txnid"].orEmpty()}")
+        appendLine("txnRef: ${fields["txnref"].orEmpty()}")
+        append("approvalRefNo: ${fields["approvalrefno"].orEmpty()}")
+    }
+}
+
+private fun copyDebugText(
+    context: Context,
+    text: String,
+) {
+    val clipboard =
+        context.getSystemService(Context.CLIPBOARD_SERVICE)
+            as ClipboardManager
+
+    clipboard.setPrimaryClip(
+        ClipData.newPlainText("UPI Debug", text),
+    )
+}
