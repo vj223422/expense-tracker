@@ -5,6 +5,14 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- Added to allow the app to see and launch installed UPI payment apps -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" android:host="pay" />
+        </intent>
+    </queries>
+
     <application
         android:name=".App"
         android:allowBackup="true"
