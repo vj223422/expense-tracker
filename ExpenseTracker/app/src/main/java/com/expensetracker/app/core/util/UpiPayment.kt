@@ -62,6 +62,7 @@ private val KNOWN_UPI_EXTRA_PARAMS = setOf(
     "minamount",
     "mam",
     "tr",
+    "aid",
 )
 
 /**
