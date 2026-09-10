@@ -174,7 +174,7 @@ fun ScanPayScreen(
                 }
             }
         }
-    )
+    
 
     /*
      * Launches the selected UPI application using
