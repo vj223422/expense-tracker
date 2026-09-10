@@ -3,6 +3,9 @@ package com.expensetracker.app.feature.scanpay
 import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -33,6 +36,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -47,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -70,6 +75,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -91,6 +97,20 @@ fun ScanPayScreen(
 
     val context =
         LocalContext.current
+
+    var showScannedQrDebug by remember {
+        mutableStateOf(false)
+    }
+
+    var pendingDebugPaymentUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+    var resultDebugText by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val coroutineScope = rememberCoroutineScope()
 
     val imageQrScanner =
         remember {
@@ -164,6 +184,11 @@ fun ScanPayScreen(
             ActivityResultContracts.StartActivityForResult(),
         ) { result ->
 
+            resultDebugText = upiResultDebugText(
+                resultCode = result.resultCode,
+                responseExtra = result.data?.getStringExtra("response"),
+            )
+
             viewModel.onPaymentActivityResult(
                 result.resultCode,
                 result.data?.getStringExtra(
@@ -190,29 +215,7 @@ fun ScanPayScreen(
                     }
 
                     is ScanPayEffect.LaunchUpiApp -> {
-
-                        try {
-
-                            paymentLauncher.launch(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    effect.uri,
-                                ),
-                            )
-
-                        } catch (
-                            e: ActivityNotFoundException
-                        ) {
-
-                            viewModel.onPaymentActivityResult(
-                                Activity.RESULT_CANCELED,
-                                null,
-                            )
-
-                            snackbarHostState.showSnackbar(
-                                "No UPI app found on this device",
-                            )
-                        }
+                        pendingDebugPaymentUri = effect.uri
                     }
                 }
             }
@@ -310,6 +313,10 @@ fun ScanPayScreen(
                     onCategoryChange =
                         viewModel::onCategoryChange,
 
+                    onDebugClick = {
+                        showScannedQrDebug = true
+                    },
+
                     onPayClick =
                         viewModel::onPayClick,
 
@@ -323,6 +330,167 @@ fun ScanPayScreen(
                 )
             }
         }
+    }
+
+    val debugPayee = when (val stage = uiState.stage) {
+        is ScanPayStage.Confirming -> stage.payee
+        is ScanPayStage.LaunchingPayment -> stage.payee
+        ScanPayStage.Scanning -> null
+    }
+
+    if (showScannedQrDebug && debugPayee != null) {
+        val debugText = scannedQrDebugText(debugPayee)
+
+        AlertDialog(
+            onDismissRequest = {
+                showScannedQrDebug = false
+            },
+            title = {
+                Text("UPI Debug — Scanned QR")
+            },
+            text = {
+                Text(
+                    text = debugText,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        copyDebugText(context, debugText)
+                    },
+                ) {
+                    Text("Copy")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showScannedQrDebug = false
+                    },
+                ) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    pendingDebugPaymentUri?.let { finalUri ->
+        val payee = debugPayee
+
+        if (payee != null) {
+            val debugText = paymentUriDebugText(
+                payee = payee,
+                amount = uiState.amountText,
+                note = uiState.note,
+                finalUri = finalUri,
+            )
+
+            AlertDialog(
+                onDismissRequest = {
+                    pendingDebugPaymentUri = null
+                    viewModel.onPaymentActivityResult(
+                        Activity.RESULT_CANCELED,
+                        null,
+                    )
+                },
+                title = {
+                    Text("UPI Debug — Payment URI")
+                },
+                text = {
+                    Text(
+                        text = debugText,
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            pendingDebugPaymentUri = null
+
+                            try {
+                                paymentLauncher.launch(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        finalUri,
+                                    ),
+                                )
+                            } catch (e: ActivityNotFoundException) {
+                                viewModel.onPaymentActivityResult(
+                                    Activity.RESULT_CANCELED,
+                                    null,
+                                )
+
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        "No UPI app found on this device",
+                                    )
+                                }
+                            }
+                        },
+                    ) {
+                        Text("Continue")
+                    }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(
+                            onClick = {
+                                copyDebugText(context, debugText)
+                            },
+                        ) {
+                            Text("Copy")
+                        }
+                        TextButton(
+                            onClick = {
+                                pendingDebugPaymentUri = null
+                                viewModel.onPaymentActivityResult(
+                                    Activity.RESULT_CANCELED,
+                                    null,
+                                )
+                            },
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                },
+            )
+        }
+    }
+
+    resultDebugText?.let { debugText ->
+        AlertDialog(
+            onDismissRequest = {
+                resultDebugText = null
+            },
+            title = {
+                Text("UPI Result Debug")
+            },
+            text = {
+                Text(
+                    text = debugText,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        copyDebugText(context, debugText)
+                    },
+                ) {
+                    Text("Copy")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        resultDebugText = null
+                    },
+                ) {
+                    Text("Close")
+                }
+            },
+        )
     }
 }
 
@@ -715,6 +883,7 @@ private fun ConfirmPaymentSheet(
     onAmountChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     onCategoryChange: (ExpenseCategory) -> Unit,
+    onDebugClick: () -> Unit,
     onPayClick: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
@@ -820,6 +989,12 @@ private fun ConfirmPaymentSheet(
                 }
             }
 
+            TextButton(
+                onClick = onDebugClick,
+            ) {
+                Text("UPI Debug")
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             Row(
@@ -842,4 +1017,84 @@ private fun ConfirmPaymentSheet(
             }
         }
     }
+}
+
+private fun scannedQrDebugText(
+    payee: UpiPayee,
+): String {
+    val rawUri = payee.originalUri.orEmpty()
+    val uri = Uri.parse(rawUri)
+
+    return buildString {
+        appendLine("Raw scanned QR URI: $rawUri")
+        appendLine("UPI ID (pa): ${payee.vpa}")
+        appendLine("Payee name (pn): ${payee.payeeName.orEmpty()}")
+        appendLine("QR amount (am): ${payee.suggestedAmount.orEmpty()}")
+        appendLine("Currency (cu): ${uri.getQueryParameter("cu").orEmpty()}")
+        appendLine("Merchant category (mc): ${uri.getQueryParameter("mc").orEmpty()}")
+        appendLine("isDynamic: ${payee.isDynamic}")
+        append("originalUri: ${payee.originalUri.orEmpty()}")
+    }
+}
+
+private fun paymentUriDebugText(
+    payee: UpiPayee,
+    amount: String,
+    note: String,
+    finalUri: Uri,
+): String = buildString {
+    appendLine("Original scanned QR URI: ${payee.originalUri.orEmpty()}")
+    appendLine("UPI ID (pa): ${payee.vpa}")
+    appendLine("Payee name (pn): ${payee.payeeName.orEmpty()}")
+    appendLine("Original QR amount (am): ${payee.suggestedAmount.orEmpty()}")
+    appendLine("User-entered amount: $amount")
+    appendLine("User-entered note: $note")
+    appendLine("isDynamic: ${payee.isDynamic}")
+    appendLine("Final URI: $finalUri")
+    appendLine()
+    appendLine("Final URI query parameters:")
+
+    finalUri.queryParameterNames
+        .sorted()
+        .forEach { key ->
+            appendLine("$key=${finalUri.getQueryParameter(key).orEmpty()}")
+        }
+}
+
+private fun upiResultDebugText(
+    resultCode: Int,
+    responseExtra: String?,
+): String {
+    val fields = responseExtra
+        .orEmpty()
+        .split('&')
+        .mapNotNull { field ->
+            field.split('=', limit = 2)
+                .takeIf { it.size == 2 }
+                ?.let { (key, value) -> key.lowercase() to value }
+        }
+        .toMap()
+
+    return buildString {
+        appendLine("resultCode: $resultCode")
+        appendLine("Raw response extra: ${responseExtra.orEmpty()}")
+        appendLine("Status: ${fields["status"].orEmpty()}")
+        appendLine("error: ${fields["error"].orEmpty()}")
+        appendLine("txnId: ${fields["txnid"].orEmpty()}")
+        appendLine("txnRef: ${fields["txnref"].orEmpty()}")
+        append("approvalRefNo: ${fields["approvalrefno"].orEmpty()}")
+    }
+}
+
+private fun copyDebugText(
+    context: Context,
+    text: String,
+) {
+    val clipboard =
+        context.getSystemService(Context.CLIPBOARD_SERVICE)
+            as ClipboardManager
+
+    clipboard.setPrimaryClip(
+        ClipData.newPlainText("UPI Debug", text),
+    )
 }
