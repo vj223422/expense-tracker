@@ -174,6 +174,7 @@ fun ScanPayScreen(
                 }
             }
         }
+    )
 
     /*
      * Launches the selected UPI application using
@@ -686,4 +687,453 @@ private fun QrCodeCamera(
         bindingFailed = false
 
         val executor =
-            Executors.newSingleThreadExecutor(
+            Executors.newSingleThreadExecutor()
+
+        val scanner =
+            BarcodeScanning.getClient(
+
+                BarcodeScannerOptions
+                    .Builder()
+                    .setBarcodeFormats(
+                        Barcode.FORMAT_QR_CODE,
+                    )
+                    .build(),
+            )
+
+        val cameraProviderFuture =
+            ProcessCameraProvider
+                .getInstance(context)
+
+        cameraProviderFuture.addListener(
+
+            {
+
+                val cameraProvider =
+                    cameraProviderFuture.get()
+
+                val preview =
+                    Preview
+                        .Builder()
+                        .build()
+                        .also {
+                            it.setSurfaceProvider(
+                                previewView.surfaceProvider,
+                            )
+                        }
+
+                val analysis =
+                    ImageAnalysis
+                        .Builder()
+                        .setBackpressureStrategy(
+                            ImageAnalysis
+                                .STRATEGY_KEEP_ONLY_LATEST,
+                        )
+                        .build()
+
+                analysis.setAnalyzer(
+                    executor,
+                ) { imageProxy ->
+
+                    val mediaImage =
+                        imageProxy.image
+
+                    if (
+                        !enabledState.value ||
+                        mediaImage == null
+                    ) {
+
+                        imageProxy.close()
+
+                    } else {
+
+                        scanner
+                            .process(
+
+                                InputImage.fromMediaImage(
+                                    mediaImage,
+                                    imageProxy
+                                        .imageInfo
+                                        .rotationDegrees,
+                                ),
+                            )
+                            .addOnSuccessListener { barcodes ->
+
+                                barcodes
+                                    .firstOrNull {
+                                        it.rawValue != null
+                                    }
+                                    ?.rawValue
+                                    ?.let(
+                                        onQrDetectedState.value,
+                                    )
+                            }
+                            .addOnCompleteListener {
+                                imageProxy.close()
+                            }
+                    }
+                }
+
+                val bound =
+                    runCatching {
+
+                        cameraProvider.unbindAll()
+
+                        cameraProvider.bindToLifecycle(
+                            lifecycleOwner,
+                            CameraSelector.DEFAULT_BACK_CAMERA,
+                            preview,
+                            analysis,
+                        )
+                    }
+
+                bindingFailed =
+                    bound.isFailure
+            },
+
+            ContextCompat.getMainExecutor(
+                context,
+            ),
+        )
+
+        onDispose {
+
+            runCatching {
+                cameraProviderFuture
+                    .get()
+                    .unbindAll()
+            }
+
+            scanner.close()
+
+            executor.shutdown()
+        }
+    }
+
+    if (bindingFailed) {
+
+        Column(
+
+            modifier =
+                modifier.padding(24.dp),
+
+            horizontalAlignment =
+                Alignment.CenterHorizontally,
+
+            verticalArrangement =
+                Arrangement.Center,
+        ) {
+
+            Text(
+
+                text =
+                    "Couldn't start the camera. Close any other app that might be using it and try again.",
+
+                style =
+                    MaterialTheme.typography.bodyLarge,
+
+                textAlign =
+                    TextAlign.Center,
+            )
+        }
+
+    } else {
+
+        AndroidView(
+            factory = {
+                previewView
+            },
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun PermissionRationale(
+    permanentlyDenied: Boolean,
+    onRequestPermission: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+
+    Column(
+
+        modifier =
+            modifier.padding(24.dp),
+
+        horizontalAlignment =
+            Alignment.CenterHorizontally,
+
+        verticalArrangement =
+            Arrangement.Center,
+    ) {
+
+        Text(
+
+            text =
+                if (permanentlyDenied) {
+
+                    "Camera access was denied. Enable it from Settings to scan UPI QR codes."
+
+                } else {
+
+                    "Camera access is needed to scan UPI QR codes."
+                },
+
+            style =
+                MaterialTheme.typography.bodyLarge,
+
+            textAlign =
+                TextAlign.Center,
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(16.dp),
+        )
+
+        if (permanentlyDenied) {
+
+            Button(
+                onClick = onOpenSettings,
+            ) {
+                Text("Open Settings")
+            }
+
+        } else {
+
+            Button(
+                onClick = onRequestPermission,
+            ) {
+                Text("Grant camera access")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfirmPaymentSheet(
+    payee: UpiPayee,
+    amountText: String,
+    amountError: String?,
+    amountPrefilledFromQr: Boolean,
+    note: String,
+    selectedCategory: ExpenseCategory,
+    canPay: Boolean,
+    onAmountChange: (String) -> Unit,
+    onNoteChange: (String) -> Unit,
+    onCategoryChange: (ExpenseCategory) -> Unit,
+    onDebugClick: () -> Unit,
+    onPayClick: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isDynamicQr = payee.isDynamic
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(
+            topStart = 24.dp,
+            topEnd = 24.dp,
+        ),
+        tonalElevation = 4.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+        ) {
+            Text(
+                text = "Pay to",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = payee.vpa,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            if (!payee.payeeName.isNullOrBlank()) {
+                Text(
+                    text = "Claims to be \"${payee.payeeName}\" — unverified, read from the QR",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = amountText,
+                onValueChange = onAmountChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Amount") },
+                enabled = !isDynamicQr,
+                isError = amountError != null,
+                supportingText = {
+                    when {
+                        amountError != null -> Text(amountError)
+                        isDynamicQr -> Text("Amount is fixed by the merchant QR")
+                        amountPrefilledFromQr -> Text(
+                            "Pre-filled from the QR — double-check before paying",
+                        )
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                ),
+                singleLine = true,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = note,
+                onValueChange = onNoteChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Note") },
+                enabled = !isDynamicQr,
+                supportingText = {
+                    if (isDynamicQr) {
+                        Text("Merchant QR details will be sent unchanged")
+                    }
+                },
+                singleLine = true,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Category",
+                style = MaterialTheme.typography.labelLarge,
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(
+                    items = ExpenseCategory.entries,
+                    key = { it.name },
+                ) { category ->
+                    FilterChip(
+                        selected = category == selectedCategory,
+                        onClick = {
+                            onCategoryChange(category)
+                        },
+                        label = {
+                            Text(category.displayName)
+                        },
+                    )
+                }
+            }
+
+            TextButton(
+                onClick = onDebugClick,
+            ) {
+                Text("UPI Debug")
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = onPayClick,
+                    enabled = canPay,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Pay")
+                }
+            }
+        }
+    }
+}
+
+private fun scannedQrDebugText(
+    payee: UpiPayee,
+): String {
+    val rawUri = payee.originalUri.orEmpty()
+    val uri = Uri.parse(rawUri)
+
+    return buildString {
+        appendLine("Raw scanned QR URI: $rawUri")
+        appendLine("UPI ID (pa): ${payee.vpa}")
+        appendLine("Payee name (pn): ${payee.payeeName.orEmpty()}")
+        appendLine("QR amount (am): ${payee.suggestedAmount.orEmpty()}")
+        appendLine("Currency (cu): ${uri.getQueryParameter("cu").orEmpty()}")
+        appendLine("Merchant category (mc): ${uri.getQueryParameter("mc").orEmpty()}")
+        appendLine("isDynamic: ${payee.isDynamic}")
+        append("originalUri: ${payee.originalUri.orEmpty()}")
+    }
+}
+
+private fun paymentUriDebugText(
+    payee: UpiPayee,
+    amount: String,
+    note: String,
+    finalUri: Uri,
+): String = buildString {
+    appendLine("Original scanned QR URI: ${payee.originalUri.orEmpty()}")
+    appendLine("UPI ID (pa): ${payee.vpa}")
+    appendLine("Payee name (pn): ${payee.payeeName.orEmpty()}")
+    appendLine("Original QR amount (am): ${payee.suggestedAmount.orEmpty()}")
+    appendLine("User-entered amount: $amount")
+    appendLine("User-entered note: $note")
+    appendLine("isDynamic: ${payee.isDynamic}")
+    appendLine("Final URI: $finalUri")
+    appendLine()
+    appendLine("Final URI query parameters:")
+
+    finalUri.queryParameterNames
+        .sorted()
+        .forEach { key ->
+            appendLine("$key=${finalUri.getQueryParameter(key).orEmpty()}")
+        }
+}
+
+private fun upiResultDebugText(
+    resultCode: Int,
+    responseExtra: String?,
+): String {
+    val fields = responseExtra
+        .orEmpty()
+        .split('&')
+        .mapNotNull { field ->
+            field.split('=', limit = 2)
+                .takeIf { it.size == 2 }
+                ?.let { (key, value) -> key.lowercase() to value }
+        }
+        .toMap()
+
+    return buildString {
+        appendLine("resultCode: $resultCode")
+        appendLine("Raw response extra: ${responseExtra.orEmpty()}")
+        appendLine("Status: ${fields["status"].orEmpty()}")
+        appendLine("error: ${fields["error"].orEmpty()}")
+        appendLine("txnId: ${fields["txnid"].orEmpty()}")
+        appendLine("txnRef: ${fields["txnref"].orEmpty()}")
+        append("approvalRefNo: ${fields["approvalrefno"].orEmpty()}")
+    }
+}
+
+private fun copyDebugText(
+    context: Context,
+    text: String,
+) {
+    val clipboard =
+        context.getSystemService(Context.CLIPBOARD_SERVICE)
+            as ClipboardManager
+
+    clipboard.setPrimaryClip(
+        ClipData.newPlainText("UPI Debug", text),
+    )
+}
