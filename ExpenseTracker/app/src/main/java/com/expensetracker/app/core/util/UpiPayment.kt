@@ -33,6 +33,20 @@ private val HANDLED_UPI_PARAMS = setOf(
     "tn",
 )
 
+/*
+ * These are the only non-transaction parameters we can safely rebuild.
+ *
+ * A QR can contain provider-specific parameters that are not documented by
+ * the base UPI link format.  Dropping one while rebuilding the URI can be
+ * just as harmful as changing a known signature or transaction reference.
+ */
+private val SAFE_STATIC_UPI_PARAMS =
+    HANDLED_UPI_PARAMS + setOf(
+        "mc",
+        "mode",
+        "purpose",
+    )
+
 /**
  * Known UPI Linking Specification parameters.
  */
@@ -46,6 +60,7 @@ private val KNOWN_UPI_EXTRA_PARAMS = setOf(
     "sign",
     "refurl",
     "minamount",
+    "mam",
     "tr",
 )
 
@@ -63,6 +78,7 @@ private val DYNAMIC_UPI_PARAMS = setOf(
     "refurl",
     "orgid",
     "minamount",
+    "mam",
 )
 
 /** Returns null if [rawValue] isn't a UPI payment link or has no payee address. */
