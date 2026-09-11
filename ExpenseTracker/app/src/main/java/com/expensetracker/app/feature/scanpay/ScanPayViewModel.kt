@@ -363,7 +363,7 @@ class ScanPayViewModel(
         val uri =
             buildUpiPaymentUri(
                 payee = payee,
-                amountMinor = amountMinor,
+                amount = amountMinor,
                 note = state.note.trim(),
             )
 
