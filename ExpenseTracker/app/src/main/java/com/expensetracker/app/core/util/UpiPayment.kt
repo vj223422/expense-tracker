@@ -62,6 +62,7 @@ private val KNOWN_UPI_EXTRA_PARAMS = setOf(
     "minamount",
     "mam",
     "tr",
+    "aid",
 )
 
 /**
@@ -188,71 +189,65 @@ fun parseUpiQr(rawValue: String): UpiPayee? {
  */
 fun buildUpiPaymentUri(
     payee: UpiPayee,
-    amountMinor: Long,
+    amount: String,
     note: String,
 ): Uri {
+    val originalUri = payee.originalUri
 
-    /*
-     * Dynamic/signed QR:
-     *
-     * Never rebuild this URI.
-     *
-     * The merchant may have generated a transaction reference,
-     * signature, transaction ID, or fixed amount.
-     */
-    if (payee.isDynamic && !payee.originalUri.isNullOrBlank()) {
-        return Uri.parse(payee.originalUri)
+    if (payee.isDynamic && originalUri != null) {
+        return Uri.parse(originalUri)
     }
 
-    val amount = String.format(
-        Locale.US,
-        "%.2f",
-        amountMinor / 100.0,
-    )
+    if (originalUri != null) {
+        val cleanAmount = amount.trim()
 
-    /*
-     * If the QR has no payee name, use the VPA prefix.
-     *
-     * Example:
-     * abc@upi -> abc
-     */
-    val safePayeeName = payee.payeeName
-        ?.takeIf { it.isNotBlank() }
-        ?: payee.vpa.substringBefore("@")
-            .ifBlank { payee.vpa }
+        val separator =
+            if (originalUri.contains("?")) "&" else "?"
 
-    val builder = Uri.Builder()
+        var uriString =
+            originalUri +
+                separator +
+                "am=" +
+                Uri.encode(cleanAmount)
+
+        if (note.isNotBlank()) {
+            uriString +=
+                "&tn=" +
+                Uri.encode(note.trim())
+        }
+
+        return Uri.parse(uriString)
+    }
+
+    // Fallback if original URI isn't available.
+    return Uri.Builder()
         .scheme("upi")
         .authority("pay")
         .appendQueryParameter("pa", payee.vpa)
-        .appendQueryParameter("pn", safePayeeName)
+        .apply {
+            payee.payeeName
+                ?.takeIf { it.isNotBlank() }
+                ?.let {
+                    appendQueryParameter("pn", it)
+                }
 
-    /*
-     * Preserve harmless merchant information such as MC.
-     *
-     * Dynamic/signature fields were removed during parsing.
-     */
-    payee.extraParams.forEach { (key, value) ->
-        if (value.isNotBlank()) {
-            builder.appendQueryParameter(key, value)
+            amount
+                .trim()
+                .takeIf { it.isNotBlank() }
+                ?.let {
+                    appendQueryParameter("am", it)
+                }
+
+            note
+                .trim()
+                .takeIf { it.isNotBlank() }
+                ?.let {
+                    appendQueryParameter("tn", it)
+                }
         }
-    }
-
-    builder.appendQueryParameter("am", amount)
-    builder.appendQueryParameter("cu", "INR")
-
-    /*
-     * Don't append an empty tn parameter.
-     */
-    if (note.isNotBlank()) {
-        builder.appendQueryParameter("tn", note)
-    }
-
-    // THE FIX: Intercept the built URI and swap the URL-encoded '%40' back to a raw '@'
-    val uri = builder.build()
-    val finalUriString = uri.toString().replace("%40", "@")
-    return Uri.parse(finalUriString)
+        .build()
 }
+
 
 sealed interface UpiPaymentOutcome {
 
