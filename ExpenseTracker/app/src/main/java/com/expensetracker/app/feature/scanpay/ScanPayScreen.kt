@@ -448,12 +448,14 @@ fun ScanPayScreen(
                             pendingDebugPaymentUri = null
 
                             try {
-                                paymentLauncher.launch(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        finalUri,
-                                    ),
-                                )
+                                val gpayIntent = Intent(
+    Intent.ACTION_VIEW,
+    finalUri,
+).apply {
+    setPackage("com.google.android.apps.nbu.paisa.user")
+}
+
+paymentLauncher.launch(gpayIntent)
                             } catch (e: ActivityNotFoundException) {
                                 viewModel.onPaymentActivityResult(
                                     Activity.RESULT_CANCELED,
