@@ -381,9 +381,11 @@ fun ScanPayScreen(
 
         if (payee != null) {
             val debugIntent = Intent(
-                Intent.ACTION_VIEW,
-                finalUri,
-            )
+    Intent.ACTION_VIEW,
+    finalUri,
+).apply {
+    setPackage("com.google.android.apps.nbu.paisa.user")
+            }
 
             val resolvedActivity = debugIntent.resolveActivity(
                 context.packageManager,
