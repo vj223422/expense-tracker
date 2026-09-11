@@ -220,35 +220,34 @@ fun buildUpiPaymentUri(
     }
 
     // Fallback if original URI isn't available.
-    return Uri.Builder()
-        .scheme("upi")
-        .authority("pay")
-        .appendQueryParameter("pa", payee.vpa)
-        .apply {
-            payee.payeeName
-                ?.takeIf { it.isNotBlank() }
-                ?.let {
-                    appendQueryParameter("pn", it)
-                }
+    
+return Uri.Builder()
+    .scheme("upi")
+    .authority("pay")
+    .appendQueryParameter("pa", payee.vpa)
+    .apply {
+        payee.payeeName
+            ?.takeIf { it.isNotBlank() }
+            ?.let {
+                appendQueryParameter("pn", it)
+            }
 
-            amount
-                .trim()
-                .takeIf { it.isNotBlank() }
-                ?.let {
-                    appendQueryParameter("am", it)
-                }
+        amount
+            .trim()
+            .takeIf { it.isNotBlank() }
+            ?.let {
+                appendQueryParameter("am", it)
+            }
 
-            note
-                .trim()
-                .takeIf { it.isNotBlank() }
-                ?.let {
-                    appendQueryParameter("tn", it)
-                }
-        }
-        .build()
+        note
+            .trim()
+            .takeIf { it.isNotBlank() }
+            ?.let {
+                appendQueryParameter("tn", it)
+            }
+    }
+    .build()
 }
-
-
 sealed interface UpiPaymentOutcome {
 
     data class Success(
