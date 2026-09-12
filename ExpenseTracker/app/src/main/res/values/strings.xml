@@ -3,4 +3,6 @@
     <string name="app_name">Kanakku</string>
     <string name="notification_channel_budget_alerts">Budget alerts</string>
     <string name="notification_channel_budget_alerts_description">Alerts when spending approaches or exceeds a set limit</string>
+    <string name="notification_channel_reminders">Reminders</string>
+    <string name="notification_channel_reminders_description">Scheduled reminders and notes</string>
 </resources>
