@@ -29,6 +29,7 @@ private const val KEY_PENDING_PROFILE_ID = "scanpay_pending_profile_id"
 private const val KEY_PENDING_PAYEE_VPA = "scanpay_pending_payee_vpa"
 private const val KEY_PENDING_PAYEE_NAME = "scanpay_pending_payee_name"
 private const val KEY_PENDING_PAYEE_MCC = "scanpay_pending_payee_mcc"
+private const val KEY_PENDING_PAYEE_TR = "scanpay_pending_payee_tr"
 private const val KEY_HANDLED_SESSION_ID = "scanpay_handled_session_id"
 
 class ScanPayViewModel(
@@ -58,7 +59,8 @@ class ScanPayViewModel(
                 ?: ExpenseCategory.OTHER,
             payeeVpa = savedStateHandle[KEY_PENDING_PAYEE_VPA] ?: "",
             payeeName = savedStateHandle[KEY_PENDING_PAYEE_NAME] ?: "",
-            payeeMcc = savedStateHandle[KEY_PENDING_PAYEE_MCC] ?: "0000",
+            payeeMcc = savedStateHandle[KEY_PENDING_PAYEE_MCC],
+            payeeTransactionRef = savedStateHandle[KEY_PENDING_PAYEE_TR],
         ).also {
             if (savedStateHandle.get<String>(KEY_HANDLED_SESSION_ID) == sessionId) clearPendingPayment()
         }
@@ -71,6 +73,7 @@ class ScanPayViewModel(
         savedStateHandle[KEY_PENDING_PAYEE_VPA] = null
         savedStateHandle[KEY_PENDING_PAYEE_NAME] = null
         savedStateHandle[KEY_PENDING_PAYEE_MCC] = null
+        savedStateHandle[KEY_PENDING_PAYEE_TR] = null
         paymentProfileId = null
     }
 
@@ -90,7 +93,15 @@ class ScanPayViewModel(
 
     override fun onPayeeVpaChange(value: String) {
         if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
-        _uiState.update { it.copy(payeeVpa = value.trim(), payeeMcc = "0000") }
+        // A manually entered VPA is a person-to-person/static-style payment.
+        // Do not turn it into a merchant intent by inventing MCC/tr parameters.
+        _uiState.update {
+            it.copy(
+                payeeVpa = value.trim(),
+                payeeMcc = null,
+                payeeTransactionRef = null,
+            )
+        }
     }
 
     override fun onPayeeNameChange(value: String) {
@@ -98,13 +109,14 @@ class ScanPayViewModel(
         _uiState.update { it.copy(payeeName = value) }
     }
 
-    fun onQrPayeeChange(vpa: String, name: String, mcc: String?) {
+    fun onQrPayeeChange(vpa: String, name: String, mcc: String?, transactionRef: String?) {
         if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
         _uiState.update {
             it.copy(
                 payeeVpa = vpa.trim(),
                 payeeName = name,
-                payeeMcc = mcc?.takeIf { value -> value.matches(Regex("\\d{4}")) } ?: "0000",
+                payeeMcc = mcc?.takeIf { value -> value.matches(Regex("\\d{4}")) },
+                payeeTransactionRef = transactionRef?.takeIf { value -> value.isNotBlank() },
             )
         }
     }
@@ -115,7 +127,6 @@ class ScanPayViewModel(
         viewModelScope.launch {
             val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
             val sessionId = UUID.randomUUID().toString()
-            val transactionRef = UUID.randomUUID().toString().replace("-", "").take(32)
             val transactionNote = buildString {
                 append(state.selectedCategory.displayName)
                 state.note.trim().takeIf { it.isNotBlank() }?.let {
@@ -130,6 +141,7 @@ class ScanPayViewModel(
             savedStateHandle[KEY_PENDING_PAYEE_VPA] = state.payeeVpa
             savedStateHandle[KEY_PENDING_PAYEE_NAME] = state.payeeName
             savedStateHandle[KEY_PENDING_PAYEE_MCC] = state.payeeMcc
+            savedStateHandle[KEY_PENDING_PAYEE_TR] = state.payeeTransactionRef
             paymentProfileId = profileId
             _uiState.update { it.copy(stage = ScanPayStage.LaunchingPayment) }
             _effects.send(
@@ -137,7 +149,7 @@ class ScanPayViewModel(
                     payeeVpa = state.payeeVpa,
                     payeeName = state.payeeName.ifBlank { state.payeeVpa },
                     payeeMcc = state.payeeMcc,
-                    transactionRef = transactionRef,
+                    transactionRef = state.payeeTransactionRef,
                     transactionNote = transactionNote,
                 ),
             )
@@ -221,6 +233,7 @@ class ScanPayViewModel(
                 payeeVpa = state.payeeVpa,
                 payeeName = state.payeeName,
                 payeeMcc = state.payeeMcc,
+                payeeTransactionRef = state.payeeTransactionRef,
             )
         } else {
             ScanPayUiState()
