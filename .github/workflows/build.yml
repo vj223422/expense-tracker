@@ -20,8 +20,8 @@ jobs:
 
       - name: Ensure required Android SDK components are installed
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       # This repo's gradle/wrapper/gradle-wrapper.jar was never committed (it's a compiled binary
       # that can't be hand-authored) — regenerate it here from the pinned version in
