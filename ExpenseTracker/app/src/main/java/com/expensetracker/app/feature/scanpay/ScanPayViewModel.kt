@@ -112,9 +112,6 @@ class ScanPayViewModel(
         when (val outcome = parseUpiResponse(resultCode, responseExtra)) {
             is UpiPaymentOutcome.Success -> {
                 if (outcome.amountMinor == null || outcome.amountMinor <= 0L) {
-                    // The payment app reported success but did not return an amount. The user
-                    // explicitly asked to keep the successful payment visible as an expense so
-                    // it can be corrected manually rather than silently losing the transaction.
                     saveExpense(
                         state = state,
                         amountMinor = 0L,
@@ -136,13 +133,65 @@ class ScanPayViewModel(
                 )
             }
             is UpiPaymentOutcome.Cancelled -> {
-                finishWithoutExpense("Payment cancelled", restoreContext = true)
+                // Some UPI apps complete the payment but fail to return control to the
+                // initiating app. Do not incorrectly call that situation a cancellation.
+                _effects.trySend(ScanPayEffect.ConfirmPayment)
             }
             is UpiPaymentOutcome.Failed -> {
                 finishWithoutExpense(
                     outcome.reason?.let { "Payment failed: $it" } ?: "Payment failed",
                     restoreContext = true,
                 )
+            }
+        }
+    }
+
+    override fun onPaymentConfirmation(completed: Boolean) {
+        val state = _uiState.value
+        if (state.stage !is ScanPayStage.LaunchingPayment) return
+
+        if (!completed) {
+            finishWithoutExpense("Payment cancelled", restoreContext = true)
+            return
+        }
+
+        saveExpenseFromConfirmation(state)
+    }
+
+    private fun saveExpenseFromConfirmation(state: ScanPayUiState) {
+        viewModelScope.launch {
+            val profileId = paymentProfileId
+                ?: profileRepository.observeActiveProfileId().filterNotNull().first()
+
+            val result = expenseRepository.addExpense(
+                profileId = profileId,
+                amountMinor = 0L,
+                category = state.selectedCategory,
+                note = state.note.trim(),
+                date = LocalDate.now(),
+            )
+
+            clearPendingPayment()
+            _uiState.value = ScanPayUiState()
+
+            when (result) {
+                is AddExpenseResult.Success -> {
+                    val alert = result.newAlerts.firstOrNull()?.let {
+                        " ${it.toSnackbarMessage()}"
+                    } ?: ""
+                    _effects.send(
+                        ScanPayEffect.ShowMessage(
+                            "Expense added with amount ₹0. Please edit this expense and enter the amount paid.$alert",
+                        ),
+                    )
+                }
+                is AddExpenseResult.Error -> {
+                    _effects.send(
+                        ScanPayEffect.ShowMessage(
+                            "Payment was confirmed, but the expense couldn't be logged: ${result.message}",
+                        ),
+                    )
+                }
             }
         }
     }
@@ -178,10 +227,8 @@ class ScanPayViewModel(
                     val message = when {
                         missingAmount ->
                             "Expense added with amount ₹0. Please edit this expense and enter the amount paid."
-                        transactionSummary.isBlank() ->
-                            "Expense added"
-                        else ->
-                            "Expense added.$transactionSummary"
+                        transactionSummary.isBlank() -> "Expense added"
+                        else -> "Expense added.$transactionSummary"
                     }
                     val withAlert = result.newAlerts.firstOrNull()?.let {
                         "$message ${it.toSnackbarMessage()}"
@@ -191,11 +238,7 @@ class ScanPayViewModel(
                 is AddExpenseResult.Error -> {
                     _effects.send(
                         ScanPayEffect.ShowMessage(
-                            if (missingAmount) {
-                                "Payment succeeded but couldn't be logged: ${result.message}"
-                            } else {
-                                "Payment succeeded but couldn't be logged: ${result.message}"
-                            },
+                            "Payment succeeded but couldn't be logged: ${result.message}",
                         ),
                     )
                 }
