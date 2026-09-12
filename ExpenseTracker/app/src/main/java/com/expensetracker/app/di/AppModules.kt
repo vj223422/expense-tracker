@@ -25,7 +25,7 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3)
+            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
@@ -33,6 +33,7 @@ val databaseModule = module {
     single { get<ExpenseDatabase>().budgetLimitDao() }
     single { get<ExpenseDatabase>().profileDao() }
     single { get<ExpenseDatabase>().reminderDao() }
+    single { get<ExpenseDatabase>().noteDao() }
 }
 
 val dataModule = module {
@@ -51,7 +52,7 @@ val viewModelModule = module {
     viewModel { BudgetsViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { ProfileSwitcherViewModel(get()) }
-    viewModel { RemindersViewModel(get(), get(), get()) }
+    viewModel { RemindersViewModel(get(), get(), get(), get()) }
 }
 
 val appModules = listOf(databaseModule, dataModule, viewModelModule)
