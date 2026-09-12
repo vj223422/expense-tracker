@@ -22,6 +22,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,7 +35,6 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -47,12 +47,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.Surface
 import com.expensetracker.app.data.entity.NoteEntity
 import com.expensetracker.app.data.entity.ReminderEntity
 import org.koin.androidx.compose.koinViewModel
 import java.text.DateFormat
 import java.util.Date
-import java.util.TimeZone
 
 @Composable
 fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
@@ -134,6 +136,7 @@ private fun NoteRow(note: NoteEntity, vm: RemindersViewModel, onEdit: () -> Unit
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReminderEditorDialog(initial: ReminderEntity?, onSave: (String, String, Long, String, Int) -> Unit, onDismiss: () -> Unit) {
     var title by remember(initial) { mutableStateOf(initial?.title.orEmpty()) }
@@ -176,7 +179,18 @@ private fun ReminderEditorDialog(initial: ReminderEntity?, onSave: (String, Stri
     if (showTime) {
         val cal = java.util.Calendar.getInstance().apply { timeInMillis = selectedTime }
         val state = rememberTimePickerState(cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE), true)
-        TimePickerDialog(onDismiss = { showTime = false }, confirmButton = { TextButton(onClick = { val c = java.util.Calendar.getInstance(); c.set(java.util.Calendar.HOUR_OF_DAY, state.hour); c.set(java.util.Calendar.MINUTE, state.minute); selectedTime = c.timeInMillis; showTime = false }) { Text("OK") } }, title = { Text("Select time") }) { TimeInput(state) }
+        Dialog(onDismissRequest = { showTime = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(shape = MaterialTheme.shapes.extraLarge) {
+                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Select time", style = MaterialTheme.typography.headlineSmall)
+                    TimeInput(state)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showTime = false }) { Text("Cancel") }
+                        TextButton(onClick = { val c = java.util.Calendar.getInstance(); c.set(java.util.Calendar.HOUR_OF_DAY, state.hour); c.set(java.util.Calendar.MINUTE, state.minute); selectedTime = c.timeInMillis; showTime = false }) { Text("OK") }
+                    }
+                }
+            }
+        }
     }
 }
 

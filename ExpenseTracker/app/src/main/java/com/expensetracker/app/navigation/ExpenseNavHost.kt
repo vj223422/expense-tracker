@@ -126,8 +126,8 @@ private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinV
     var showCreateDialog by remember { mutableStateOf(false) }
     TopAppBar(title = { Text("Kanakku") }, actions = {
         Box {
-            ProfileAvatar(uiState.activeProfile?.name.orEmpty()) { menuExpanded = true }
-            DropdownMenu(menuExpanded, { menuExpanded = false }) {
+            ProfileAvatar(name = uiState.activeProfile?.name.orEmpty(), onClick = { menuExpanded = true })
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 uiState.profiles.forEach { profile ->
                     DropdownMenuItem(text = { Text(profile.name) }, leadingIcon = { if (profile.id == uiState.activeProfileId) Icon(Icons.Filled.Check, null) }, onClick = { profileSwitcherViewModel.onSwitchProfile(profile.id); menuExpanded = false })
                 }
