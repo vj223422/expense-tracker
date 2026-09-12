@@ -14,14 +14,20 @@ data class ScanPayUiState(
     val stage: ScanPayStage = ScanPayStage.Ready,
     val note: String = "",
     val selectedCategory: ExpenseCategory = ExpenseCategory.OTHER,
+    val payeeVpa: String = "",
+    val payeeName: String = "",
 ) {
     val canPay: Boolean
-        get() = stage is ScanPayStage.Ready
+        get() = stage is ScanPayStage.Ready && payeeVpa.isNotBlank()
 }
 
 sealed interface ScanPayEffect {
-    data object LaunchUpiApp : ScanPayEffect
-    data object ConfirmPayment : ScanPayEffect
+    data class LaunchUpiApp(
+        val payeeVpa: String,
+        val payeeName: String,
+        val transactionRef: String,
+        val transactionNote: String,
+    ) : ScanPayEffect
     data class ShowMessage(val message: String) : ScanPayEffect
 }
 
@@ -29,7 +35,8 @@ sealed interface ScanPayEffect {
 interface ScanPayActions {
     fun onNoteChange(value: String)
     fun onCategoryChange(category: ExpenseCategory)
+    fun onPayeeVpaChange(value: String)
+    fun onPayeeNameChange(value: String)
     fun onPayClick()
     fun onPaymentActivityResult(resultCode: Int, responseExtra: String?)
-    fun onPaymentConfirmation(completed: Boolean)
 }
