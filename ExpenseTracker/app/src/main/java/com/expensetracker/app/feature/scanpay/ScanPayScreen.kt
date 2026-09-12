@@ -1,13 +1,24 @@
 package com.expensetracker.app.feature.scanpay
 
+import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,12 +33,15 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,11 +51,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
 import org.koin.androidx.compose.koinViewModel
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
 fun ScanPayScreen(
@@ -51,13 +71,11 @@ fun ScanPayScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    var showPaymentConfirmation by remember { mutableStateOf(false) }
+    var showScanner by remember { mutableStateOf(false) }
 
     val paymentLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        // Most UPI apps return the standard response extra. A few return the same
-        // response in the Intent data URI instead, so accept that form as a fallback.
         val response = result.data?.getStringExtra("response")
             ?: result.data?.dataString?.takeIf {
                 it.contains("status=", ignoreCase = true) ||
@@ -66,69 +84,74 @@ fun ScanPayScreen(
         viewModel.onPaymentActivityResult(result.resultCode, response)
     }
 
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) {
+            scanQrImage(
+                context = context,
+                uri = uri,
+                onResult = { raw ->
+                    val payee = parseUpiPayee(raw)
+                    if (payee != null) {
+                        viewModel.onPayeeVpaChange(payee.first)
+                        viewModel.onPayeeNameChange(payee.second)
+                    } else {
+                        viewModel.showMessage("The selected image does not contain a valid UPI QR code.")
+                    }
+                },
+                onError = { viewModel.showMessage("Couldn't read a UPI QR code from that image.") },
+            )
+        }
+    }
+
     LaunchedEffect(Unit) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.effects.collect { effect ->
                 when (effect) {
-                    ScanPayEffect.LaunchUpiApp -> {
-                        val upiIntent = Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("upi://pay"),
-                        )
+                    is ScanPayEffect.LaunchUpiApp -> {
+                        val uri = Uri.Builder()
+                            .scheme("upi")
+                            .authority("pay")
+                            .appendQueryParameter("pa", effect.payeeVpa)
+                            .appendQueryParameter("pn", effect.payeeName)
+                            .appendQueryParameter("tr", effect.transactionRef)
+                            .appendQueryParameter("tn", effect.transactionNote)
+                            .appendQueryParameter("cu", "INR")
+                            .build()
+                        val upiIntent = Intent(Intent.ACTION_VIEW, uri)
 
                         if (upiIntent.resolveActivity(context.packageManager) == null) {
                             viewModel.onPaymentActivityResult(Activity.RESULT_CANCELED, null)
                         } else {
                             try {
                                 paymentLauncher.launch(
-                                    Intent.createChooser(upiIntent, "Pay with UPI"),
+                                    Intent.createChooser(upiIntent, "Choose UPI app"),
                                 )
                             } catch (_: ActivityNotFoundException) {
                                 viewModel.onPaymentActivityResult(Activity.RESULT_CANCELED, null)
                             }
                         }
                     }
-                    ScanPayEffect.ConfirmPayment -> {
-                        showPaymentConfirmation = true
-                    }
-                    is ScanPayEffect.ShowMessage -> {
-                        snackbarHostState.showSnackbar(effect.message)
-                    }
+                    is ScanPayEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 }
             }
         }
     }
 
-    if (showPaymentConfirmation) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text("Did the UPI payment complete?") },
-            text = {
-                Text(
-                    "This UPI app did not return a payment result to Expense Tracker. " +
-                        "If you completed the payment successfully, we can add an expense with ₹0 and you can edit the amount afterwards.",
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showPaymentConfirmation = false
-                        viewModel.onPaymentConfirmation(completed = true)
-                    },
-                ) {
-                    Text("Yes, payment completed")
+    if (showScanner) {
+        QrScannerDialog(
+            onQrDetected = { raw ->
+                val payee = parseUpiPayee(raw)
+                showScanner = false
+                if (payee != null) {
+                    viewModel.onPayeeVpaChange(payee.first)
+                    viewModel.onPayeeNameChange(payee.second)
+                } else {
+                    viewModel.showMessage("This QR code is not a valid UPI payment QR.")
                 }
             },
-            dismissButton = {
-                Button(
-                    onClick = {
-                        showPaymentConfirmation = false
-                        viewModel.onPaymentConfirmation(completed = false)
-                    },
-                ) {
-                    Text("No, cancel")
-                }
-            },
+            onDismiss = { showScanner = false },
         )
     }
 
@@ -150,21 +173,52 @@ fun ScanPayScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
-
             Text(
-                text = "Choose the expense details here. The amount and payment details are entered entirely in your selected UPI app.",
+                text = "First choose the person or merchant to pay. Then your UPI app will open with the payee filled in and you can enter the amount there.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Text(
-                text = "Category",
-                style = MaterialTheme.typography.titleMedium,
+            Text("Payee", style = MaterialTheme.typography.titleMedium)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { showScanner = true }) {
+                    Text("Scan QR")
+                }
+                OutlinedButton(onClick = { imagePicker.launch("image/*") }) {
+                    Text("Upload QR")
+                }
+            }
+
+            OutlinedTextField(
+                value = uiState.payeeVpa,
+                onValueChange = viewModel::onPayeeVpaChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("UPI ID or phone number") },
+                placeholder = { Text("name@upi or 9876543210") },
+                singleLine = true,
+                enabled = uiState.stage is ScanPayStage.Ready,
             )
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            if (uiState.payeeVpa.isNotBlank() && uiState.payeeName.isNotBlank()) {
+                Text(
+                    text = "Paying ${uiState.payeeName}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            OutlinedTextField(
+                value = uiState.payeeName,
+                onValueChange = viewModel::onPayeeNameChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Payee name (optional)") },
+                singleLine = true,
+                enabled = uiState.stage is ScanPayStage.Ready,
+            )
+
+            Text("Category", style = MaterialTheme.typography.titleMedium)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(
                     items = com.expensetracker.app.data.model.ExpenseCategory.entries,
                     key = { it.name },
@@ -187,21 +241,153 @@ fun ScanPayScreen(
                 enabled = uiState.stage is ScanPayStage.Ready,
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "The amount will be entered after you choose a UPI app.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
+            Spacer(modifier = Modifier.height(4.dp))
             Button(
                 onClick = viewModel::onPayClick,
                 enabled = uiState.canPay,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Pay with UPI")
+                Text("Continue to UPI")
             }
         }
     }
+}
+
+@Composable
+private fun QrScannerDialog(
+    onQrDetected: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> hasCameraPermission = granted }
+
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Scan UPI QR") },
+        text = {
+            if (hasCameraPermission) {
+                CameraPreview(onQrDetected = onQrDetected)
+            } else {
+                Text("Camera permission is required to scan a QR code.")
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
+}
+
+@OptIn(ExperimentalGetImage::class)
+@Composable
+private fun CameraPreview(onQrDetected: (String) -> Unit) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val executor = remember { Executors.newSingleThreadExecutor() }
+    val scanner = remember { BarcodeScanning.getClient() }
+    val handled = remember { AtomicBoolean(false) }
+
+    DisposableEffect(Unit) {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        val listener = Runnable {
+            val provider = cameraProviderFuture.get()
+            val preview = Preview.Builder().build()
+            val analysis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+            analysis.setAnalyzer(executor) { imageProxy ->
+                val mediaImage = imageProxy.image
+                if (mediaImage == null || handled.get()) {
+                    imageProxy.close()
+                    return@setAnalyzer
+                }
+                val image = InputImage.fromMediaImage(
+                    mediaImage,
+                    imageProxy.imageInfo.rotationDegrees,
+                )
+                scanner.process(image)
+                    .addOnSuccessListener { barcodes ->
+                        val raw = barcodes.firstOrNull()?.rawValue
+                        if (!raw.isNullOrBlank() && handled.compareAndSet(false, true)) {
+                            onQrDetected(raw)
+                        }
+                    }
+                    .addOnCompleteListener { imageProxy.close() }
+            }
+            try {
+                provider.unbindAll()
+                provider.bindToLifecycle(
+                    lifecycleOwner,
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    preview,
+                    analysis,
+                )
+            } catch (_: Exception) {
+                // Camera binding failure is surfaced by the dialog remaining open.
+            }
+        }
+        cameraProviderFuture.addListener(listener, ContextCompat.getMainExecutor(context))
+
+        onDispose {
+            runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
+            scanner.close()
+            executor.shutdown()
+        }
+    }
+
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(320.dp),
+        factory = { PreviewView(it) },
+        update = { previewView ->
+            val providerFuture = ProcessCameraProvider.getInstance(context)
+            providerFuture.addListener({
+                val provider = providerFuture.get()
+                provider.boundCameraControl?.let { control ->
+                    // No-op; the PreviewView is bound by the analyzer setup above.
+                    control.enableTorch(false)
+                }
+            }, ContextCompat.getMainExecutor(context))
+        },
+    )
+}
+
+private fun parseUpiPayee(rawValue: String): Pair<String, String>? {
+    val uri = runCatching { Uri.parse(rawValue.trim()) }.getOrNull() ?: return null
+    if (!uri.scheme.equals("upi", ignoreCase = true) ||
+        !uri.host.equals("pay", ignoreCase = true)
+    ) return null
+
+    val vpa = uri.getQueryParameter("pa")?.trim().orEmpty()
+    if (vpa.isBlank()) return null
+    val name = uri.getQueryParameter("pn")?.trim().orEmpty()
+    return vpa to name
+}
+
+private fun scanQrImage(
+    context: Context,
+    uri: Uri,
+    onResult: (String) -> Unit,
+    onError: () -> Unit,
+) {
+    val image = runCatching { InputImage.fromFilePath(context, uri) }.getOrNull()
+    if (image == null) {
+        onError()
+        return
+    }
+    BarcodeScanning.getClient().process(image)
+        .addOnSuccessListener { barcodes ->
+            barcodes.firstOrNull()?.rawValue?.let(onResult) ?: onError()
+        }
+        .addOnFailureListener { onError() }
 }
