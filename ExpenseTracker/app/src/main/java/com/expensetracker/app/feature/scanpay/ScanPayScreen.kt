@@ -116,6 +116,11 @@ fun ScanPayScreen(
                             .appendQueryParameter("pn", effect.payeeName)
                             .appendQueryParameter("tn", effect.transactionNote)
                             .appendQueryParameter("cu", "INR")
+                        // Manual P2P launches are intent-based, but QR-derived payments
+                        // must preserve the parameters encoded in the scanned QR.
+                        if (effect.payeeMcc == null && effect.transactionRef == null) {
+                            builder.appendQueryParameter("mode", "04")
+                        }
                         effect.payeeMcc?.let { builder.appendQueryParameter("mc", it) }
                         effect.transactionRef?.let { builder.appendQueryParameter("tr", it) }
                         val upiIntent = Intent(Intent.ACTION_VIEW, builder.build())
