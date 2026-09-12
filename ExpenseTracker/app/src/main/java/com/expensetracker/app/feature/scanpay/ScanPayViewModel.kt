@@ -26,6 +26,8 @@ private const val KEY_PENDING_SESSION_ID = "scanpay_pending_session_id"
 private const val KEY_PENDING_NOTE = "scanpay_pending_note"
 private const val KEY_PENDING_CATEGORY = "scanpay_pending_category"
 private const val KEY_PENDING_PROFILE_ID = "scanpay_pending_profile_id"
+private const val KEY_PENDING_PAYEE_VPA = "scanpay_pending_payee_vpa"
+private const val KEY_PENDING_PAYEE_NAME = "scanpay_pending_payee_name"
 private const val KEY_HANDLED_SESSION_ID = "scanpay_handled_session_id"
 
 class ScanPayViewModel(
@@ -54,6 +56,8 @@ class ScanPayViewModel(
             selectedCategory = savedStateHandle.get<String>(KEY_PENDING_CATEGORY)
                 ?.let { name -> ExpenseCategory.entries.firstOrNull { it.name == name } }
                 ?: ExpenseCategory.OTHER,
+            payeeVpa = savedStateHandle[KEY_PENDING_PAYEE_VPA] ?: "",
+            payeeName = savedStateHandle[KEY_PENDING_PAYEE_NAME] ?: "",
         ).also {
             if (savedStateHandle.get<String>(KEY_HANDLED_SESSION_ID) == sessionId) {
                 clearPendingPayment()
@@ -65,6 +69,8 @@ class ScanPayViewModel(
         savedStateHandle[KEY_PENDING_SESSION_ID] = null
         savedStateHandle[KEY_PENDING_NOTE] = null
         savedStateHandle[KEY_PENDING_CATEGORY] = null
+        savedStateHandle[KEY_PENDING_PAYEE_VPA] = null
+        savedStateHandle[KEY_PENDING_PAYEE_NAME] = null
         paymentProfileId = null
     }
 
@@ -78,21 +84,48 @@ class ScanPayViewModel(
         _uiState.update { it.copy(selectedCategory = category) }
     }
 
+    override fun onPayeeVpaChange(value: String) {
+        if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
+        _uiState.update { it.copy(payeeVpa = value.trim()) }
+    }
+
+    override fun onPayeeNameChange(value: String) {
+        if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
+        _uiState.update { it.copy(payeeName = value) }
+    }
+
     override fun onPayClick() {
         val state = _uiState.value
-        if (state.stage is ScanPayStage.LaunchingPayment) return
+        if (!state.canPay) return
 
         viewModelScope.launch {
             val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
             val sessionId = UUID.randomUUID().toString()
+            val transactionRef = UUID.randomUUID().toString().replace("-", "").take(32)
+            val transactionNote = buildString {
+                append(state.selectedCategory.displayName)
+                state.note.trim().takeIf { it.isNotBlank() }?.let {
+                    append(": ")
+                    append(it)
+                }
+            }.take(80)
 
             savedStateHandle[KEY_PENDING_SESSION_ID] = sessionId
             savedStateHandle[KEY_PENDING_NOTE] = state.note
             savedStateHandle[KEY_PENDING_CATEGORY] = state.selectedCategory.name
+            savedStateHandle[KEY_PENDING_PAYEE_VPA] = state.payeeVpa
+            savedStateHandle[KEY_PENDING_PAYEE_NAME] = state.payeeName
             paymentProfileId = profileId
 
             _uiState.update { it.copy(stage = ScanPayStage.LaunchingPayment) }
-            _effects.send(ScanPayEffect.LaunchUpiApp)
+            _effects.send(
+                ScanPayEffect.LaunchUpiApp(
+                    payeeVpa = state.payeeVpa,
+                    payeeName = state.payeeName.ifBlank { state.payeeVpa },
+                    transactionRef = transactionRef,
+                    transactionNote = transactionNote,
+                ),
+            )
         }
     }
 
@@ -112,86 +145,24 @@ class ScanPayViewModel(
         when (val outcome = parseUpiResponse(resultCode, responseExtra)) {
             is UpiPaymentOutcome.Success -> {
                 if (outcome.amountMinor == null || outcome.amountMinor <= 0L) {
-                    saveExpense(
-                        state = state,
-                        amountMinor = 0L,
-                        missingAmount = true,
-                        outcome = outcome,
-                    )
+                    saveExpense(state, 0L, missingAmount = true, outcome = outcome)
                 } else {
-                    saveExpense(
-                        state = state,
-                        amountMinor = outcome.amountMinor,
-                        missingAmount = false,
-                        outcome = outcome,
-                    )
+                    saveExpense(state, outcome.amountMinor, missingAmount = false, outcome = outcome)
                 }
             }
             is UpiPaymentOutcome.Submitted -> {
                 finishWithoutExpense(
-                    "Payment submitted or pending. No expense was added until payment is confirmed.",
+                    "Payment is pending. No expense was added until the UPI app reports success.",
                 )
             }
             is UpiPaymentOutcome.Cancelled -> {
-                // Some UPI apps complete the payment but fail to return control to the
-                // initiating app. Do not incorrectly call that situation a cancellation.
-                _effects.trySend(ScanPayEffect.ConfirmPayment)
+                finishWithoutExpense("Payment cancelled", restoreContext = true)
             }
             is UpiPaymentOutcome.Failed -> {
                 finishWithoutExpense(
                     outcome.reason?.let { "Payment failed: $it" } ?: "Payment failed",
                     restoreContext = true,
                 )
-            }
-        }
-    }
-
-    override fun onPaymentConfirmation(completed: Boolean) {
-        val state = _uiState.value
-        if (state.stage !is ScanPayStage.LaunchingPayment) return
-
-        if (!completed) {
-            finishWithoutExpense("Payment cancelled", restoreContext = true)
-            return
-        }
-
-        saveExpenseFromConfirmation(state)
-    }
-
-    private fun saveExpenseFromConfirmation(state: ScanPayUiState) {
-        viewModelScope.launch {
-            val profileId = paymentProfileId
-                ?: profileRepository.observeActiveProfileId().filterNotNull().first()
-
-            val result = expenseRepository.addExpense(
-                profileId = profileId,
-                amountMinor = 0L,
-                category = state.selectedCategory,
-                note = state.note.trim(),
-                date = LocalDate.now(),
-            )
-
-            clearPendingPayment()
-            _uiState.value = ScanPayUiState()
-
-            when (result) {
-                is AddExpenseResult.Success -> {
-                    val alert = result.newAlerts.firstOrNull()?.let {
-                        " ${it.toSnackbarMessage()}"
-                    } ?: ""
-                    _effects.send(
-                        ScanPayEffect.ShowMessage(
-                            "Expense added with amount ₹0. Please edit this expense and enter the amount paid.$alert",
-                        ),
-                    )
-                }
-                is AddExpenseResult.Error -> {
-                    _effects.send(
-                        ScanPayEffect.ShowMessage(
-                            "Payment was confirmed, but the expense couldn't be logged: ${result.message}",
-                        ),
-                    )
-                }
             }
         }
     }
@@ -226,9 +197,9 @@ class ScanPayViewModel(
                 is AddExpenseResult.Success -> {
                     val message = when {
                         missingAmount ->
-                            "Expense added with amount ₹0. Please edit this expense and enter the amount paid."
-                        transactionSummary.isBlank() -> "Expense added"
-                        else -> "Expense added.$transactionSummary"
+                            "Expense added with amount ₹0 because the UPI app did not return the amount."
+                        transactionSummary.isBlank() -> "Expense added automatically"
+                        else -> "Expense added automatically.$transactionSummary"
                     }
                     val withAlert = result.newAlerts.firstOrNull()?.let {
                         "$message ${it.toSnackbarMessage()}"
@@ -257,6 +228,8 @@ class ScanPayViewModel(
                 stage = ScanPayStage.Ready,
                 note = state.note,
                 selectedCategory = state.selectedCategory,
+                payeeVpa = state.payeeVpa,
+                payeeName = state.payeeName,
             )
         } else {
             ScanPayUiState()
