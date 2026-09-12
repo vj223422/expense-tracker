@@ -3,13 +3,11 @@ package com.expensetracker.app.feature.scanpay
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -31,19 +30,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -54,15 +51,19 @@ fun ScanPayScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val coroutineScope = rememberCoroutineScope()
+    var showPaymentConfirmation by remember { mutableStateOf(false) }
 
     val paymentLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        viewModel.onPaymentActivityResult(
-            result.resultCode,
-            result.data?.getStringExtra("response"),
-        )
+        // Most UPI apps return the standard response extra. A few return the same
+        // response in the Intent data URI instead, so accept that form as a fallback.
+        val response = result.data?.getStringExtra("response")
+            ?: result.data?.dataString?.takeIf {
+                it.contains("status=", ignoreCase = true) ||
+                    it.contains("Status=", ignoreCase = true)
+            }
+        viewModel.onPaymentActivityResult(result.resultCode, response)
     }
 
     LaunchedEffect(Unit) {
@@ -76,29 +77,19 @@ fun ScanPayScreen(
                         )
 
                         if (upiIntent.resolveActivity(context.packageManager) == null) {
-                            viewModel.onPaymentActivityResult(
-                                Activity.RESULT_CANCELED,
-                                null,
-                            )
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("No UPI app is installed.")
-                            }
+                            viewModel.onPaymentActivityResult(Activity.RESULT_CANCELED, null)
                         } else {
                             try {
                                 paymentLauncher.launch(
-                                    Intent.createChooser(
-                                        upiIntent,
-                                        "Pay with UPI",
-                                    ),
+                                    Intent.createChooser(upiIntent, "Pay with UPI"),
                                 )
                             } catch (_: ActivityNotFoundException) {
-                                viewModel.onPaymentActivityResult(
-                                    Activity.RESULT_CANCELED,
-                                    null,
-                                )
-                                snackbarHostState.showSnackbar("No UPI app is installed.")
+                                viewModel.onPaymentActivityResult(Activity.RESULT_CANCELED, null)
                             }
                         }
+                    }
+                    ScanPayEffect.ConfirmPayment -> {
+                        showPaymentConfirmation = true
                     }
                     is ScanPayEffect.ShowMessage -> {
                         snackbarHostState.showSnackbar(effect.message)
@@ -106,6 +97,39 @@ fun ScanPayScreen(
                 }
             }
         }
+    }
+
+    if (showPaymentConfirmation) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Did the UPI payment complete?") },
+            text = {
+                Text(
+                    "This UPI app did not return a payment result to Expense Tracker. " +
+                        "If you completed the payment successfully, we can add an expense with ₹0 and you can edit the amount afterwards.",
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPaymentConfirmation = false
+                        viewModel.onPaymentConfirmation(completed = true)
+                    },
+                ) {
+                    Text("Yes, payment completed")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        showPaymentConfirmation = false
+                        viewModel.onPaymentConfirmation(completed = false)
+                    },
+                ) {
+                    Text("No, cancel")
+                }
+            },
+        )
     }
 
     Scaffold(
