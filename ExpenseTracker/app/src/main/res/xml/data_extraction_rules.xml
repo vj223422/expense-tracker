@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The database holds financial transaction history. Cloud backup is therefore disabled for
-     the database, while device-to-device transfer keeps the database available when physically
-     moving the app to a new device. Preferences DataStore stores only non-financial settings and
-     app state, so it is explicitly included in both backup modes. -->
+<!-- The database contains financial transaction history, so it is intentionally NOT included
+     in cloud backup. Because explicit <include> rules are present below, Android backs up only
+     the listed domains; database is therefore excluded implicitly. Device-to-device transfer
+     explicitly includes the database so local data moves with the app. -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="database" path="." />
         <include domain="sharedpref" path="." />
         <include domain="file" path="." />
     </cloud-backup>
