@@ -3,11 +3,7 @@ package com.expensetracker.app.feature.scanpay
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.expensetracker.app.core.util.UpiPayee
 import com.expensetracker.app.core.util.UpiPaymentOutcome
-import com.expensetracker.app.core.util.buildUpiPaymentUri
-import com.expensetracker.app.core.util.parseAmountToMinorUnits
-import com.expensetracker.app.core.util.parseUpiQr
 import com.expensetracker.app.core.util.parseUpiResponse
 import com.expensetracker.app.data.model.ExpenseCategory
 import com.expensetracker.app.data.notification.toSnackbarMessage
@@ -24,27 +20,13 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 
-private const val KEY_PENDING_VPA =
-    "scanpay_pending_vpa"
-
-private const val KEY_PENDING_PAYEE_NAME =
-    "scanpay_pending_payee_name"
-
-private const val KEY_PENDING_AMOUNT_TEXT =
-    "scanpay_pending_amount_text"
-
-private const val KEY_PENDING_NOTE =
-    "scanpay_pending_note"
-
-private const val KEY_PENDING_CATEGORY =
-    "scanpay_pending_category"
-
-private const val KEY_PENDING_PROFILE_ID =
-    "scanpay_pending_profile_id"
-
-private const val KEY_PENDING_ORIGINAL_URI =
-    "scanpay_pending_original_uri"
+private const val KEY_PENDING_SESSION_ID = "scanpay_pending_session_id"
+private const val KEY_PENDING_NOTE = "scanpay_pending_note"
+private const val KEY_PENDING_CATEGORY = "scanpay_pending_category"
+private const val KEY_PENDING_PROFILE_ID = "scanpay_pending_profile_id"
+private const val KEY_HANDLED_SESSION_ID = "scanpay_handled_session_id"
 
 class ScanPayViewModel(
     private val expenseRepository: ExpenseRepository,
@@ -52,386 +34,66 @@ class ScanPayViewModel(
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel(), ScanPayActions {
 
-    /*
-     * Restores a payment that was mid-flight in the external UPI app
-     * when Android killed the process.
-     */
-    private val _uiState = MutableStateFlow(
-        restorePendingLaunch(),
-    )
+    private val _uiState = MutableStateFlow(restorePendingPayment())
+    val uiState: StateFlow<ScanPayUiState> = _uiState.asStateFlow()
 
-    val uiState: StateFlow<ScanPayUiState> =
-        _uiState.asStateFlow()
-
-    private val _effects =
-        Channel<ScanPayEffect>(Channel.BUFFERED)
-
-    val effects =
-        _effects.receiveAsFlow()
+    private val _effects = Channel<ScanPayEffect>(Channel.BUFFERED)
+    val effects = _effects.receiveAsFlow()
 
     private var paymentProfileId: Long?
         get() = savedStateHandle[KEY_PENDING_PROFILE_ID]
-        set(value) {
-            savedStateHandle[KEY_PENDING_PROFILE_ID] = value
-        }
+        set(value) { savedStateHandle[KEY_PENDING_PROFILE_ID] = value }
 
-    /**
-     * Suppresses repeated invalid QR messages while the camera
-     * continues detecting the same QR.
-     */
-    private var lastInvalidQrValue: String? = null
-
-    private fun restorePendingLaunch(): ScanPayUiState {
-
-        val vpa =
-            savedStateHandle.get<String>(
-                KEY_PENDING_VPA,
-            ) ?: return ScanPayUiState()
-
-        /*
-         * If the original QR URI is still available, parse it again.
-         *
-         * This is important for dynamic merchant QR codes because
-         * merely restoring pa/pn would lose the transaction-bound
-         * information.
-         */
-        val originalUri =
-            savedStateHandle.get<String>(
-                KEY_PENDING_ORIGINAL_URI,
-            )
-
-        val restoredPayee =
-            originalUri
-                ?.let { parseUpiQr(it) }
-
-        val payee =
-            restoredPayee
-                ?: UpiPayee(
-                    vpa = vpa,
-                    payeeName = savedStateHandle[
-                        KEY_PENDING_PAYEE_NAME
-                    ],
-                    suggestedAmount = null,
-                )
+    private fun restorePendingPayment(): ScanPayUiState {
+        val sessionId = savedStateHandle.get<String>(KEY_PENDING_SESSION_ID)
+            ?: return ScanPayUiState()
 
         return ScanPayUiState(
-            stage = ScanPayStage.LaunchingPayment(
-                payee,
-            ),
-            amountText =
-                savedStateHandle[
-                    KEY_PENDING_AMOUNT_TEXT
-                ] ?: "",
-            note =
-                savedStateHandle[
-                    KEY_PENDING_NOTE
-                ] ?: "",
-            selectedCategory =
-                savedStateHandle
-                    .get<String>(KEY_PENDING_CATEGORY)
-                    ?.let { categoryName ->
-                        ExpenseCategory.entries.firstOrNull {
-                            it.name == categoryName
-                        }
-                    }
-                    ?: ExpenseCategory.OTHER,
-        )
+            stage = ScanPayStage.LaunchingPayment,
+            note = savedStateHandle[KEY_PENDING_NOTE] ?: "",
+            selectedCategory = savedStateHandle.get<String>(KEY_PENDING_CATEGORY)
+                ?.let { name -> ExpenseCategory.entries.firstOrNull { it.name == name } }
+                ?: ExpenseCategory.OTHER,
+        ).also {
+            if (savedStateHandle.get<String>(KEY_HANDLED_SESSION_ID) == sessionId) {
+                clearPendingPayment()
+            }
+        }
     }
 
-    private fun clearPendingLaunch() {
-
-        savedStateHandle[
-            KEY_PENDING_VPA
-        ] = null
-
-        savedStateHandle[
-            KEY_PENDING_PAYEE_NAME
-        ] = null
-
-        savedStateHandle[
-            KEY_PENDING_AMOUNT_TEXT
-        ] = null
-
-        savedStateHandle[
-            KEY_PENDING_NOTE
-        ] = null
-
-        savedStateHandle[
-            KEY_PENDING_CATEGORY
-        ] = null
-
-        savedStateHandle[
-            KEY_PENDING_ORIGINAL_URI
-        ] = null
-
+    private fun clearPendingPayment() {
+        savedStateHandle[KEY_PENDING_SESSION_ID] = null
+        savedStateHandle[KEY_PENDING_NOTE] = null
+        savedStateHandle[KEY_PENDING_CATEGORY] = null
         paymentProfileId = null
     }
 
-    override fun onQrDetected(
-        rawValue: String,
-    ) {
-
-        if (
-            _uiState.value.stage
-                !is ScanPayStage.Scanning
-        ) {
-            return
-        }
-
-        val payee =
-            parseUpiQr(rawValue)
-
-        if (payee == null) {
-
-            if (
-                rawValue != lastInvalidQrValue
-            ) {
-
-                lastInvalidQrValue =
-                    rawValue
-
-                viewModelScope.launch {
-                    _effects.send(
-                        ScanPayEffect.ShowMessage(
-                            "That QR code isn't a UPI payment code",
-                        ),
-                    )
-                }
-            }
-
-            return
-        }
-
-        lastInvalidQrValue = null
-
-        _uiState.update { currentState ->
-
-            currentState.copy(
-
-                stage =
-                    ScanPayStage.Confirming(
-                        payee,
-                    ),
-
-                /*
-                 * Dynamic QR:
-                 * use the merchant-supplied amount.
-                 *
-                 * Static/P2P:
-                 * use the supplied amount if one exists,
-                 * otherwise leave it empty so the user can enter it.
-                 */
-                amountText =
-                    payee.suggestedAmount.orEmpty(),
-
-                /*
-                 * A note is optional and must be user-provided.  Do not
-                 * manufacture a `tn` parameter from the QR display name.
-                 */
-                note = "",
-
-                selectedCategory = ExpenseCategory.OTHER,
-
-                amountError = null,
-
-                amountPrefilledFromQr =
-                    !payee.suggestedAmount.isNullOrBlank(),
-            )
-        }
+    override fun onNoteChange(value: String) {
+        if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
+        _uiState.update { it.copy(note = value) }
     }
 
-    override fun onQrImageReadFailed() {
-
-        if (
-            _uiState.value.stage
-                !is ScanPayStage.Scanning
-        ) {
-            return
-        }
-
-        viewModelScope.launch {
-            _effects.send(
-                ScanPayEffect.ShowMessage(
-                    "Couldn't read a UPI QR code from that image",
-                ),
-            )
-        }
-    }
-
-    override fun onAmountChange(
-        value: String,
-    ) {
-
-        /*
-         * A dynamic/signed merchant QR owns the amount.
-         *
-         * Do not allow the app to modify it.
-         */
-        val payee =
-            (
-                _uiState.value.stage
-                    as? ScanPayStage.Confirming
-                )?.payee
-
-        if (payee?.isDynamic == true) {
-            return
-        }
-
-        _uiState.update {
-            it.copy(
-                amountText = value,
-                amountError = null,
-                amountPrefilledFromQr = false,
-            )
-        }
-    }
-
-    override fun onNoteChange(
-        value: String,
-    ) {
-
-        /*
-         * Dynamic QR is launched exactly as scanned.
-         *
-         * A note added here would not be inserted into the
-         * merchant-generated URI anyway, so keep the UI locked.
-         */
-        val payee =
-            (
-                _uiState.value.stage
-                    as? ScanPayStage.Confirming
-                )?.payee
-
-        if (payee?.isDynamic == true) {
-            return
-        }
-
-        _uiState.update {
-            it.copy(
-                note = value,
-            )
-        }
-    }
-
-    override fun onCategoryChange(
-        category: ExpenseCategory,
-    ) {
-
-        _uiState.update {
-            it.copy(
-                selectedCategory = category,
-            )
-        }
+    override fun onCategoryChange(category: ExpenseCategory) {
+        if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
+        _uiState.update { it.copy(selectedCategory = category) }
     }
 
     override fun onPayClick() {
-
-        val state =
-            _uiState.value
-
-        val payee =
-            (
-                state.stage
-                    as? ScanPayStage.Confirming
-            )?.payee ?: return
-
-        val amountMinor =
-            state.amountText
-                .parseAmountToMinorUnits()
-
-        if (
-            amountMinor == null ||
-            amountMinor <= 0L
-        ) {
-
-            _uiState.update {
-                it.copy(
-                    amountError =
-                        "Enter a valid amount",
-                )
-            }
-
-            return
-        }
-
-        /*
-         * For dynamic QR this function returns the exact original
-         * URI instead of rebuilding it.
-         *
-         * For P2P/static QR it creates a clean UPI payment URI.
-         */
-        val uri =
-            buildUpiPaymentUri(
-                payee = payee,
-                amount = state.amountText.trim(),
-                note = state.note.trim(),
-            )
-
-        savedStateHandle[
-            KEY_PENDING_VPA
-        ] = payee.vpa
-
-        savedStateHandle[
-            KEY_PENDING_PAYEE_NAME
-        ] = payee.payeeName
-
-        savedStateHandle[
-            KEY_PENDING_AMOUNT_TEXT
-        ] = state.amountText
-
-        savedStateHandle[
-            KEY_PENDING_NOTE
-        ] = state.note
-
-        savedStateHandle[
-            KEY_PENDING_CATEGORY
-        ] = state.selectedCategory.name
-
-        /*
-         * Preserve the exact QR URI so a process restart can
-         * restore a dynamic merchant payment correctly.
-         */
-        savedStateHandle[
-            KEY_PENDING_ORIGINAL_URI
-        ] = payee.originalUri
-
-        _uiState.update {
-            it.copy(
-                stage =
-                    ScanPayStage.LaunchingPayment(
-                        payee,
-                    ),
-            )
-        }
+        val state = _uiState.value
+        if (state.stage is ScanPayStage.LaunchingPayment) return
 
         viewModelScope.launch {
+            val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
+            val sessionId = UUID.randomUUID().toString()
 
-            /*
-             * Capture the active profile before launching
-             * the external UPI application.
-             */
-            paymentProfileId =
-                profileRepository
-                    .observeActiveProfileId()
-                    .filterNotNull()
-                    .first()
+            // Persist everything needed after the external app takes over.
+            savedStateHandle[KEY_PENDING_SESSION_ID] = sessionId
+            savedStateHandle[KEY_PENDING_NOTE] = state.note
+            savedStateHandle[KEY_PENDING_CATEGORY] = state.selectedCategory.name
+            paymentProfileId = profileId
 
-            _effects.send(
-                ScanPayEffect.LaunchUpiApp(
-                    uri,
-                ),
-            )
-        }
-    }
-
-    override fun onCancelConfirm() {
-
-        if (
-            _uiState.value.stage
-                is ScanPayStage.Confirming
-        ) {
-            _uiState.value =
-                ScanPayUiState()
+            _uiState.update { it.copy(stage = ScanPayStage.LaunchingPayment) }
+            _effects.send(ScanPayEffect.LaunchUpiApp)
         }
     }
 
@@ -439,191 +101,80 @@ class ScanPayViewModel(
         resultCode: Int,
         responseExtra: String?,
     ) {
+        val state = _uiState.value
+        if (state.stage !is ScanPayStage.LaunchingPayment) return
 
-        val state =
-            _uiState.value
+        val sessionId = savedStateHandle.get<String>(KEY_PENDING_SESSION_ID)
+            ?: return
+        if (savedStateHandle.get<String>(KEY_HANDLED_SESSION_ID) == sessionId) return
 
-        val payee =
-            (
-                state.stage
-                    as? ScanPayStage.LaunchingPayment
-            )?.payee ?: return
+        // Mark this callback as consumed before starting asynchronous DB work.
+        savedStateHandle[KEY_HANDLED_SESSION_ID] = sessionId
 
-        when (
-            val outcome =
-                parseUpiResponse(
-                    resultCode,
-                    responseExtra,
-                )
-        ) {
-
+        when (val outcome = parseUpiResponse(resultCode, responseExtra)) {
             is UpiPaymentOutcome.Success -> {
-
-                saveExpense(
-                    state = state,
-                    payee = payee,
-                    txnRef = outcome.txnRef,
-                    pending = false,
-                )
+                if (outcome.amountMinor == null || outcome.amountMinor <= 0L) {
+                    finishWithoutExpense(
+                        "Payment completed, but the amount could not be read from the UPI app.",
+                    )
+                } else {
+                    saveSuccessfulExpense(state, outcome)
+                }
             }
-
             is UpiPaymentOutcome.Submitted -> {
-
-                saveExpense(
-                    state = state,
-                    payee = payee,
-                    txnRef = outcome.txnRef,
-                    pending = true,
+                finishWithoutExpense(
+                    "Payment submitted or pending. No expense was added until payment is confirmed.",
                 )
             }
-
             is UpiPaymentOutcome.Cancelled -> {
-
-                clearPendingLaunch()
-
-                _uiState.update {
-                    it.copy(
-                        stage =
-                            ScanPayStage.Confirming(
-                                payee,
-                            ),
-                    )
-                }
-
-                viewModelScope.launch {
-                    _effects.send(
-                        ScanPayEffect.ShowMessage(
-                            "Payment cancelled",
-                        ),
-                    )
-                }
+                finishWithoutExpense("Payment cancelled", restoreContext = true)
             }
-
             is UpiPaymentOutcome.Failed -> {
-
-                clearPendingLaunch()
-
-                _uiState.update {
-                    it.copy(
-                        stage =
-                            ScanPayStage.Confirming(
-                                payee,
-                            ),
-                    )
-                }
-
-                viewModelScope.launch {
-
-                    _effects.send(
-                        ScanPayEffect.ShowMessage(
-                            outcome.reason?.let {
-                                "Payment failed: $it"
-                            } ?: "Payment failed",
-                        ),
-                    )
-                }
+                finishWithoutExpense(
+                    outcome.reason?.let { "Payment failed: $it" } ?: "Payment failed",
+                    restoreContext = true,
+                )
             }
         }
     }
 
-    /**
-     * Saves the expense after the external UPI app returns.
-     */
-    private fun saveExpense(
+    private fun saveSuccessfulExpense(
         state: ScanPayUiState,
-        payee: UpiPayee,
-        txnRef: String?,
-        pending: Boolean,
+        outcome: UpiPaymentOutcome.Success,
     ) {
-
-        val amountMinor =
-            state.amountText
-                .parseAmountToMinorUnits()
-                ?: 0L
-
-        val baseNote =
-            state.note
-                .trim()
-                .ifEmpty {
-                    payee.payeeName
-                        ?: payee.vpa
-                }
-
-        val note =
-            buildString {
-
-                append(baseNote)
-
-                if (pending) {
-                    append(
-                        " (payment submitted — verify)",
-                    )
-                }
-
-                if (txnRef != null) {
-                    append(
-                        " [UPI ref: $txnRef]",
-                    )
-                }
-            }
-
         viewModelScope.launch {
+            val profileId = paymentProfileId
+                ?: profileRepository.observeActiveProfileId().filterNotNull().first()
 
-            val profileId =
-                paymentProfileId
-                    ?: profileRepository
-                        .observeActiveProfileId()
-                        .filterNotNull()
-                        .first()
+            val result = expenseRepository.addExpense(
+                profileId = profileId,
+                amountMinor = outcome.amountMinor!!,
+                category = state.selectedCategory,
+                note = state.note.trim(),
+                date = LocalDate.now(),
+            )
 
-            clearPendingLaunch()
+            clearPendingPayment()
+            _uiState.value = ScanPayUiState()
 
-            val result =
-                expenseRepository.addExpense(
-
-                    profileId = profileId,
-
-                    amountMinor = amountMinor,
-
-                    category =
-                        state.selectedCategory,
-
-                    note = note,
-
-                    date = LocalDate.now(),
-                )
-
-            _uiState.value =
-                ScanPayUiState()
+            val transactionSummary = buildString {
+                outcome.txnRef?.let { append(" UPI ref: $it.") }
+                outcome.txnId?.let { append(" Txn ID: $it.") }
+            }.trim()
 
             when (result) {
-
                 is AddExpenseResult.Success -> {
-
-                    val baseMessage =
-                        if (pending) {
-                            "Expense logged — payment submitted, verify it completed"
-                        } else {
-                            "Expense added"
-                        }
-
-                    val message =
-                        result.newAlerts
-                            .firstOrNull()
-                            ?.let {
-                                "$baseMessage. ${it.toSnackbarMessage()}"
-                            }
-                            ?: baseMessage
-
-                    _effects.send(
-                        ScanPayEffect.ShowMessage(
-                            message,
-                        ),
-                    )
+                    val message = if (transactionSummary.isBlank()) {
+                        "Expense added"
+                    } else {
+                        "Expense added.$transactionSummary"
+                    }
+                    val withAlert = result.newAlerts.firstOrNull()?.let {
+                        "$message ${it.toSnackbarMessage()}"
+                    } ?: message
+                    _effects.send(ScanPayEffect.ShowMessage(withAlert))
                 }
-
                 is AddExpenseResult.Error -> {
-
                     _effects.send(
                         ScanPayEffect.ShowMessage(
                             "Payment succeeded but couldn't be logged: ${result.message}",
@@ -632,5 +183,23 @@ class ScanPayViewModel(
                 }
             }
         }
+    }
+
+    private fun finishWithoutExpense(
+        message: String,
+        restoreContext: Boolean = false,
+    ) {
+        val state = _uiState.value
+        clearPendingPayment()
+        _uiState.value = if (restoreContext) {
+            ScanPayUiState(
+                stage = ScanPayStage.Ready,
+                note = state.note,
+                selectedCategory = state.selectedCategory,
+            )
+        } else {
+            ScanPayUiState()
+        }
+        viewModelScope.launch { _effects.send(ScanPayEffect.ShowMessage(message)) }
     }
 }
