@@ -86,7 +86,6 @@ class ScanPayViewModel(
             val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
             val sessionId = UUID.randomUUID().toString()
 
-            // Persist everything needed after the external app takes over.
             savedStateHandle[KEY_PENDING_SESSION_ID] = sessionId
             savedStateHandle[KEY_PENDING_NOTE] = state.note
             savedStateHandle[KEY_PENDING_CATEGORY] = state.selectedCategory.name
@@ -108,17 +107,27 @@ class ScanPayViewModel(
             ?: return
         if (savedStateHandle.get<String>(KEY_HANDLED_SESSION_ID) == sessionId) return
 
-        // Mark this callback as consumed before starting asynchronous DB work.
         savedStateHandle[KEY_HANDLED_SESSION_ID] = sessionId
 
         when (val outcome = parseUpiResponse(resultCode, responseExtra)) {
             is UpiPaymentOutcome.Success -> {
                 if (outcome.amountMinor == null || outcome.amountMinor <= 0L) {
-                    finishWithoutExpense(
-                        "Payment completed, but the amount could not be read from the UPI app.",
+                    // The payment app reported success but did not return an amount. The user
+                    // explicitly asked to keep the successful payment visible as an expense so
+                    // it can be corrected manually rather than silently losing the transaction.
+                    saveExpense(
+                        state = state,
+                        amountMinor = 0L,
+                        missingAmount = true,
+                        outcome = outcome,
                     )
                 } else {
-                    saveSuccessfulExpense(state, outcome)
+                    saveExpense(
+                        state = state,
+                        amountMinor = outcome.amountMinor,
+                        missingAmount = false,
+                        outcome = outcome,
+                    )
                 }
             }
             is UpiPaymentOutcome.Submitted -> {
@@ -138,8 +147,10 @@ class ScanPayViewModel(
         }
     }
 
-    private fun saveSuccessfulExpense(
+    private fun saveExpense(
         state: ScanPayUiState,
+        amountMinor: Long,
+        missingAmount: Boolean,
         outcome: UpiPaymentOutcome.Success,
     ) {
         viewModelScope.launch {
@@ -148,7 +159,7 @@ class ScanPayViewModel(
 
             val result = expenseRepository.addExpense(
                 profileId = profileId,
-                amountMinor = outcome.amountMinor!!,
+                amountMinor = amountMinor,
                 category = state.selectedCategory,
                 note = state.note.trim(),
                 date = LocalDate.now(),
@@ -164,10 +175,13 @@ class ScanPayViewModel(
 
             when (result) {
                 is AddExpenseResult.Success -> {
-                    val message = if (transactionSummary.isBlank()) {
-                        "Expense added"
-                    } else {
-                        "Expense added.$transactionSummary"
+                    val message = when {
+                        missingAmount ->
+                            "Expense added with amount ₹0. Please edit this expense and enter the amount paid."
+                        transactionSummary.isBlank() ->
+                            "Expense added"
+                        else ->
+                            "Expense added.$transactionSummary"
                     }
                     val withAlert = result.newAlerts.firstOrNull()?.let {
                         "$message ${it.toSnackbarMessage()}"
@@ -177,7 +191,11 @@ class ScanPayViewModel(
                 is AddExpenseResult.Error -> {
                     _effects.send(
                         ScanPayEffect.ShowMessage(
-                            "Payment succeeded but couldn't be logged: ${result.message}",
+                            if (missingAmount) {
+                                "Payment succeeded but couldn't be logged: ${result.message}"
+                            } else {
+                                "Payment succeeded but couldn't be logged: ${result.message}"
+                            },
                         ),
                     )
                 }
