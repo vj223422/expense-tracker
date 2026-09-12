@@ -16,7 +16,6 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -110,10 +109,11 @@ fun ScanPayScreen(
             viewModel.effects.collect { effect ->
                 when (effect) {
                     is ScanPayEffect.LaunchUpiApp -> {
+                        val payeeVpa = normalizePayeeVpa(effect.payeeVpa)
                         val uri = Uri.Builder()
                             .scheme("upi")
                             .authority("pay")
-                            .appendQueryParameter("pa", effect.payeeVpa)
+                            .appendQueryParameter("pa", payeeVpa)
                             .appendQueryParameter("pn", effect.payeeName)
                             .appendQueryParameter("tr", effect.transactionRef)
                             .appendQueryParameter("tn", effect.transactionNote)
@@ -168,26 +168,17 @@ fun ScanPayScreen(
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            Text("Pay with UPI", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(
-                text = "Pay with UPI",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "First choose the person or merchant to pay. Then your UPI app will open with the payee filled in and you can enter the amount there.",
+                "Choose the person or merchant first. Your UPI app will open with the payee filled in, and you can enter the amount there.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Text("Payee", style = MaterialTheme.typography.titleMedium)
-
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { showScanner = true }) {
-                    Text("Scan QR")
-                }
-                OutlinedButton(onClick = { imagePicker.launch("image/*") }) {
-                    Text("Upload QR")
-                }
+                OutlinedButton(onClick = { showScanner = true }) { Text("Scan QR") }
+                OutlinedButton(onClick = { imagePicker.launch("image/*") }) { Text("Upload QR") }
             }
 
             OutlinedTextField(
@@ -199,15 +190,9 @@ fun ScanPayScreen(
                 singleLine = true,
                 enabled = uiState.stage is ScanPayStage.Ready,
             )
-
             if (uiState.payeeVpa.isNotBlank() && uiState.payeeName.isNotBlank()) {
-                Text(
-                    text = "Paying ${uiState.payeeName}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Text("Paying ${uiState.payeeName}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
             }
-
             OutlinedTextField(
                 value = uiState.payeeName,
                 onValueChange = viewModel::onPayeeNameChange,
@@ -219,10 +204,7 @@ fun ScanPayScreen(
 
             Text("Category", style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(
-                    items = com.expensetracker.app.data.model.ExpenseCategory.entries,
-                    key = { it.name },
-                ) { category ->
+                items(com.expensetracker.app.data.model.ExpenseCategory.entries, key = { it.name }) { category ->
                     FilterChip(
                         selected = category == uiState.selectedCategory,
                         onClick = { viewModel.onCategoryChange(category) },
@@ -242,11 +224,7 @@ fun ScanPayScreen(
             )
 
             Spacer(modifier = Modifier.height(4.dp))
-            Button(
-                onClick = viewModel::onPayClick,
-                enabled = uiState.canPay,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
+            Button(onClick = viewModel::onPayClick, enabled = uiState.canPay, modifier = Modifier.fillMaxWidth()) {
                 Text("Continue to UPI")
             }
         }
@@ -254,21 +232,16 @@ fun ScanPayScreen(
 }
 
 @Composable
-private fun QrScannerDialog(
-    onQrDetected: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun QrScannerDialog(onQrDetected: (String) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED,
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> hasCameraPermission = granted }
-
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasCameraPermission = granted
+    }
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
@@ -277,11 +250,8 @@ private fun QrScannerDialog(
         onDismissRequest = onDismiss,
         title = { Text("Scan UPI QR") },
         text = {
-            if (hasCameraPermission) {
-                CameraPreview(onQrDetected = onQrDetected)
-            } else {
-                Text("Camera permission is required to scan a QR code.")
-            }
+            if (hasCameraPermission) CameraPreview(onQrDetected)
+            else Text("Camera permission is required to scan a QR code.")
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
     )
@@ -292,15 +262,18 @@ private fun QrScannerDialog(
 private fun CameraPreview(onQrDetected: (String) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val previewView = remember { PreviewView(context) }
     val executor = remember { Executors.newSingleThreadExecutor() }
     val scanner = remember { BarcodeScanning.getClient() }
     val handled = remember { AtomicBoolean(false) }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(previewView, lifecycleOwner) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        val listener = Runnable {
+        cameraProviderFuture.addListener({
             val provider = cameraProviderFuture.get()
-            val preview = Preview.Builder().build()
+            val preview = Preview.Builder().build().also {
+                it.surfaceProvider = previewView.surfaceProvider
+            }
             val analysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
@@ -310,32 +283,19 @@ private fun CameraPreview(onQrDetected: (String) -> Unit) {
                     imageProxy.close()
                     return@setAnalyzer
                 }
-                val image = InputImage.fromMediaImage(
-                    mediaImage,
-                    imageProxy.imageInfo.rotationDegrees,
-                )
+                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                 scanner.process(image)
                     .addOnSuccessListener { barcodes ->
                         val raw = barcodes.firstOrNull()?.rawValue
-                        if (!raw.isNullOrBlank() && handled.compareAndSet(false, true)) {
-                            onQrDetected(raw)
-                        }
+                        if (!raw.isNullOrBlank() && handled.compareAndSet(false, true)) onQrDetected(raw)
                     }
                     .addOnCompleteListener { imageProxy.close() }
             }
-            try {
+            runCatching {
                 provider.unbindAll()
-                provider.bindToLifecycle(
-                    lifecycleOwner,
-                    CameraSelector.DEFAULT_BACK_CAMERA,
-                    preview,
-                    analysis,
-                )
-            } catch (_: Exception) {
-                // Camera binding failure is surfaced by the dialog remaining open.
+                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
             }
-        }
-        cameraProviderFuture.addListener(listener, ContextCompat.getMainExecutor(context))
+        }, ContextCompat.getMainExecutor(context))
 
         onDispose {
             runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
@@ -345,49 +305,31 @@ private fun CameraPreview(onQrDetected: (String) -> Unit) {
     }
 
     AndroidView(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(320.dp),
-        factory = { PreviewView(it) },
-        update = { previewView ->
-            val providerFuture = ProcessCameraProvider.getInstance(context)
-            providerFuture.addListener({
-                val provider = providerFuture.get()
-                provider.boundCameraControl?.let { control ->
-                    // No-op; the PreviewView is bound by the analyzer setup above.
-                    control.enableTorch(false)
-                }
-            }, ContextCompat.getMainExecutor(context))
-        },
+        modifier = Modifier.fillMaxWidth().height(320.dp),
+        factory = { previewView },
     )
 }
 
 private fun parseUpiPayee(rawValue: String): Pair<String, String>? {
     val uri = runCatching { Uri.parse(rawValue.trim()) }.getOrNull() ?: return null
-    if (!uri.scheme.equals("upi", ignoreCase = true) ||
-        !uri.host.equals("pay", ignoreCase = true)
-    ) return null
-
+    if (!uri.scheme.equals("upi", ignoreCase = true) || !uri.host.equals("pay", ignoreCase = true)) return null
     val vpa = uri.getQueryParameter("pa")?.trim().orEmpty()
     if (vpa.isBlank()) return null
-    val name = uri.getQueryParameter("pn")?.trim().orEmpty()
-    return vpa to name
+    return vpa to uri.getQueryParameter("pn")?.trim().orEmpty()
 }
 
-private fun scanQrImage(
-    context: Context,
-    uri: Uri,
-    onResult: (String) -> Unit,
-    onError: () -> Unit,
-) {
+private fun normalizePayeeVpa(value: String): String {
+    val trimmed = value.trim()
+    return if (trimmed.matches(Regex("\\d{8,15}"))) "$trimmed@upi" else trimmed
+}
+
+private fun scanQrImage(context: Context, uri: Uri, onResult: (String) -> Unit, onError: () -> Unit) {
     val image = runCatching { InputImage.fromFilePath(context, uri) }.getOrNull()
     if (image == null) {
         onError()
         return
     }
     BarcodeScanning.getClient().process(image)
-        .addOnSuccessListener { barcodes ->
-            barcodes.firstOrNull()?.rawValue?.let(onResult) ?: onError()
-        }
+        .addOnSuccessListener { barcodes -> barcodes.firstOrNull()?.rawValue?.let(onResult) ?: onError() }
         .addOnFailureListener { onError() }
 }
