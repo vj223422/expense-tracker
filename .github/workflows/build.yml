@@ -8,9 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./ExpenseTracker
     steps:
       - uses: actions/checkout@v4
 
@@ -19,26 +16,34 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+          cache: gradle
 
       - name: Ensure required Android SDK components are installed
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
+      # This repo's gradle/wrapper/gradle-wrapper.jar was never committed (it's a compiled binary
+      # that can't be hand-authored) — regenerate it here from the pinned version in
+      # gradle/wrapper/gradle-wrapper.properties using the runner's preinstalled Gradle.
       - name: Regenerate Gradle wrapper jar
         run: gradle wrapper --gradle-version 8.11.1 --distribution-type bin
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Run Android Lint
+        run: ./gradlew lint --no-daemon --stacktrace
+
+      # assembleRelease isn't run here: it requires real release-signing credentials
+      # (release.keystore.properties, git-ignored — see release.keystore.properties.example) that
+      # only the app owner should hold, so it can't run on a shared CI runner without those
+      # secrets being provisioned first.
       - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: expense-tracker-debug-apk
-          path: ExpenseTracker/app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
