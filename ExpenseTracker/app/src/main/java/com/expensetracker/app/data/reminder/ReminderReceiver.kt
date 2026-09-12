@@ -11,10 +11,15 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.room.Room
 import com.expensetracker.app.R
+import com.expensetracker.app.data.entity.ReminderEntity
+import com.expensetracker.app.data.local.ExpenseDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
-import java.time.ZonedDateTime
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -22,35 +27,49 @@ class ReminderReceiver : BroadcastReceiver() {
         if (id < 0) return
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty().ifBlank { "Reminder" }
         val note = intent.getStringExtra(EXTRA_NOTE).orEmpty()
-
-        ensureChannel(context)
-        val allowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        if (allowed) {
-            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle(title)
-                .setContentText(note.ifBlank { "Reminder" })
-                .setStyle(NotificationCompat.BigTextStyle().bigText(note.ifBlank { "Reminder" }))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true)
-                .build()
-            NotificationManagerCompat.from(context).notify(id.toInt(), notification)
-        }
+        showNotification(context, id, title, note)
 
         val recurrence = intent.getStringExtra(EXTRA_RECURRENCE).orEmpty()
         val current = intent.getLongExtra(EXTRA_TRIGGER_AT, System.currentTimeMillis())
         val intervalDays = intent.getIntExtra(EXTRA_INTERVAL_DAYS, 1).coerceAtLeast(1)
-        val next = nextOccurrence(current, recurrence, intervalDays)
-        if (next != null) {
-            val scheduler = ReminderScheduler(context)
-            scheduler.scheduleFromReceiver(id, title, note, next, recurrence, intervalDays)
+        val next = nextOccurrence(current, recurrence, intervalDays) ?: return
+
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            val db = Room.databaseBuilder(context.applicationContext, ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
+                .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4)
+                .build()
+            try {
+                val existing = db.reminderDao().getById(id)
+                if (existing?.enabled == true) {
+                    val updated = existing.copy(triggerAtEpochMillis = next)
+                    db.reminderDao().update(updated)
+                    ReminderScheduler(context.applicationContext).schedule(updated)
+                }
+            } finally {
+                db.close()
+                pending.finish()
+            }
         }
     }
 
+    private fun showNotification(context: Context, id: Long, title: String, note: String) {
+        ensureChannel(context)
+        val allowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (!allowed) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(note.ifBlank { "Reminder" })
+            .setStyle(NotificationCompat.BigTextStyle().bigText(note.ifBlank { "Reminder" }))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        NotificationManagerCompat.from(context).notify(id.toInt(), notification)
+    }
+
     private fun nextOccurrence(triggerAt: Long, recurrence: String, intervalDays: Int): Long? {
-        val zone = ZoneId.systemDefault()
-        val dateTime = Instant.ofEpochMilli(triggerAt).atZone(zone)
+        val dateTime = Instant.ofEpochMilli(triggerAt).atZone(ZoneId.systemDefault())
         val next = when (recurrence) {
             "DAILY" -> dateTime.plusDays(1)
             "WEEKLY" -> dateTime.plusWeeks(1)
@@ -81,26 +100,4 @@ class ReminderReceiver : BroadcastReceiver() {
         const val EXTRA_INTERVAL_DAYS = "interval_days"
         const val CHANNEL_ID = "reminders"
     }
-}
-
-private fun ReminderScheduler.scheduleFromReceiver(
-    id: Long,
-    title: String,
-    note: String,
-    triggerAt: Long,
-    recurrence: String,
-    intervalDays: Int,
-) {
-    val reminder = com.expensetracker.app.data.entity.ReminderEntity(
-        id = id,
-        profileId = 0L,
-        title = title,
-        note = note,
-        triggerAtEpochMillis = triggerAt,
-        recurrence = recurrence,
-        customIntervalDays = intervalDays,
-        enabled = true,
-        createdAtEpochMillis = 0L,
-    )
-    schedule(reminder)
 }
