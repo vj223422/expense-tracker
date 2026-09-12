@@ -13,15 +13,13 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders WHERE profileId = :profileId ORDER BY enabled DESC, triggerAtEpochMillis ASC")
     fun observeForProfile(profileId: Long): Flow<List<ReminderEntity>>
 
+    @Query("SELECT * FROM reminders WHERE enabled = 1")
+    suspend fun getEnabled(): List<ReminderEntity>
+
     @Insert
     suspend fun insert(reminder: ReminderEntity): Long
-
     @Update
     suspend fun update(reminder: ReminderEntity)
-
     @Delete
     suspend fun delete(reminder: ReminderEntity)
-
-    @Query("SELECT * FROM reminders WHERE id = :id LIMIT 1")
-    suspend fun getById(id: Long): ReminderEntity?
 }
