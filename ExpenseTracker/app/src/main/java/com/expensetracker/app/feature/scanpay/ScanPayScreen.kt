@@ -93,8 +93,7 @@ fun ScanPayScreen(
                 onResult = { raw ->
                     val payee = parseUpiPayee(raw)
                     if (payee != null) {
-                        viewModel.onPayeeVpaChange(payee.first)
-                        viewModel.onPayeeNameChange(payee.second)
+                        viewModel.onQrPayeeChange(payee.vpa, payee.name, payee.mcc)
                     } else {
                         viewModel.showMessage("The selected image does not contain a valid UPI QR code.")
                     }
@@ -115,6 +114,7 @@ fun ScanPayScreen(
                             .authority("pay")
                             .appendQueryParameter("pa", payeeVpa)
                             .appendQueryParameter("pn", effect.payeeName)
+                            .appendQueryParameter("mc", effect.payeeMcc)
                             .appendQueryParameter("tr", effect.transactionRef)
                             .appendQueryParameter("tn", effect.transactionNote)
                             .appendQueryParameter("cu", "INR")
@@ -145,8 +145,7 @@ fun ScanPayScreen(
                 val payee = parseUpiPayee(raw)
                 showScanner = false
                 if (payee != null) {
-                    viewModel.onPayeeVpaChange(payee.first)
-                    viewModel.onPayeeNameChange(payee.second)
+                    viewModel.onQrPayeeChange(payee.vpa, payee.name, payee.mcc)
                 } else {
                     viewModel.showMessage("This QR code is not a valid UPI payment QR.")
                 }
@@ -310,12 +309,22 @@ private fun CameraPreview(onQrDetected: (String) -> Unit) {
     )
 }
 
-private fun parseUpiPayee(rawValue: String): Pair<String, String>? {
+private data class UpiPayee(
+    val vpa: String,
+    val name: String,
+    val mcc: String?,
+)
+
+private fun parseUpiPayee(rawValue: String): UpiPayee? {
     val uri = runCatching { Uri.parse(rawValue.trim()) }.getOrNull() ?: return null
     if (!uri.scheme.equals("upi", ignoreCase = true) || !uri.host.equals("pay", ignoreCase = true)) return null
     val vpa = uri.getQueryParameter("pa")?.trim().orEmpty()
     if (vpa.isBlank()) return null
-    return vpa to uri.getQueryParameter("pn")?.trim().orEmpty()
+    return UpiPayee(
+        vpa = vpa,
+        name = uri.getQueryParameter("pn")?.trim().orEmpty(),
+        mcc = uri.getQueryParameter("mc")?.trim(),
+    )
 }
 
 private fun normalizePayeeVpa(value: String): String {
