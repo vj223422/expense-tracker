@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The database holds financial transaction history. cloud-backup can be restored to any
-     device signed into the same Google account (or extracted if that account is compromised), so
-     it's excluded there. device-transfer (moving to a new phone via cable/Switch) is left in
-     since it requires physical possession of both devices.
-
-     Preferences DataStore (data/prefs/AppPreferences) backs up under domain="file", not
-     "sharedpref" — it only holds the active-profile pointer, the notification alert-dedup
-     ledger, and theme prefs (no financial data), so it's safe to include in both rulesets. Once
-     any <include> is present, Android excludes every domain not explicitly listed, so this has
-     to be spelled out here or the DataStore file silently never gets backed up/restored. -->
+<!-- The database holds financial transaction history. Cloud backup is therefore disabled for
+     the database, while device-to-device transfer keeps the database available when physically
+     moving the app to a new device. Preferences DataStore stores only non-financial settings and
+     app state, so it is explicitly included in both backup modes. -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="database" path="*" />
+        <exclude domain="database" path="." />
         <include domain="sharedpref" path="." />
         <include domain="file" path="." />
     </cloud-backup>
