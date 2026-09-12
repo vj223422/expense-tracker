@@ -93,7 +93,7 @@ fun ScanPayScreen(
                 onResult = { raw ->
                     val payee = parseUpiPayee(raw)
                     if (payee != null) {
-                        viewModel.onQrPayeeChange(payee.vpa, payee.name, payee.mcc)
+                        viewModel.onQrPayeeChange(payee.vpa, payee.name, payee.mcc, payee.transactionRef)
                     } else {
                         viewModel.showMessage("The selected image does not contain a valid UPI QR code.")
                     }
@@ -109,17 +109,16 @@ fun ScanPayScreen(
                 when (effect) {
                     is ScanPayEffect.LaunchUpiApp -> {
                         val payeeVpa = normalizePayeeVpa(effect.payeeVpa)
-                        val uri = Uri.Builder()
+                        val builder = Uri.Builder()
                             .scheme("upi")
                             .authority("pay")
                             .appendQueryParameter("pa", payeeVpa)
                             .appendQueryParameter("pn", effect.payeeName)
-                            .appendQueryParameter("mc", effect.payeeMcc)
-                            .appendQueryParameter("tr", effect.transactionRef)
                             .appendQueryParameter("tn", effect.transactionNote)
                             .appendQueryParameter("cu", "INR")
-                            .build()
-                        val upiIntent = Intent(Intent.ACTION_VIEW, uri)
+                        effect.payeeMcc?.let { builder.appendQueryParameter("mc", it) }
+                        effect.transactionRef?.let { builder.appendQueryParameter("tr", it) }
+                        val upiIntent = Intent(Intent.ACTION_VIEW, builder.build())
 
                         if (upiIntent.resolveActivity(context.packageManager) == null) {
                             viewModel.onPaymentActivityResult(Activity.RESULT_CANCELED, null)
@@ -145,7 +144,7 @@ fun ScanPayScreen(
                 val payee = parseUpiPayee(raw)
                 showScanner = false
                 if (payee != null) {
-                    viewModel.onQrPayeeChange(payee.vpa, payee.name, payee.mcc)
+                    viewModel.onQrPayeeChange(payee.vpa, payee.name, payee.mcc, payee.transactionRef)
                 } else {
                     viewModel.showMessage("This QR code is not a valid UPI payment QR.")
                 }
@@ -313,6 +312,7 @@ private data class UpiPayee(
     val vpa: String,
     val name: String,
     val mcc: String?,
+    val transactionRef: String?,
 )
 
 private fun parseUpiPayee(rawValue: String): UpiPayee? {
@@ -324,6 +324,7 @@ private fun parseUpiPayee(rawValue: String): UpiPayee? {
         vpa = vpa,
         name = uri.getQueryParameter("pn")?.trim().orEmpty(),
         mcc = uri.getQueryParameter("mc")?.trim(),
+        transactionRef = uri.getQueryParameter("tr")?.trim(),
     )
 }
 
