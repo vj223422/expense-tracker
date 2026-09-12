@@ -16,6 +16,7 @@ data class ScanPayUiState(
     val selectedCategory: ExpenseCategory = ExpenseCategory.OTHER,
     val payeeVpa: String = "",
     val payeeName: String = "",
+    val payeeMcc: String = "0000",
 ) {
     val canPay: Boolean
         get() = stage is ScanPayStage.Ready && payeeVpa.isNotBlank()
@@ -25,6 +26,7 @@ sealed interface ScanPayEffect {
     data class LaunchUpiApp(
         val payeeVpa: String,
         val payeeName: String,
+        val payeeMcc: String,
         val transactionRef: String,
         val transactionNote: String,
     ) : ScanPayEffect
