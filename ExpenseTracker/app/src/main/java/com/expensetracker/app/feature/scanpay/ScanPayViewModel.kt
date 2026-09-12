@@ -28,6 +28,7 @@ private const val KEY_PENDING_CATEGORY = "scanpay_pending_category"
 private const val KEY_PENDING_PROFILE_ID = "scanpay_pending_profile_id"
 private const val KEY_PENDING_PAYEE_VPA = "scanpay_pending_payee_vpa"
 private const val KEY_PENDING_PAYEE_NAME = "scanpay_pending_payee_name"
+private const val KEY_PENDING_PAYEE_MCC = "scanpay_pending_payee_mcc"
 private const val KEY_HANDLED_SESSION_ID = "scanpay_handled_session_id"
 
 class ScanPayViewModel(
@@ -57,6 +58,7 @@ class ScanPayViewModel(
                 ?: ExpenseCategory.OTHER,
             payeeVpa = savedStateHandle[KEY_PENDING_PAYEE_VPA] ?: "",
             payeeName = savedStateHandle[KEY_PENDING_PAYEE_NAME] ?: "",
+            payeeMcc = savedStateHandle[KEY_PENDING_PAYEE_MCC] ?: "0000",
         ).also {
             if (savedStateHandle.get<String>(KEY_HANDLED_SESSION_ID) == sessionId) clearPendingPayment()
         }
@@ -68,6 +70,7 @@ class ScanPayViewModel(
         savedStateHandle[KEY_PENDING_CATEGORY] = null
         savedStateHandle[KEY_PENDING_PAYEE_VPA] = null
         savedStateHandle[KEY_PENDING_PAYEE_NAME] = null
+        savedStateHandle[KEY_PENDING_PAYEE_MCC] = null
         paymentProfileId = null
     }
 
@@ -87,12 +90,23 @@ class ScanPayViewModel(
 
     override fun onPayeeVpaChange(value: String) {
         if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
-        _uiState.update { it.copy(payeeVpa = value.trim()) }
+        _uiState.update { it.copy(payeeVpa = value.trim(), payeeMcc = "0000") }
     }
 
     override fun onPayeeNameChange(value: String) {
         if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
         _uiState.update { it.copy(payeeName = value) }
+    }
+
+    fun onQrPayeeChange(vpa: String, name: String, mcc: String?) {
+        if (_uiState.value.stage is ScanPayStage.LaunchingPayment) return
+        _uiState.update {
+            it.copy(
+                payeeVpa = vpa.trim(),
+                payeeName = name,
+                payeeMcc = mcc?.takeIf { value -> value.matches(Regex("\\d{4}")) } ?: "0000",
+            )
+        }
     }
 
     override fun onPayClick() {
@@ -115,12 +129,14 @@ class ScanPayViewModel(
             savedStateHandle[KEY_PENDING_CATEGORY] = state.selectedCategory.name
             savedStateHandle[KEY_PENDING_PAYEE_VPA] = state.payeeVpa
             savedStateHandle[KEY_PENDING_PAYEE_NAME] = state.payeeName
+            savedStateHandle[KEY_PENDING_PAYEE_MCC] = state.payeeMcc
             paymentProfileId = profileId
             _uiState.update { it.copy(stage = ScanPayStage.LaunchingPayment) }
             _effects.send(
                 ScanPayEffect.LaunchUpiApp(
                     payeeVpa = state.payeeVpa,
                     payeeName = state.payeeName.ifBlank { state.payeeVpa },
+                    payeeMcc = state.payeeMcc,
                     transactionRef = transactionRef,
                     transactionNote = transactionNote,
                 ),
@@ -204,6 +220,7 @@ class ScanPayViewModel(
                 selectedCategory = state.selectedCategory,
                 payeeVpa = state.payeeVpa,
                 payeeName = state.payeeName,
+                payeeMcc = state.payeeMcc,
             )
         } else {
             ScanPayUiState()
