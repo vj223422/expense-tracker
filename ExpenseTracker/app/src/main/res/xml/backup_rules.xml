@@ -5,7 +5,7 @@
      Preferences DataStore backs up under domain="file" (see data_extraction_rules.xml) — included
      here for the same reason: no financial data, just the active-profile pointer/alert ledger/theme. -->
 <full-backup-content>
-    <exclude domain="database" path="." />
+    <exclude domain="database" path="expense_tracker.db" />
     <include domain="sharedpref" path="." />
     <include domain="file" path="." />
 </full-backup-content>
