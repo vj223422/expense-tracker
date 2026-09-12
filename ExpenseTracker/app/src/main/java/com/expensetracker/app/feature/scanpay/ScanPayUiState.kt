@@ -21,6 +21,7 @@ data class ScanPayUiState(
 
 sealed interface ScanPayEffect {
     data object LaunchUpiApp : ScanPayEffect
+    data object ConfirmPayment : ScanPayEffect
     data class ShowMessage(val message: String) : ScanPayEffect
 }
 
@@ -30,4 +31,5 @@ interface ScanPayActions {
     fun onCategoryChange(category: ExpenseCategory)
     fun onPayClick()
     fun onPaymentActivityResult(resultCode: Int, responseExtra: String?)
+    fun onPaymentConfirmation(completed: Boolean)
 }
