@@ -8,8 +8,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    # IMPORTANT: If your Android project (where settings.gradle lives) is inside a subfolder,
+    # remove the '#' from the next 3 lines and replace 'your-subfolder-name' with the actual name.
+    # defaults:
+    #   run:
+    #     working-directory: ./your-subfolder-name
+
     steps:
       - uses: actions/checkout@v4
+
+      # This step prints the contents of your repository to the Action logs.
+      # If settings.gradle is missing from these logs, you need to commit it to GitHub.
+      - name: Debug - List repository files
+        run: ls -la
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
