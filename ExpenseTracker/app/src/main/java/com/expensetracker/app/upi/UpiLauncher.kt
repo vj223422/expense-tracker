@@ -14,7 +14,6 @@ object UpiLauncher {
         amountMinor: Long,
         payeeName: String? = null,
         note: String? = null,
-        originalUri: Uri? = null,
     ): Intent {
         require(payeeVpa.isNotBlank()) { "Payee VPA is required" }
         require(amountMinor > 0L) { "Amount must be greater than zero" }
@@ -23,34 +22,31 @@ object UpiLauncher {
         val amountText = if (amount % 1.0 == 0.0) {
             amount.toLong().toString()
         } else {
-            "%.2f".format(Locale.US, amount).trimEnd('0').trimEnd('.')
+            "%.2f".format(Locale.US, amount)
         }
 
-        val builder = (originalUri ?: Uri.parse("upi://pay")).buildUpon()
-            .clearQuery()
+        // Same URI construction as the reference Android-payment-using-UPI project:
+        // upi://pay -> pa -> pn -> tn -> am -> cu
+        val uri = Uri.parse("upi://pay").buildUpon()
             .appendQueryParameter("pa", payeeVpa.trim())
             .appendQueryParameter("pn", payeeName?.trim().orEmpty())
             .appendQueryParameter("tn", note?.trim().orEmpty())
             .appendQueryParameter("am", amountText)
             .appendQueryParameter("cu", "INR")
+            .build()
 
-        // Keep all non-standard parameters from a scanned QR (for example mc, tr,
-        // url, mode, purpose and orgid) while replacing the editable payment fields.
-        originalUri?.queryParameterNames?.forEach { key ->
-            if (key !in setOf("pa", "pn", "tn", "am", "cu")) {
-                originalUri.getQueryParameters(key).forEach { value ->
-                    builder.appendQueryParameter(key, value)
-                }
-            }
-        }
-
-        return Intent(Intent.ACTION_VIEW, builder.build())
+        val upiPayIntent = Intent(Intent.ACTION_VIEW)
+        upiPayIntent.setData(uri)
+        return upiPayIntent
     }
 
     fun launch(activity: Activity, intent: Intent): Boolean {
+        // Same chooser flow as the reference project.
         val chooser = Intent.createChooser(intent, "Pay with")
-        if (chooser.resolveActivity(activity.packageManager) == null) return false
-        activity.startActivityForResult(chooser, REQUEST_CODE)
-        return true
+        if (chooser.resolveActivity(activity.packageManager) != null) {
+            activity.startActivityForResult(chooser, REQUEST_CODE)
+            return true
+        }
+        return false
     }
 }
