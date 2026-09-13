@@ -34,8 +34,6 @@ class AddExpenseViewModel(
     private val _effects = Channel<AddExpenseEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
-    /** Set once the existing expense loads — carries the id/profileId/createdAt that onSaveClick
-     * needs but never shows in the form. Null in add mode, or if the load below hasn't (or can't) resolve. */
     private var loadedExpense: Expense? = null
 
     init {
@@ -86,6 +84,44 @@ class AddExpenseViewModel(
         viewModelScope.launch { _effects.send(AddExpenseEffect.NavigateBack) }
     }
 
+    /** Saves an expense after the amount has been supplied by the caller, such as UPI result handling. */
+    fun savePaidAmount(
+        amountMinor: Long,
+        transactionId: String?,
+        paymentMethod: String = "UPI",
+    ) {
+        if (loadedExpense != null || _uiState.value.isSaving || amountMinor <= 0L) return
+        _uiState.update { it.copy(amountText = amountMinor.toAmountInputText(), isSaving = true, amountError = null) }
+        viewModelScope.launch {
+            val state = _uiState.value
+            val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
+            val note = buildString {
+                state.note.trim().takeIf { it.isNotEmpty() }?.let { append(it) }
+                transactionId?.takeIf { it.isNotBlank() }?.let {
+                    if (isNotEmpty()) append(" ")
+                    append("[$paymentMethod txn: ").append(it).append("]")
+                }
+            }
+            when (val result = expenseRepository.addExpense(
+                profileId = profileId,
+                amountMinor = amountMinor,
+                category = state.selectedCategory,
+                note = note,
+                date = state.date,
+            )) {
+                is AddExpenseResult.Success -> {
+                    val message = result.newAlerts.firstOrNull()?.let { "Expense added. ${it.toSnackbarMessage()}" } ?: "Expense added"
+                    _effects.send(AddExpenseEffect.ShowMessage(message))
+                    _effects.send(AddExpenseEffect.NavigateBack)
+                }
+                is AddExpenseResult.Error -> {
+                    _uiState.update { it.copy(isSaving = false) }
+                    _effects.send(AddExpenseEffect.ShowMessage(result.message))
+                }
+            }
+        }
+    }
+
     override fun onSaveClick() {
         val state = _uiState.value
         if (state.isSaving) return
@@ -120,9 +156,6 @@ class AddExpenseViewModel(
             when (result) {
                 is AddExpenseResult.Success -> {
                     val baseMessage = if (existing != null) "Expense updated" else "Expense added"
-                    // The system push notification for this alert (if any) is silently skipped
-                    // when POST_NOTIFICATIONS was declined, so this is the only feedback some
-                    // users would otherwise get for crossing a budget threshold: none at all.
                     val message = result.newAlerts.firstOrNull()?.let { "$baseMessage. ${it.toSnackbarMessage()}" } ?: baseMessage
                     _effects.send(AddExpenseEffect.ShowMessage(message))
                     _effects.send(AddExpenseEffect.NavigateBack)
