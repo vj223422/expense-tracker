@@ -25,7 +25,12 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4)
+            .addMigrations(
+                ExpenseDatabase.MIGRATION_1_2,
+                ExpenseDatabase.MIGRATION_2_3,
+                ExpenseDatabase.MIGRATION_3_4,
+                ExpenseDatabase.MIGRATION_4_5,
+            )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
