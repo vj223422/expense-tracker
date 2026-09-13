@@ -65,13 +65,12 @@ import org.koin.compose.koinInject
 fun ExpenseTrackerApp() {
     val appPreferences: AppPreferences = koinInject()
     val themeMode by appPreferences.themeMode.collectAsStateWithLifecycle(ThemeMode.SYSTEM)
-    val dynamicColorEnabled by appPreferences.dynamicColorEnabled.collectAsStateWithLifecycle(true)
     val darkTheme = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    ExpenseTrackerTheme(darkTheme = darkTheme, dynamicColor = dynamicColorEnabled) {
+    ExpenseTrackerTheme(darkTheme = darkTheme) {
         val navController = rememberNavController()
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
@@ -129,33 +128,50 @@ private fun AppTopBar(
     onScanPayClick: () -> Unit,
     profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel(),
 ) {
-    val uiState by profileSwitcherViewModel.uiState.collectAsStateWithLifecycle()
-    var menuExpanded by remember { mutableStateOf(false) }
-    var showCreateDialog by remember { mutableStateOf(false) }
-    TopAppBar(title = { Text("Kanakku") }, actions = {
-        TextButton(onClick = onScanPayClick) { Text("Scan & Pay") }
-        Box {
-            ProfileAvatar(name = uiState.activeProfile?.name.orEmpty(), onClick = { menuExpanded = true })
-            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                uiState.profiles.forEach { profile ->
-                    DropdownMenuItem(text = { Text(profile.name) }, leadingIcon = { if (profile.id == uiState.activeProfileId) Icon(Icons.Filled.Check, null) }, onClick = { profileSwitcherViewModel.onSwitchProfile(profile.id); menuExpanded = false })
+    val profiles by profileSwitcherViewModel.profiles.collectAsStateWithLifecycle()
+    val activeProfileId by profileSwitcherViewModel.activeProfileId.collectAsStateWithLifecycle()
+    var expanded by remember { mutableStateOf(false) }
+    var showCreateProfile by remember { mutableStateOf(false) }
+    val activeProfile = profiles.firstOrNull { it.id == activeProfileId }
+    TopAppBar(
+        title = { Text(activeProfile?.name ?: "Expense Tracker") },
+        actions = {
+            TextButton(onClick = onScanPayClick) { Text("Scan & Pay") }
+            Box {
+                TextButton(onClick = { expanded = true }) { Text("Profile") }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    profiles.forEach { profile ->
+                        DropdownMenuItem(
+                            text = { Text(profile.name) },
+                            onClick = {
+                                profileSwitcherViewModel.selectProfile(profile.id)
+                                expanded = false
+                            },
+                            leadingIcon = {
+                                if (profile.id == activeProfileId) Icon(Icons.Default.Check, null)
+                            },
+                        )
+                    }
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Create profile") },
+                        onClick = {
+                            expanded = false
+                            showCreateProfile = true
+                        },
+                        leadingIcon = { Icon(Icons.Default.Add, null) },
+                    )
                 }
-                HorizontalDivider()
-                DropdownMenuItem(text = { Text("Add profile") }, leadingIcon = { Icon(Icons.Filled.Add, null) }, onClick = { menuExpanded = false; showCreateDialog = true })
             }
-        }
-    })
-    if (showCreateDialog) CreateProfileDialog(existingNames = uiState.profiles.map { it.name }, onConfirm = { profileSwitcherViewModel.onCreateProfile(it); showCreateDialog = false }, onDismiss = { showCreateDialog = false })
-}
-
-private fun String.firstGraphemeOrPlaceholder(): String {
-    val trimmed = trim(); if (trimmed.isEmpty()) return "?"
-    return String(Character.toChars(trimmed.codePointAt(0))).uppercase()
-}
-
-@Composable
-private fun ProfileAvatar(name: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(modifier.padding(end = 16.dp).size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(name.firstGraphemeOrPlaceholder(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+        },
+    )
+    if (showCreateProfile) {
+        CreateProfileDialog(
+            onDismiss = { showCreateProfile = false },
+            onCreate = { name ->
+                profileSwitcherViewModel.createProfile(name)
+                showCreateProfile = false
+            },
+        )
     }
 }
