@@ -13,7 +13,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.room.Room
 import com.expensetracker.app.R
-import com.expensetracker.app.data.entity.ReminderEntity
 import com.expensetracker.app.data.local.ExpenseDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,17 +30,25 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val recurrence = intent.getStringExtra(EXTRA_RECURRENCE).orEmpty()
         val current = intent.getLongExtra(EXTRA_TRIGGER_AT, System.currentTimeMillis())
+        val endDate = intent.getLongExtra(EXTRA_END_DATE, -1L).takeIf { it >= 0L }
         val intervalDays = intent.getIntExtra(EXTRA_INTERVAL_DAYS, 1).coerceAtLeast(1)
         val next = nextOccurrence(current, recurrence, intervalDays) ?: return
+
+        if (endDate != null && next > endDate) return
 
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             val db = Room.databaseBuilder(context.applicationContext, ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-                .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4)
+                .addMigrations(
+                    ExpenseDatabase.MIGRATION_1_2,
+                    ExpenseDatabase.MIGRATION_2_3,
+                    ExpenseDatabase.MIGRATION_3_4,
+                    ExpenseDatabase.MIGRATION_4_5,
+                )
                 .build()
             try {
                 val existing = db.reminderDao().getById(id)
-                if (existing?.enabled == true) {
+                if (existing?.enabled == true && (existing.endDateEpochMillis == null || next <= existing.endDateEpochMillis)) {
                     val updated = existing.copy(triggerAtEpochMillis = next)
                     db.reminderDao().update(updated)
                     ReminderScheduler(context.applicationContext).schedule(updated)
@@ -96,6 +103,7 @@ class ReminderReceiver : BroadcastReceiver() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_NOTE = "note"
         const val EXTRA_TRIGGER_AT = "trigger_at"
+        const val EXTRA_END_DATE = "end_date"
         const val EXTRA_RECURRENCE = "recurrence"
         const val EXTRA_INTERVAL_DAYS = "interval_days"
         const val CHANNEL_ID = "reminders"
