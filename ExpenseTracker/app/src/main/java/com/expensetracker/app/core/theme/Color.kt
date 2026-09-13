@@ -2,69 +2,68 @@ package com.expensetracker.app.core.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Seed: a calm teal-green — money/growth association without being a cliché finance-app blue.
-val primaryLight = Color(0xFF1B6E5C)
+// App-wide blue theme. All Material surfaces, controls and primary actions derive from this palette.
+val primaryLight = Color(0xFF1565D8)
 val onPrimaryLight = Color(0xFFFFFFFF)
-val primaryContainerLight = Color(0xFFA6F2DA)
-val onPrimaryContainerLight = Color(0xFF002015)
-val secondaryLight = Color(0xFF4A635B)
+val primaryContainerLight = Color(0xFFD9E7FF)
+val onPrimaryContainerLight = Color(0xFF001B3D)
+val secondaryLight = Color(0xFF536273)
 val onSecondaryLight = Color(0xFFFFFFFF)
-val secondaryContainerLight = Color(0xFFCCE8DC)
-val onSecondaryContainerLight = Color(0xFF06201A)
-val tertiaryLight = Color(0xFF3F6375)
+val secondaryContainerLight = Color(0xFFD7E3F4)
+val onSecondaryContainerLight = Color(0xFF101D2A)
+val tertiaryLight = Color(0xFF5B5F8A)
 val onTertiaryLight = Color(0xFFFFFFFF)
-val tertiaryContainerLight = Color(0xFFC3E8FC)
-val onTertiaryContainerLight = Color(0xFF001F2A)
+val tertiaryContainerLight = Color(0xFFE2E0FF)
+val onTertiaryContainerLight = Color(0xFF171633)
 val errorLight = Color(0xFFBA1A1A)
 val onErrorLight = Color(0xFFFFFFFF)
 val errorContainerLight = Color(0xFFFFDAD6)
 val onErrorContainerLight = Color(0xFF410002)
-val backgroundLight = Color(0xFFF6FBF7)
-val onBackgroundLight = Color(0xFF171D1A)
-val surfaceLight = Color(0xFFF6FBF7)
-val onSurfaceLight = Color(0xFF171D1A)
-val surfaceVariantLight = Color(0xFFDBE5DF)
-val onSurfaceVariantLight = Color(0xFF404944)
-val outlineLight = Color(0xFF707974)
-val outlineVariantLight = Color(0xFFBFC9C3)
+val backgroundLight = Color(0xFFF7F9FC)
+val onBackgroundLight = Color(0xFF171B22)
+val surfaceLight = Color(0xFFF7F9FC)
+val onSurfaceLight = Color(0xFF171B22)
+val surfaceVariantLight = Color(0xFFDCE3EC)
+val onSurfaceVariantLight = Color(0xFF414952)
+val outlineLight = Color(0xFF717982)
+val outlineVariantLight = Color(0xFFC0C8D2)
 val surfaceContainerLowestLight = Color(0xFFFFFFFF)
-val surfaceContainerLowLight = Color(0xFFF0F5F1)
-val surfaceContainerLight = Color(0xFFEAF0EB)
-val surfaceContainerHighLight = Color(0xFFE4EAE5)
-val surfaceContainerHighestLight = Color(0xFFDEE4E0)
+val surfaceContainerLowLight = Color(0xFFF0F3F8)
+val surfaceContainerLight = Color(0xFFEAEFF5)
+val surfaceContainerHighLight = Color(0xFFE4E9F0)
+val surfaceContainerHighestLight = Color(0xFFDEE4EB)
 
-val primaryDark = Color(0xFF8AD5BE)
-val onPrimaryDark = Color(0xFF00382C)
-val primaryContainerDark = Color(0xFF005142)
-val onPrimaryContainerDark = Color(0xFFA6F2DA)
-val secondaryDark = Color(0xFFB0CCC1)
-val onSecondaryDark = Color(0xFF1C352E)
-val secondaryContainerDark = Color(0xFF334B44)
-val onSecondaryContainerDark = Color(0xFFCCE8DC)
-val tertiaryDark = Color(0xFFA7CCE0)
-val onTertiaryDark = Color(0xFF0A3444)
-val tertiaryContainerDark = Color(0xFF264B5C)
-val onTertiaryContainerDark = Color(0xFFC3E8FC)
+val primaryDark = Color(0xFF8FB8FF)
+val onPrimaryDark = Color(0xFF002F6C)
+val primaryContainerDark = Color(0xFF084A9B)
+val onPrimaryContainerDark = Color(0xFFD9E7FF)
+val secondaryDark = Color(0xFFBBC8DA)
+val onSecondaryDark = Color(0xFF25313E)
+val secondaryContainerDark = Color(0xFF3B4857)
+val onSecondaryContainerDark = Color(0xFFD7E3F4)
+val tertiaryDark = Color(0xFFC4C3F0)
+val onTertiaryDark = Color(0xFF2D2D50)
+val tertiaryContainerDark = Color(0xFF444466)
+val onTertiaryContainerDark = Color(0xFFE2E0FF)
 val errorDark = Color(0xFFFFB4AB)
 val onErrorDark = Color(0xFF690005)
 val errorContainerDark = Color(0xFF93000A)
 val onErrorContainerDark = Color(0xFFFFDAD6)
-val backgroundDark = Color(0xFF0F1512)
-val onBackgroundDark = Color(0xFFDEE4E0)
-val surfaceDark = Color(0xFF0F1512)
-val onSurfaceDark = Color(0xFFDEE4E0)
-val surfaceVariantDark = Color(0xFF404944)
-val onSurfaceVariantDark = Color(0xFFBFC9C3)
-val outlineDark = Color(0xFF899390)
-val outlineVariantDark = Color(0xFF404944)
-val surfaceContainerLowestDark = Color(0xFF0A0F0D)
-val surfaceContainerLowDark = Color(0xFF171D1A)
-val surfaceContainerDark = Color(0xFF1B211E)
-val surfaceContainerHighDark = Color(0xFF252B28)
-val surfaceContainerHighestDark = Color(0xFF303633)
+val backgroundDark = Color(0xFF090E17)
+val onBackgroundDark = Color(0xFFE1E7F0)
+val surfaceDark = Color(0xFF090E17)
+val onSurfaceDark = Color(0xFFE1E7F0)
+val surfaceVariantDark = Color(0xFF3F4854)
+val onSurfaceVariantDark = Color(0xFFBEC7D2)
+val outlineDark = Color(0xFF89929E)
+val outlineVariantDark = Color(0xFF3F4854)
+val surfaceContainerLowestDark = Color(0xFF060A10)
+val surfaceContainerLowDark = Color(0xFF111720)
+val surfaceContainerDark = Color(0xFF161D27)
+val surfaceContainerHighDark = Color(0xFF202833)
+val surfaceContainerHighestDark = Color(0xFF2A3440)
 
-// Semantic status — budget progress bands. Not part of MaterialTheme.colorScheme's fixed
-// roles, so exposed via LocalExtendedColors (see Theme.kt) rather than hardcoded at call sites.
+// Semantic status colors remain distinct from the blue application accent.
 val safeLight = Color(0xFF1B6E5C)
 val warningLight = Color(0xFF8A5800)
 val dangerLight = Color(0xFFBA1A1A)
@@ -72,7 +71,7 @@ val safeDark = Color(0xFF8AD5BE)
 val warningDark = Color(0xFFFFB74D)
 val dangerDark = Color(0xFFFFB4AB)
 
-// One accent per ExpenseCategory (data/model/ExpenseCategory), tuned as a light/dark pair.
+// Category colors remain differentiated so expense categories are easy to scan.
 data class CategoryPalette(
     val food: Color,
     val transport: Color,
@@ -90,7 +89,7 @@ val categoryPaletteLight = CategoryPalette(
     shopping = Color(0xFF8B4A9C),
     bills = Color(0xFF4A635B),
     entertainment = Color(0xFFB2416B),
-    health = Color(0xFF1B6E5C),
+    health = Color(0xFF1565D8),
     education = Color(0xFF3A5FBF),
     other = Color(0xFF6B6558),
 )
@@ -101,7 +100,7 @@ val categoryPaletteDark = CategoryPalette(
     shopping = Color(0xFFE0AEEC),
     bills = Color(0xFFB0CCC1),
     entertainment = Color(0xFFF0A8C4),
-    health = Color(0xFF8AD5BE),
+    health = Color(0xFF8FB8FF),
     education = Color(0xFFAEBFF6),
     other = Color(0xFFD6D0C1),
 )
