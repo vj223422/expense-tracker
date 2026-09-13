@@ -35,8 +35,21 @@ class RemindersViewModel(
     private val _message = MutableStateFlow<String?>(null)
     val message = _message
 
-    fun saveReminder(id: Long?, title: String, note: String, triggerAt: Long, recurrence: String, intervalDays: Int) {
+    fun saveReminder(
+        id: Long?,
+        title: String,
+        note: String,
+        triggerAt: Long,
+        endDate: Long?,
+        recurrence: String,
+        intervalDays: Int,
+    ) {
         val profileId = activeProfileId.value ?: return
+        if (title.isBlank()) return
+        if (endDate != null && endDate < triggerAt.startOfDay()) {
+            _message.value = "End date cannot be before the start date"
+            return
+        }
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val reminder = ReminderEntity(
@@ -45,6 +58,7 @@ class RemindersViewModel(
                 title = title.trim(),
                 note = note.trim(),
                 triggerAtEpochMillis = triggerAt,
+                endDateEpochMillis = endDate?.endOfDay(),
                 recurrence = recurrence,
                 customIntervalDays = intervalDays.coerceAtLeast(1),
                 enabled = true,
@@ -92,4 +106,12 @@ class RemindersViewModel(
     }
 
     fun clearMessage() { _message.value = null }
+
+    private fun Long.startOfDay(): Long = java.time.Instant.ofEpochMilli(this)
+        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        .atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+    private fun Long.endOfDay(): Long = java.time.Instant.ofEpochMilli(this)
+        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        .plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() - 1L
 }
