@@ -9,16 +9,15 @@ object UpiLauncher {
     const val EXTRA_UPI_RESPONSE = "response"
 
     fun buildIntent(
-        payeeVpa: String? = null,
+        payeeVpa: String,
         payeeName: String? = null,
         note: String? = null,
     ): Intent {
         val builder = Uri.parse("upi://pay").buildUpon()
-        if (!payeeVpa.isNullOrBlank()) builder.appendQueryParameter("pa", payeeVpa)
+            .appendQueryParameter("pa", payeeVpa)
+            .appendQueryParameter("cu", "INR")
         if (!payeeName.isNullOrBlank()) builder.appendQueryParameter("pn", payeeName)
         if (!note.isNullOrBlank()) builder.appendQueryParameter("tn", note)
-        builder.appendQueryParameter("cu", "INR")
-
         return Intent(Intent.ACTION_VIEW, builder.build())
     }
 
