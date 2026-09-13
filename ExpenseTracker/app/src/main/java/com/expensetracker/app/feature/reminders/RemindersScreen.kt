@@ -78,8 +78,8 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
     }
 
     if (showReminderEditor) {
-        ModernReminderEditorDialog(editingReminder, { title, note, at, recurrence, days ->
-            viewModel.saveReminder(editingReminder?.id, title, note, at, recurrence, days)
+        ModernReminderEditorDialog(editingReminder, { title, note, startAt, endDate, recurrence, days ->
+            viewModel.saveReminder(editingReminder?.id, title, note, startAt, endDate, recurrence, days)
             showReminderEditor = false
         }, { showReminderEditor = false })
     }
@@ -97,7 +97,11 @@ private fun ReminderRow(reminder: ReminderEntity, vm: RemindersViewModel, onEdit
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
                 Text(reminder.title, style = MaterialTheme.typography.titleMedium)
-                Text(formatDateTime(reminder.triggerAtEpochMillis), style = MaterialTheme.typography.bodyMedium)
+                Text("Starts ${formatDateTime(reminder.triggerAtEpochMillis)}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    reminder.endDateEpochMillis?.let { "Ends ${formatDate(it)}" } ?: "No end date",
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 Text(recurrenceLabel(reminder), style = MaterialTheme.typography.bodySmall)
                 if (reminder.note.isNotBlank()) Text(reminder.note, style = MaterialTheme.typography.bodySmall)
             }
@@ -136,6 +140,7 @@ private fun NoteEditorDialog(initial: NoteEntity?, onSave: (String, String) -> U
 }
 
 private fun formatDateTime(epoch: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(epoch))
+private fun formatDate(epoch: Long): String = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(epoch))
 private fun recurrenceLabel(r: ReminderEntity): String = when (r.recurrence) {
     "DAILY" -> "Every day"
     "WEEKLY" -> "Every week"
