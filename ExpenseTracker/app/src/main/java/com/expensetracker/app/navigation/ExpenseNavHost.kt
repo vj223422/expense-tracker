@@ -128,11 +128,13 @@ private fun AppTopBar(
     onScanPayClick: () -> Unit,
     profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel(),
 ) {
-    val profiles by profileSwitcherViewModel.profiles.collectAsStateWithLifecycle()
-    val activeProfileId by profileSwitcherViewModel.activeProfileId.collectAsStateWithLifecycle()
+    val uiState by profileSwitcherViewModel.uiState.collectAsStateWithLifecycle()
+    val profiles = uiState.profiles
+    val activeProfileId = uiState.activeProfileId
     var expanded by remember { mutableStateOf(false) }
     var showCreateProfile by remember { mutableStateOf(false) }
-    val activeProfile = profiles.firstOrNull { it.id == activeProfileId }
+    val activeProfile = uiState.activeProfile
+
     TopAppBar(
         title = { Text(activeProfile?.name ?: "Expense Tracker") },
         actions = {
@@ -144,7 +146,7 @@ private fun AppTopBar(
                         DropdownMenuItem(
                             text = { Text(profile.name) },
                             onClick = {
-                                profileSwitcherViewModel.selectProfile(profile.id)
+                                profileSwitcherViewModel.onSwitchProfile(profile.id)
                                 expanded = false
                             },
                             leadingIcon = {
@@ -167,9 +169,10 @@ private fun AppTopBar(
     )
     if (showCreateProfile) {
         CreateProfileDialog(
+            existingNames = profiles.map { it.name },
             onDismiss = { showCreateProfile = false },
-            onCreate = { name ->
-                profileSwitcherViewModel.createProfile(name)
+            onConfirm = { name ->
+                profileSwitcherViewModel.onCreateProfile(name)
                 showCreateProfile = false
             },
         )
