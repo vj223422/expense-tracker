@@ -123,7 +123,7 @@ fun ModernReminderEditorDialog(
                 Text("End", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { if (selectedEndDate == null) selectedEndDate = selectedStartDate },
+                    onClick = { showEndDate = true },
                     colors = CardDefaults.cardColors(containerColor = if (selectedEndDate != null) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -147,7 +147,7 @@ fun ModernReminderEditorDialog(
                 if (selectedEndDate != null) {
                     TextButton(onClick = { showEndDate = true }) { Text("Change end date") }
                 } else {
-                    Text("Leave empty to repeat indefinitely.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Tap the end date card to choose a date, or leave it empty to repeat indefinitely.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 dateError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 
