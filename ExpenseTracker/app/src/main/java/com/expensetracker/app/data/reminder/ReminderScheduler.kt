@@ -10,7 +10,7 @@ class ReminderScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
     fun schedule(reminder: ReminderEntity) {
-        if (!reminder.enabled) {
+        if (!reminder.enabled || (reminder.endDateEpochMillis != null && reminder.triggerAtEpochMillis > reminder.endDateEpochMillis)) {
             cancel(reminder.id)
             return
         }
@@ -19,6 +19,7 @@ class ReminderScheduler(private val context: Context) {
             putExtra(ReminderReceiver.EXTRA_TITLE, reminder.title)
             putExtra(ReminderReceiver.EXTRA_NOTE, reminder.note)
             putExtra(ReminderReceiver.EXTRA_TRIGGER_AT, reminder.triggerAtEpochMillis)
+            putExtra(ReminderReceiver.EXTRA_END_DATE, reminder.endDateEpochMillis ?: -1L)
             putExtra(ReminderReceiver.EXTRA_RECURRENCE, reminder.recurrence)
             putExtra(ReminderReceiver.EXTRA_INTERVAL_DAYS, reminder.customIntervalDays)
         }
