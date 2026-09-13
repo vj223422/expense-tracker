@@ -10,6 +10,7 @@ data class ReminderEntity(
     val title: String,
     val note: String,
     val triggerAtEpochMillis: Long,
+    val endDateEpochMillis: Long? = null,
     val recurrence: String,
     val customIntervalDays: Int = 1,
     val enabled: Boolean = true,
