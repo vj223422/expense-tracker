@@ -84,14 +84,12 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun ExpenseTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    // Use the app's curated palette instead of device wallpaper colors. This keeps the
-    // experience visually consistent across devices while still adapting every semantic
-    // Material color role for light and dark themes.
+    // Keep one curated Material palette across the entire app. The palette itself provides
+    // separate light/dark values, so screens remain consistent across devices regardless of
+    // the device wallpaper or dynamic-color settings.
     val colorScheme = if (darkTheme) DarkColors else LightColors
-    val context = LocalContext.current
     val extendedColors = if (darkTheme) {
         ExtendedColors(safe = safeDark, warning = warningDark, danger = dangerDark, category = categoryPaletteDark)
     } else {
