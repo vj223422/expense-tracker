@@ -19,6 +19,7 @@ sealed class Destination(val route: String) {
     data object Reminders : Destination("reminders")
     data object Budgets : Destination("budgets")
     data object Settings : Destination("settings")
+    data object ScanPay : Destination("scan_pay")
 
     data object AddExpense : Destination("add_expense?expenseId={expenseId}") {
         const val ARG_EXPENSE_ID = "expenseId"
