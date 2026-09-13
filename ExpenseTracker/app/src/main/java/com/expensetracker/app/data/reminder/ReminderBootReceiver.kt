@@ -15,7 +15,12 @@ class ReminderBootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             val db = Room.databaseBuilder(context.applicationContext, ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-                .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4)
+                .addMigrations(
+                    ExpenseDatabase.MIGRATION_1_2,
+                    ExpenseDatabase.MIGRATION_2_3,
+                    ExpenseDatabase.MIGRATION_3_4,
+                    ExpenseDatabase.MIGRATION_4_5,
+                )
                 .build()
             try {
                 val scheduler = ReminderScheduler(context.applicationContext)
