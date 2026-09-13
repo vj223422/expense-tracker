@@ -14,6 +14,7 @@ object UpiLauncher {
         amountMinor: Long,
         payeeName: String? = null,
         note: String? = null,
+        originalUri: Uri? = null,
     ): Intent {
         require(payeeVpa.isNotBlank()) { "Payee VPA is required" }
         require(amountMinor > 0L) { "Amount must be greater than zero" }
@@ -25,12 +26,23 @@ object UpiLauncher {
             "%.2f".format(Locale.US, amount).trimEnd('0').trimEnd('.')
         }
 
-        val builder = Uri.parse("upi://pay").buildUpon()
+        val builder = (originalUri ?: Uri.parse("upi://pay")).buildUpon()
+            .clearQuery()
             .appendQueryParameter("pa", payeeVpa.trim())
             .appendQueryParameter("pn", payeeName?.trim().orEmpty())
             .appendQueryParameter("tn", note?.trim().orEmpty())
             .appendQueryParameter("am", amountText)
             .appendQueryParameter("cu", "INR")
+
+        // Keep all non-standard parameters from a scanned QR (for example mc, tr,
+        // url, mode, purpose and orgid) while replacing the editable payment fields.
+        originalUri?.queryParameterNames?.forEach { key ->
+            if (key !in setOf("pa", "pn", "tn", "am", "cu")) {
+                originalUri.getQueryParameters(key).forEach { value ->
+                    builder.appendQueryParameter(key, value)
+                }
+            }
+        }
 
         return Intent(Intent.ACTION_VIEW, builder.build())
     }
