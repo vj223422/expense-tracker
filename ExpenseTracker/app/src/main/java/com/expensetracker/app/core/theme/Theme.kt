@@ -1,12 +1,9 @@
 package com.expensetracker.app.core.theme
 
-import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -87,16 +84,14 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun ExpenseTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    // Use the app's curated palette instead of device wallpaper colors. This keeps the
+    // experience visually consistent across devices while still adapting every semantic
+    // Material color role for light and dark themes.
+    val colorScheme = if (darkTheme) DarkColors else LightColors
     val context = LocalContext.current
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        darkTheme -> DarkColors
-        else -> LightColors
-    }
     val extendedColors = if (darkTheme) {
         ExtendedColors(safe = safeDark, warning = warningDark, danger = dangerDark, category = categoryPaletteDark)
     } else {
