@@ -3,6 +3,7 @@ package com.expensetracker.app.feature.upipay
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,8 +51,13 @@ import com.expensetracker.app.feature.addexpense.AddExpenseViewModel
 import com.expensetracker.app.upi.UpiLauncher
 import com.expensetracker.app.upi.UpiPaymentParser
 import com.expensetracker.app.upi.UpiQrParser
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.common.InputImage
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.NotFoundException
+import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.Result
+import com.google.zxing.common.HybridBinarizer
+import java.io.InputStream
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import org.koin.androidx.compose.koinViewModel
@@ -104,7 +110,7 @@ fun UpiScanPayScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 AddExpenseEffect.NavigateBack -> onNavigateBack()
-                is AddExpenseEffect.ShowMessage -> { /* successful save navigates immediately */ }
+                is AddExpenseEffect.ShowMessage -> Unit
             }
         }
     }
@@ -118,13 +124,11 @@ fun UpiScanPayScreen(
                 TextButton(onClick = onNavigateBack) { Text("Close") }
                 Text("Scan & Pay", style = MaterialTheme.typography.titleLarge)
             }
-
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(mode == RecipientMode.SCAN, { mode = RecipientMode.SCAN; recipientError = null }, label = { Text("Scan QR") })
                 FilterChip(mode == RecipientMode.UPLOAD, { mode = RecipientMode.UPLOAD; recipientError = null }, label = { Text("Upload QR") })
                 FilterChip(mode == RecipientMode.PHONE, { mode = RecipientMode.PHONE; recipientError = null }, label = { Text("Phone") })
             }
-
             when (mode) {
                 RecipientMode.SCAN -> {
                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -153,9 +157,7 @@ fun UpiScanPayScreen(
                     Text("Phone-number payments require the selected UPI app to support UPI Number routing.", style = MaterialTheme.typography.bodySmall)
                 }
             }
-
             recipientError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
             payeeVpa?.takeIf { it.isNotBlank() }?.let { vpa ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp)) {
@@ -164,7 +166,6 @@ fun UpiScanPayScreen(
                     }
                 }
             }
-
             OutlinedTextField(
                 value = amountText,
                 onValueChange = { amountText = it.filter { c -> c.isDigit() || c == '.' }.take(12) },
@@ -179,7 +180,6 @@ fun UpiScanPayScreen(
                 label = { Text("Note (optional)") },
                 singleLine = true,
             )
-
             Text("Category", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ExpenseCategory.entries.take(4).forEach { category ->
@@ -187,7 +187,6 @@ fun UpiScanPayScreen(
                 }
             }
             Spacer(Modifier.weight(1f))
-
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !paymentStarted,
@@ -216,60 +215,90 @@ fun UpiScanPayScreen(
 
 private fun Long.toAmountText(): String = "%.2f".format(java.util.Locale.US, this / 100.0)
 
-private fun decodeQrFromUri(context: Context, uri: Uri, onResult: (com.expensetracker.app.upi.UpiQrPayload?, String?) -> Unit) {
-    val scanner = BarcodeScanning.getClient()
-    val image = runCatching { InputImage.fromFilePath(context, uri) }.getOrNull()
-    if (image == null) {
-        onResult(null, "Unable to read the selected image")
-        scanner.close()
-        return
-    }
-    scanner.process(image)
-        .addOnSuccessListener { barcodes ->
-            val payload = barcodes.firstNotNullOfOrNull { it.rawValue?.let(UpiQrParser::parse) }
-            onResult(payload, if (payload == null) "No valid UPI QR found in this image" else null)
+private fun decodeQrFromUri(
+    context: Context,
+    uri: Uri,
+    onResult: (com.expensetracker.app.upi.UpiQrPayload?, String?) -> Unit,
+) {
+    val bitmap = runCatching {
+        context.contentResolver.openInputStream(uri)?.use(InputStream::readBytes)?.let { bytes ->
+            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         }
-        .addOnFailureListener { onResult(null, "Unable to scan the QR image") }
-        .addOnCompleteListener { scanner.close() }
+    }.getOrNull()
+    val result = bitmap?.let(::decodeQr)
+    bitmap?.recycle()
+    if (result == null) onResult(null, "No valid UPI QR found in this image")
+    else onResult(UpiQrParser.parse(result.text), null)
+}
+
+private fun decodeQr(bitmap: Bitmap): Result? {
+    val width = bitmap.width
+    val height = bitmap.height
+    if (width <= 0 || height <= 0) return null
+    val pixels = IntArray(width * height)
+    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+    val source = RGBLuminanceSource(width, height, pixels)
+    return runCatching { MultiFormatReader().decode(BinaryBitmap(HybridBinarizer(source))) }
+        .getOrElse { error -> if (error is NotFoundException) null else null }
 }
 
 @Composable
-private fun CameraQrScanner(modifier: Modifier, onPayload: (com.expensetracker.app.upi.UpiQrPayload) -> Unit) {
+private fun CameraQrScanner(
+    modifier: Modifier,
+    onPayload: (com.expensetracker.app.upi.UpiQrPayload) -> Unit,
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val previewView = remember { PreviewView(context) }
     val executor = remember { Executors.newSingleThreadExecutor() }
-    val scanner = remember { BarcodeScanning.getClient() }
     val delivered = remember { AtomicBoolean(false) }
 
-    DisposableEffect(Unit) {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-            val analysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
-            analysis.setAnalyzer(executor) { proxy ->
-                val mediaImage = proxy.image
-                if (mediaImage == null || delivered.get()) {
-                    proxy.close()
-                    return@setAnalyzer
-                }
-                scanner.process(InputImage.fromMediaImage(mediaImage, proxy.imageInfo.rotationDegrees))
-                    .addOnSuccessListener { barcodes ->
-                        val payload = barcodes.firstNotNullOfOrNull { it.rawValue?.let(UpiQrParser::parse) }
-                        if (payload != null && delivered.compareAndSet(false, true)) onPayload(payload)
-                    }
-                    .addOnCompleteListener { proxy.close() }
-            }
+    DisposableEffect(lifecycleOwner) {
+        val future = ProcessCameraProvider.getInstance(context.applicationContext)
+        future.addListener({
+            val provider = runCatching { future.get() }.getOrNull() ?: return@addListener
             runCatching {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                val analysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                    .build()
+                analysis.setAnalyzer(executor) { image ->
+                    if (delivered.get()) {
+                        image.close()
+                        return@setAnalyzer
+                    }
+                    val plane = image.planes.firstOrNull()
+                    if (plane == null) {
+                        image.close()
+                        return@setAnalyzer
+                    }
+                    val buffer = plane.buffer
+                    val pixelStride = plane.pixelStride
+                    val rowStride = plane.rowStride
+                    val rowPadding = rowStride - pixelStride * image.width
+                    val bitmap = Bitmap.createBitmap(
+                        image.width + rowPadding / pixelStride,
+                        image.height,
+                        Bitmap.Config.ARGB_8888,
+                    )
+                    buffer.rewind()
+                    bitmap.copyPixelsFromBuffer(buffer)
+                    val result = decodeQr(bitmap)
+                    bitmap.recycle()
+                    image.close()
+                    val payload = result?.text?.let(UpiQrParser::parse)
+                    if (payload != null && delivered.compareAndSet(false, true)) {
+                        ContextCompat.getMainExecutor(context).execute { onPayload(payload) }
+                    }
+                }
+                provider.unbindAll()
+                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
             }
         }, ContextCompat.getMainExecutor(context))
         onDispose {
-            runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() }
-            scanner.close()
-            executor.shutdown()
+            runCatching { future.get().unbindAll() }
+            executor.shutdownNow()
         }
     }
     AndroidView(factory = { previewView }, modifier = modifier)
