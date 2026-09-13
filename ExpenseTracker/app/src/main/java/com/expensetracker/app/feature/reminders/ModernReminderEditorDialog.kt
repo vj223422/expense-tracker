@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -50,16 +50,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.expensetracker.app.core.theme.primaryLight
-import com.expensetracker.app.core.theme.primaryDark
 import com.expensetracker.app.data.entity.ReminderEntity
 import java.text.DateFormat
 import java.util.Calendar
 import java.util.Date
+
+private val ReminderBlue = androidx.compose.ui.graphics.Color(0xFF1976F3)
+private val ReminderBlueContainer = androidx.compose.ui.graphics.Color(0xFF0D5BD7)
+private val ReminderIconTint = androidx.compose.ui.graphics.Color(0xFF8FFFE5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,9 +84,6 @@ fun ModernReminderEditorDialog(
     var showEndDate by remember { mutableStateOf(false) }
     var dateError by remember { mutableStateOf<String?>(null) }
 
-    val blue = androidx.compose.ui.graphics.Color(0xFF1976F3)
-    val blueContainer = androidx.compose.ui.graphics.Color(0xFF0D5BD7)
-
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
@@ -96,7 +96,7 @@ fun ModernReminderEditorDialog(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    ReminderIconCircle(size = 82.dp, iconSize = 38.dp, color = blueContainer) { Icon(Icons.Default.NotificationsActive, null, tint = androidx.compose.ui.graphics.Color(0xFF8FFFE5)) }
+                    ReminderIconCircle(size = 82.dp, iconSize = 38.dp, color = ReminderBlueContainer) { Icon(Icons.Default.NotificationsActive, null, tint = ReminderIconTint) }
                     Spacer(Modifier.width(20.dp))
                     Column(Modifier.weight(1f)) {
                         Text("New reminder", fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.SemiBold)
@@ -109,14 +109,14 @@ fun ModernReminderEditorDialog(
 
                 Text("Start", fontSize = 24.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ReminderDateTimeCard(Modifier.weight(1f), { Icon(Icons.Default.DateRange, null, tint = androidx.compose.ui.graphics.Color(0xFF8FFFE5)) }, "Start date", DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(selectedStartDate)), if (isToday(selectedStartDate)) "Today" else null) { showStartDate = true }
-                    ReminderDateTimeCard(Modifier.weight(1f), { Icon(Icons.Default.AccessTime, null, tint = androidx.compose.ui.graphics.Color(0xFF8FFFE5)) }, "Time", DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(selectedStartTime)), null) { showStartTime = true }
+                    ReminderDateTimeCard(modifier = Modifier.weight(1f), icon = { Icon(Icons.Default.DateRange, null, tint = ReminderIconTint) }, label = "Start date", value = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(selectedStartDate)), supporting = if (isToday(selectedStartDate)) "Today" else null, onClick = { showStartDate = true })
+                    ReminderDateTimeCard(modifier = Modifier.weight(1f), icon = { Icon(Icons.Default.AccessTime, null, tint = ReminderIconTint) }, label = "Time", value = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(selectedStartTime)), supporting = null, onClick = { showStartTime = true })
                 }
 
                 Text("End", fontSize = 24.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold)
-                Card(Modifier.fillMaxWidth().height(96.dp), onClick = { showEndDate = true }, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                Card(modifier = Modifier.fillMaxWidth().height(96.dp), onClick = { showEndDate = true }, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        ReminderIconCircle(size = 58.dp, iconSize = 28.dp, color = blueContainer) { Icon(Icons.Default.Event, null, tint = androidx.compose.ui.graphics.Color(0xFF8FFFE5)) }
+                        ReminderIconCircle(size = 58.dp, iconSize = 28.dp, color = ReminderBlueContainer) { Icon(Icons.Default.Event, null, tint = ReminderIconTint) }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
                             Text("End date", fontSize = 15.sp, lineHeight = 19.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
@@ -129,7 +129,7 @@ fun ModernReminderEditorDialog(
                 dateError?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 13.sp) }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ReminderIconCircle(size = 58.dp, iconSize = 30.dp, color = blueContainer) { Icon(Icons.Default.Refresh, null, tint = androidx.compose.ui.graphics.Color(0xFF8FFFE5)) }
+                    ReminderIconCircle(size = 58.dp, iconSize = 30.dp, color = ReminderBlueContainer) { Icon(Icons.Default.Refresh, null, tint = ReminderIconTint) }
                     Spacer(Modifier.width(14.dp))
                     Column {
                         Text("Repeats", fontSize = 22.sp, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold)
@@ -139,13 +139,13 @@ fun ModernReminderEditorDialog(
 
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     listOf("ONCE" to "Once", "DAILY" to "Daily", "WEEKLY" to "Weekly", "MONTHLY" to "Monthly").forEach { (key, label) ->
-                        RepeatCard(label, recurrence == key, blue, blueContainer) { recurrence = key }
+                        RepeatCard(label = label, selected = recurrence == key, blue = ReminderBlue, onClick = { recurrence = key })
                     }
                 }
 
-                Card(Modifier.fillMaxWidth().height(96.dp), onClick = { recurrence = "CUSTOM" }, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = if (recurrence == "CUSTOM") androidx.compose.ui.graphics.Color(0xFF0D5BD7) else androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                Card(modifier = Modifier.fillMaxWidth().height(96.dp), onClick = { recurrence = "CUSTOM" }, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = if (recurrence == "CUSTOM") ReminderBlueContainer else androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        ReminderIconCircle(size = 54.dp, iconSize = 28.dp, color = if (recurrence == "CUSTOM") blue else androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant) { Icon(Icons.Default.Settings, null, tint = if (recurrence == "CUSTOM") androidx.compose.ui.graphics.Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant) }
+                        ReminderIconCircle(size = 54.dp, iconSize = 28.dp, color = if (recurrence == "CUSTOM") ReminderBlue else androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant) { Icon(Icons.Default.Settings, null, tint = if (recurrence == "CUSTOM") androidx.compose.ui.graphics.Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant) }
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) { Text("Custom", fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold); Text("Set your own repeating schedule", fontSize = 15.sp, lineHeight = 20.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant) }
                         Text("›", fontSize = 34.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
@@ -155,12 +155,12 @@ fun ModernReminderEditorDialog(
 
                 Spacer(Modifier.height(2.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = onDismiss, Modifier.weight(1f).height(52.dp), shape = CircleShape, border = BorderStroke(2.dp, blue), colors = ButtonDefaults.outlinedButtonColors(contentColor = blue)) { Text("Cancel", fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).height(52.dp), shape = CircleShape, border = BorderStroke(2.dp, ReminderBlue), colors = ButtonDefaults.outlinedButtonColors(contentColor = ReminderBlue)) { Text("Cancel", fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
                     Button(enabled = title.isNotBlank(), onClick = {
                         val calendar = Calendar.getInstance().apply { timeInMillis = selectedStartDate; val time = Calendar.getInstance().apply { timeInMillis = selectedStartTime }; set(Calendar.HOUR_OF_DAY, time.get(Calendar.HOUR_OF_DAY)); set(Calendar.MINUTE, time.get(Calendar.MINUTE)); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
                         val start = calendar.timeInMillis
                         if (selectedEndDate != null && selectedEndDate!! < start.startOfDay()) dateError = "End date cannot be before the start date" else { dateError = null; onSave(title.trim(), note.trim(), start, selectedEndDate, recurrence, intervalDays.toInt()) }
-                    }, Modifier.weight(1f).height(52.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = blue, contentColor = androidx.compose.ui.graphics.Color.White, disabledContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant, disabledContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)) { Text("Save reminder", fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
+                    }, modifier = Modifier.weight(1f).height(52.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = ReminderBlue, contentColor = androidx.compose.ui.graphics.Color.White, disabledContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant, disabledContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)) { Text("Save reminder", fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
                 }
             }
         }
@@ -182,8 +182,12 @@ fun ModernReminderEditorDialog(
 }
 
 @Composable
-private fun ReminderIconCircle(size: androidx.compose.ui.unit.Dp = 58.dp, iconSize: androidx.compose.ui.unit.Dp = 28.dp, color: androidx.compose.ui.graphics.Color = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer, content: @Composable () -> Unit) {
-    Surface(Modifier.size(size), shape = CircleShape, color = color) { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.foundation.layout.Box(Modifier.size(iconSize), contentAlignment = Alignment.Center) { content() } } }
+private fun ReminderIconCircle(size: Dp = 58.dp, iconSize: Dp = 28.dp, color: androidx.compose.ui.graphics.Color, content: @Composable () -> Unit) {
+    Surface(modifier = Modifier.size(size), shape = CircleShape, color = color) {
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(iconSize), contentAlignment = Alignment.Center) { content() }
+        }
+    }
 }
 
 @Composable
@@ -193,13 +197,13 @@ private fun ReminderTextField(value: String, onValueChange: (String) -> Unit, la
 
 @Composable
 private fun ReminderDateTimeCard(modifier: Modifier, icon: @Composable () -> Unit, label: String, value: String, supporting: String?, onClick: () -> Unit) {
-    Card(modifier.height(100.dp), onClick = onClick, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
+    Card(modifier = modifier.height(100.dp), onClick = onClick, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            ReminderIconCircle(size = 56.dp, iconSize = 28.dp, color = androidx.compose.ui.graphics.Color(0xFF0D5BD7), content = icon)
-            Spacer(Modifier.width(10.dp))
+            ReminderIconCircle(size = 56.dp, iconSize = 28.dp, color = ReminderBlueContainer, content = icon)
+            Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(label, fontSize = 14.sp, lineHeight = 18.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                Text(value, fontSize = 18.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                Text(value, fontSize = 17.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 supporting?.let { Text(it, fontSize = 13.sp, lineHeight = 16.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant) }
             }
             Text("›", fontSize = 30.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
@@ -208,8 +212,8 @@ private fun ReminderDateTimeCard(modifier: Modifier, icon: @Composable () -> Uni
 }
 
 @Composable
-private fun RepeatCard(label: String, selected: Boolean, blue: androidx.compose.ui.graphics.Color, blueContainer: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    Card(Modifier.width(86.dp).height(86.dp), onClick = onClick, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = if (selected) blue else androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh), border = if (selected) BorderStroke(2.dp, androidx.compose.ui.graphics.Color(0xFF78B8FF)) else null) {
+private fun RepeatCard(label: String, selected: Boolean, blue: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    Card(modifier = Modifier.width(86.dp).height(86.dp), onClick = onClick, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = if (selected) blue else androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh), border = if (selected) BorderStroke(2.dp, androidx.compose.ui.graphics.Color(0xFF78B8FF)) else null) {
         Column(Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text("○", fontSize = 27.sp, lineHeight = 29.sp, color = if (selected) androidx.compose.ui.graphics.Color.White else blue)
             Text(label, fontSize = 14.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, color = if (selected) androidx.compose.ui.graphics.Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
