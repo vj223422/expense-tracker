@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -63,6 +62,11 @@ import java.util.Date
 private val ReminderBlue = androidx.compose.ui.graphics.Color(0xFF1976F3)
 private val ReminderBlueContainer = androidx.compose.ui.graphics.Color(0xFF0D5BD7)
 private val ReminderIconTint = androidx.compose.ui.graphics.Color(0xFF8FFFE5)
+
+@Composable
+private fun Spacer(modifier: Modifier) {
+    Box(modifier = modifier)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
