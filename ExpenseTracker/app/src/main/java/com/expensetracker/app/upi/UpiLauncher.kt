@@ -3,6 +3,7 @@ package com.expensetracker.app.upi
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import java.util.Locale
 
 object UpiLauncher {
     const val REQUEST_CODE = 7001
@@ -18,12 +19,19 @@ object UpiLauncher {
         require(amountMinor > 0L) { "Amount must be greater than zero" }
 
         val amount = amountMinor / 100.0
+        val amountText = if (amount % 1.0 == 0.0) {
+            amount.toLong().toString()
+        } else {
+            "%.2f".format(Locale.US, amount).trimEnd('0').trimEnd('.')
+        }
+
         val builder = Uri.parse("upi://pay").buildUpon()
             .appendQueryParameter("pa", payeeVpa.trim())
-            .appendQueryParameter("am", "%.2f".format(java.util.Locale.US, amount))
+            .appendQueryParameter("pn", payeeName?.trim().orEmpty())
+            .appendQueryParameter("tn", note?.trim().orEmpty())
+            .appendQueryParameter("am", amountText)
             .appendQueryParameter("cu", "INR")
-        if (!payeeName.isNullOrBlank()) builder.appendQueryParameter("pn", payeeName.trim())
-        if (!note.isNullOrBlank()) builder.appendQueryParameter("tn", note.trim())
+
         return Intent(Intent.ACTION_VIEW, builder.build())
     }
 
