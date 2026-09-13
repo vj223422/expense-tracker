@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -59,9 +61,9 @@ import java.text.DateFormat
 import java.util.Calendar
 import java.util.Date
 
-private val ReminderBlue = androidx.compose.ui.graphics.Color(0xFF1976F3)
-private val ReminderBlueContainer = androidx.compose.ui.graphics.Color(0xFF0D5BD7)
-private val ReminderIconTint = androidx.compose.ui.graphics.Color(0xFF8FFFE5)
+private val ReminderBlue = Color(0xFF1976F3)
+private val ReminderBlueContainer = Color(0xFF0D5BD7)
+private val ReminderIconTint = Color(0xFF8FFFE5)
 
 @Composable
 private fun Spacer(modifier: Modifier) {
@@ -88,23 +90,51 @@ fun ModernReminderEditorDialog(
     var showEndDate by remember { mutableStateOf(false) }
     var dateError by remember { mutableStateOf<String?>(null) }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge,
             color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp,
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 22.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 28.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    ReminderIconCircle(size = 82.dp, iconSize = 38.dp, color = ReminderBlueContainer) { Icon(Icons.Default.NotificationsActive, null, tint = ReminderIconTint) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ReminderIconCircle(
+                        size = 82.dp,
+                        iconSize = 38.dp,
+                        color = ReminderBlueContainer,
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, null, tint = ReminderIconTint)
+                    }
                     Spacer(Modifier.width(20.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("New reminder", fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Set a reminder for anything", fontSize = 20.sp, lineHeight = 26.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "New reminder",
+                            fontSize = 30.sp,
+                            lineHeight = 34.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                        )
+                        Text(
+                            "Set a reminder for anything",
+                            fontSize = 20.sp,
+                            lineHeight = 26.sp,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
 
@@ -112,28 +142,69 @@ fun ModernReminderEditorDialog(
                 ReminderTextField(note, { note = it }, "Note (optional)", "Note (optional)", Icons.Default.Edit)
 
                 Text("Start", fontSize = 24.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ReminderDateTimeCard(modifier = Modifier.weight(1f), icon = { Icon(Icons.Default.DateRange, null, tint = ReminderIconTint) }, label = "Start date", value = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(selectedStartDate)), supporting = if (isToday(selectedStartDate)) "Today" else null, onClick = { showStartDate = true })
-                    ReminderDateTimeCard(modifier = Modifier.weight(1f), icon = { Icon(Icons.Default.AccessTime, null, tint = ReminderIconTint) }, label = "Time", value = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(selectedStartTime)), supporting = null, onClick = { showStartTime = true })
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ReminderDateTimeCard(
+                        modifier = Modifier.weight(1f),
+                        icon = { Icon(Icons.Default.DateRange, null, tint = ReminderIconTint) },
+                        label = "Start date",
+                        value = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(selectedStartDate)),
+                        supporting = if (isToday(selectedStartDate)) "Today" else null,
+                        onClick = { showStartDate = true },
+                    )
+                    ReminderDateTimeCard(
+                        modifier = Modifier.weight(1f),
+                        icon = { Icon(Icons.Default.AccessTime, null, tint = ReminderIconTint) },
+                        label = "Time",
+                        value = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(selectedStartTime)),
+                        supporting = null,
+                        onClick = { showStartTime = true },
+                    )
                 }
 
                 Text("End", fontSize = 24.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold)
-                Card(modifier = Modifier.fillMaxWidth().height(96.dp), onClick = { showEndDate = true }, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        ReminderIconCircle(size = 58.dp, iconSize = 28.dp, color = ReminderBlueContainer) { Icon(Icons.Default.Event, null, tint = ReminderIconTint) }
+                Card(
+                    modifier = Modifier.fillMaxWidth().height(96.dp),
+                    onClick = { showEndDate = true },
+                    shape = androidx.compose.material3.MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ReminderIconCircle(size = 58.dp, iconSize = 28.dp, color = ReminderBlueContainer) {
+                            Icon(Icons.Default.Event, null, tint = ReminderIconTint)
+                        }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
                             Text("End date", fontSize = 15.sp, lineHeight = 19.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(selectedEndDate?.let { DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it)) } ?: "No end date", fontSize = 20.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                selectedEndDate?.let { DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it)) } ?: "No end date",
+                                fontSize = 20.sp,
+                                lineHeight = 25.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                            )
                         }
                         Text("›", fontSize = 34.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                Text("Leave empty to repeat indefinitely.", fontSize = 15.sp, lineHeight = 20.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp))
+                Text(
+                    "Leave empty to repeat indefinitely.",
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
                 dateError?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 13.sp) }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ReminderIconCircle(size = 58.dp, iconSize = 30.dp, color = ReminderBlueContainer) { Icon(Icons.Default.Refresh, null, tint = ReminderIconTint) }
+                    ReminderIconCircle(size = 58.dp, iconSize = 30.dp, color = ReminderBlueContainer) {
+                        Icon(Icons.Default.Refresh, null, tint = ReminderIconTint)
+                    }
                     Spacer(Modifier.width(14.dp))
                     Column {
                         Text("Repeats", fontSize = 22.sp, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold)
@@ -141,30 +212,100 @@ fun ModernReminderEditorDialog(
                     }
                 }
 
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    listOf("ONCE" to "Once", "DAILY" to "Daily", "WEEKLY" to "Weekly", "MONTHLY" to "Monthly").forEach { (key, label) ->
-                        RepeatCard(label = label, selected = recurrence == key, blue = ReminderBlue, onClick = { recurrence = key })
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val cardWidth = ((maxWidth - 36.dp) / 4f).coerceAtLeast(72.dp)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        listOf("ONCE" to "Once", "DAILY" to "Daily", "WEEKLY" to "Weekly", "MONTHLY" to "Monthly").forEach { (key, label) ->
+                            RepeatCard(
+                                modifier = Modifier.width(cardWidth),
+                                label = label,
+                                selected = recurrence == key,
+                                blue = ReminderBlue,
+                                onClick = { recurrence = key },
+                            )
+                        }
                     }
                 }
 
-                Card(modifier = Modifier.fillMaxWidth().height(96.dp), onClick = { recurrence = "CUSTOM" }, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = if (recurrence == "CUSTOM") ReminderBlueContainer else androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().height(96.dp),
+                    onClick = { recurrence = "CUSTOM" },
+                    shape = androidx.compose.material3.MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = if (recurrence == "CUSTOM") ReminderBlueContainer else androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh),
+                ) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        ReminderIconCircle(size = 54.dp, iconSize = 28.dp, color = if (recurrence == "CUSTOM") ReminderBlue else androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant) { Icon(Icons.Default.Settings, null, tint = if (recurrence == "CUSTOM") androidx.compose.ui.graphics.Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant) }
+                        ReminderIconCircle(
+                            size = 54.dp,
+                            iconSize = 28.dp,
+                            color = if (recurrence == "CUSTOM") ReminderBlue else androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                        ) {
+                            Icon(Icons.Default.Settings, null, tint = if (recurrence == "CUSTOM") Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         Spacer(Modifier.width(16.dp))
-                        Column(Modifier.weight(1f)) { Text("Custom", fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold); Text("Set your own repeating schedule", fontSize = 15.sp, lineHeight = 20.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Column(Modifier.weight(1f)) {
+                            Text("Custom", fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Set your own repeating schedule", fontSize = 15.sp, lineHeight = 20.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         Text("›", fontSize = 34.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if (recurrence == "CUSTOM") OutlinedTextField(value = intervalDays.toString(), onValueChange = { intervalDays = (it.toIntOrNull()?.coerceAtLeast(1) ?: 1).toLong() }, modifier = Modifier.fillMaxWidth(), label = { Text("Repeat every N days") }, singleLine = true)
+                if (recurrence == "CUSTOM") {
+                    OutlinedTextField(
+                        value = intervalDays.toString(),
+                        onValueChange = { intervalDays = (it.toIntOrNull()?.coerceAtLeast(1) ?: 1).toLong() },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Repeat every N days") },
+                        singleLine = true,
+                    )
+                }
 
                 Spacer(Modifier.height(2.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).height(52.dp), shape = CircleShape, border = BorderStroke(2.dp, ReminderBlue), colors = ButtonDefaults.outlinedButtonColors(contentColor = ReminderBlue)) { Text("Cancel", fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
-                    Button(enabled = title.isNotBlank(), onClick = {
-                        val calendar = Calendar.getInstance().apply { timeInMillis = selectedStartDate; val time = Calendar.getInstance().apply { timeInMillis = selectedStartTime }; set(Calendar.HOUR_OF_DAY, time.get(Calendar.HOUR_OF_DAY)); set(Calendar.MINUTE, time.get(Calendar.MINUTE)); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
-                        val start = calendar.timeInMillis
-                        if (selectedEndDate != null && selectedEndDate!! < start.startOfDay()) dateError = "End date cannot be before the start date" else { dateError = null; onSave(title.trim(), note.trim(), start, selectedEndDate, recurrence, intervalDays.toInt()) }
-                    }, modifier = Modifier.weight(1f).height(52.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = ReminderBlue, contentColor = androidx.compose.ui.graphics.Color.White, disabledContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant, disabledContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)) { Text("Save reminder", fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(54.dp),
+                        shape = CircleShape,
+                        border = BorderStroke(2.dp, ReminderBlue),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ReminderBlue),
+                    ) {
+                        Text("Cancel", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                    Button(
+                        onClick = {
+                            if (title.isBlank()) return@Button
+                            val calendar = Calendar.getInstance().apply {
+                                timeInMillis = selectedStartDate
+                                val time = Calendar.getInstance().apply { timeInMillis = selectedStartTime }
+                                set(Calendar.HOUR_OF_DAY, time.get(Calendar.HOUR_OF_DAY))
+                                set(Calendar.MINUTE, time.get(Calendar.MINUTE))
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            val start = calendar.timeInMillis
+                            if (selectedEndDate != null && selectedEndDate!! < start.startOfDay()) {
+                                dateError = "End date cannot be before the start date"
+                            } else {
+                                dateError = null
+                                onSave(title.trim(), note.trim(), start, selectedEndDate, recurrence, intervalDays.toInt())
+                            }
+                        },
+                        modifier = Modifier.weight(1f).height(54.dp),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ReminderBlue,
+                            contentColor = Color.White,
+                            disabledContainerColor = ReminderBlue.copy(alpha = 0.45f),
+                            disabledContentColor = Color.White.copy(alpha = 0.75f),
+                        ),
+                    ) {
+                        Text("Save reminder", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+                    }
                 }
             }
         }
@@ -172,21 +313,79 @@ fun ModernReminderEditorDialog(
 
     if (showStartDate) {
         val state = rememberDatePickerState(initialSelectedDateMillis = selectedStartDate)
-        DatePickerDialog(onDismissRequest = { showStartDate = false }, confirmButton = { TextButton(onClick = { state.selectedDateMillis?.let { selectedStartDate = it; if (selectedEndDate != null && selectedEndDate!! < it.startOfDay()) selectedEndDate = it }; showStartDate = false }) { Text("Done") } }, dismissButton = { TextButton(onClick = { showStartDate = false }) { Text("Cancel") } }) { DatePicker(state) }
+        DatePickerDialog(
+            onDismissRequest = { showStartDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let {
+                        selectedStartDate = it
+                        if (selectedEndDate != null && selectedEndDate!! < it.startOfDay()) selectedEndDate = it
+                    }
+                    showStartDate = false
+                }) { Text("Done") }
+            },
+            dismissButton = { TextButton(onClick = { showStartDate = false }) { Text("Cancel") } },
+        ) { DatePicker(state) }
     }
     if (showEndDate) {
         val state = rememberDatePickerState(initialSelectedDateMillis = selectedEndDate ?: selectedStartDate)
-        DatePickerDialog(onDismissRequest = { showEndDate = false }, confirmButton = { Row { if (selectedEndDate != null) TextButton(onClick = { selectedEndDate = null; dateError = null; showEndDate = false }) { Text("Clear") }; TextButton(onClick = { state.selectedDateMillis?.let { if (it < selectedStartDate.startOfDay()) dateError = "End date cannot be before the start date" else { selectedEndDate = it; dateError = null; showEndDate = false } } }) { Text("Done") } } }, dismissButton = { TextButton(onClick = { showEndDate = false }) { Text("Cancel") } }) { DatePicker(state) }
+        DatePickerDialog(
+            onDismissRequest = { showEndDate = false },
+            confirmButton = {
+                Row {
+                    if (selectedEndDate != null) {
+                        TextButton(onClick = { selectedEndDate = null; dateError = null; showEndDate = false }) { Text("Clear") }
+                    }
+                    TextButton(onClick = {
+                        state.selectedDateMillis?.let {
+                            if (it < selectedStartDate.startOfDay()) {
+                                dateError = "End date cannot be before the start date"
+                            } else {
+                                selectedEndDate = it
+                                dateError = null
+                                showEndDate = false
+                            }
+                        }
+                    }) { Text("Done") }
+                }
+            },
+            dismissButton = { TextButton(onClick = { showEndDate = false }) { Text("Cancel") } },
+        ) { DatePicker(state) }
     }
     if (showStartTime) {
         val calendar = Calendar.getInstance().apply { timeInMillis = selectedStartTime }
         val state = rememberTimePickerState(calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), false)
-        Dialog(onDismissRequest = { showStartTime = false }) { Surface(shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge, tonalElevation = 6.dp) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) { Text("Select start time", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall); TimeInput(state); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { TextButton(onClick = { showStartTime = false }) { Text("Cancel") }; TextButton(onClick = { selectedStartTime = Calendar.getInstance().apply { timeInMillis = selectedStartTime; set(Calendar.HOUR_OF_DAY, state.hour); set(Calendar.MINUTE, state.minute); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis; showStartTime = false }) { Text("Done") } } } } }
+        Dialog(onDismissRequest = { showStartTime = false }) {
+            Surface(shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge, tonalElevation = 6.dp) {
+                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Text("Select start time", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+                    TimeInput(state)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showStartTime = false }) { Text("Cancel") }
+                        TextButton(onClick = {
+                            selectedStartTime = Calendar.getInstance().apply {
+                                timeInMillis = selectedStartTime
+                                set(Calendar.HOUR_OF_DAY, state.hour)
+                                set(Calendar.MINUTE, state.minute)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }.timeInMillis
+                            showStartTime = false
+                        }) { Text("Done") }
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun ReminderIconCircle(size: Dp = 58.dp, iconSize: Dp = 28.dp, color: androidx.compose.ui.graphics.Color, content: @Composable () -> Unit) {
+private fun ReminderIconCircle(
+    size: Dp = 58.dp,
+    iconSize: Dp = 28.dp,
+    color: Color,
+    content: @Composable () -> Unit,
+) {
     Surface(modifier = Modifier.size(size), shape = CircleShape, color = color) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Box(modifier = Modifier.size(iconSize), contentAlignment = Alignment.Center) { content() }
@@ -195,20 +394,46 @@ private fun ReminderIconCircle(size: Dp = 58.dp, iconSize: Dp = 28.dp, color: an
 }
 
 @Composable
-private fun ReminderTextField(value: String, onValueChange: (String) -> Unit, label: String, placeholder: String, leadingIcon: ImageVector) {
-    OutlinedTextField(value = value, onValueChange = onValueChange, modifier = Modifier.fillMaxWidth().height(78.dp), placeholder = { Text(placeholder, fontSize = 20.sp) }, leadingIcon = { Icon(leadingIcon, null, modifier = Modifier.size(30.dp)) }, singleLine = true, shape = androidx.compose.material3.MaterialTheme.shapes.large)
+private fun ReminderTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    leadingIcon: ImageVector,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth().height(78.dp),
+        placeholder = { Text(placeholder, fontSize = 20.sp) },
+        leadingIcon = { Icon(leadingIcon, null, modifier = Modifier.size(30.dp)) },
+        singleLine = true,
+        shape = androidx.compose.material3.MaterialTheme.shapes.large,
+    )
 }
 
 @Composable
-private fun ReminderDateTimeCard(modifier: Modifier, icon: @Composable () -> Unit, label: String, value: String, supporting: String?, onClick: () -> Unit) {
-    Card(modifier = modifier.height(100.dp), onClick = onClick, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)) {
+private fun ReminderDateTimeCard(
+    modifier: Modifier,
+    icon: @Composable () -> Unit,
+    label: String,
+    value: String,
+    supporting: String?,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = modifier.height(100.dp),
+        onClick = onClick,
+        shape = androidx.compose.material3.MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             ReminderIconCircle(size = 56.dp, iconSize = 28.dp, color = ReminderBlueContainer, content = icon)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(label, fontSize = 14.sp, lineHeight = 18.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                Text(value, fontSize = 17.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                supporting?.let { Text(it, fontSize = 13.sp, lineHeight = 16.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant) }
+                Text(value, fontSize = 17.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+                supporting?.let { Text(it, fontSize = 13.sp, lineHeight = 16.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
             }
             Text("›", fontSize = 30.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -216,19 +441,47 @@ private fun ReminderDateTimeCard(modifier: Modifier, icon: @Composable () -> Uni
 }
 
 @Composable
-private fun RepeatCard(label: String, selected: Boolean, blue: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    Card(modifier = Modifier.width(86.dp).height(86.dp), onClick = onClick, shape = androidx.compose.material3.MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = if (selected) blue else androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh), border = if (selected) BorderStroke(2.dp, androidx.compose.ui.graphics.Color(0xFF78B8FF)) else null) {
-        Column(Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text("○", fontSize = 27.sp, lineHeight = 29.sp, color = if (selected) androidx.compose.ui.graphics.Color.White else blue)
-            Text(label, fontSize = 14.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, color = if (selected) androidx.compose.ui.graphics.Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
+private fun RepeatCard(
+    modifier: Modifier,
+    label: String,
+    selected: Boolean,
+    blue: Color,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = modifier.height(94.dp),
+        onClick = onClick,
+        shape = androidx.compose.material3.MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = if (selected) blue else androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh),
+        border = if (selected) BorderStroke(2.dp, Color(0xFF78B8FF)) else null,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text("○", fontSize = 27.sp, lineHeight = 29.sp, color = if (selected) Color.White else blue)
+            Text(
+                label,
+                fontSize = 14.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (selected) Color.White else androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
         }
     }
 }
 
-private fun Long.startOfDay(): Long = java.time.Instant.ofEpochMilli(this).atZone(java.time.ZoneId.systemDefault()).toLocalDate().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+private fun Long.startOfDay(): Long = java.time.Instant.ofEpochMilli(this)
+    .atZone(java.time.ZoneId.systemDefault())
+    .toLocalDate()
+    .atStartOfDay(java.time.ZoneId.systemDefault())
+    .toInstant()
+    .toEpochMilli()
 
 private fun isToday(epochMillis: Long): Boolean {
     val selected = Calendar.getInstance().apply { timeInMillis = epochMillis }
     val today = Calendar.getInstance()
-    return selected.get(Calendar.YEAR) == today.get(Calendar.YEAR) && selected.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
+    return selected.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
+        selected.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
 }
