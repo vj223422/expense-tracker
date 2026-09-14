@@ -45,36 +45,59 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
     }
 
     private suspend fun processMessage(context: Context, message: String) {
-        val parsed = BankDebitSmsParser.parse(message) ?: return
-        val reference = parsed.reference ?: buildFallbackKey(parsed, message)
+        val debit = BankDebitSmsParser.parse(message)
+        val credit = if (debit == null) BankCreditSmsParser.parse(message) else null
+        if (debit == null && credit == null) return
+
+        val reference = when {
+            debit != null -> debit.reference ?: "debit|${debit.amountMinor}|${debit.date}|${debit.merchant}|${message.hashCode()}"
+            else -> credit!!.reference ?: "credit|${credit.amountMinor}|${credit.date}|${credit.source}|${message.hashCode()}"
+        }
         if (isAlreadyProcessed(context, reference)) return
 
         val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
-        val category = inferCategory(parsed.merchant)
-        val note = buildString {
-            append("To: ").append(parsed.merchant)
-            parsed.reference?.let {
-                append(" Ref: ").append(it)
-            }
-            append(" [SMS]")
-        }
 
-        when (expenseRepository.addExpense(
-            profileId = profileId,
-            amountMinor = parsed.amountMinor,
-            category = category,
-            note = note,
-            date = parsed.date,
-        )) {
-            is AddExpenseResult.Success -> {
-                markProcessed(context, reference)
-                notificationHelper.notifyExpenseAdded(
-                    amountMinor = parsed.amountMinor,
-                    merchant = parsed.merchant,
-                    date = parsed.date,
-                )
+        if (debit != null) {
+            val category = inferCategory(debit.merchant)
+            val note = buildString {
+                append("To: ").append(debit.merchant)
+                debit.reference?.let { append(" Ref: ").append(it) }
+                append(" [SMS]")
             }
-            is AddExpenseResult.Error -> Unit
+            when (expenseRepository.addExpense(
+                profileId = profileId,
+                amountMinor = debit.amountMinor,
+                category = category,
+                note = note,
+                date = debit.date,
+            )) {
+                is AddExpenseResult.Success -> {
+                    markProcessed(context, reference)
+                    notificationHelper.notifyExpenseAdded(debit.amountMinor, debit.merchant, debit.date)
+                }
+                is AddExpenseResult.Error -> Unit
+            }
+        } else {
+            val incoming = credit!!
+            val note = buildString {
+                append("From: ").append(incoming.source)
+                incoming.reference?.let { append(" Ref: ").append(it) }
+                append(" [SMS]")
+            }
+            when (expenseRepository.addExpense(
+                profileId = profileId,
+                amountMinor = incoming.amountMinor,
+                category = ExpenseCategory.OTHER,
+                note = note,
+                date = incoming.date,
+                isIncome = true,
+            )) {
+                is AddExpenseResult.Success -> {
+                    markProcessed(context, reference)
+                    notificationHelper.notifyIncomeAdded(incoming.amountMinor, incoming.source, incoming.date)
+                }
+                is AddExpenseResult.Error -> Unit
+            }
         }
     }
 
@@ -106,13 +129,9 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
         }
     }
 
-    private fun buildFallbackKey(parsed: BankDebitSms, rawMessage: String): String =
-        "${parsed.amountMinor}|${parsed.date}|${parsed.merchant}|${rawMessage.hashCode()}"
-
-    private fun isAlreadyProcessed(context: Context, reference: String): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getStringSet(PROCESSED_REFS_KEY, emptySet())?.contains(reference) == true
-    }
+    private fun isAlreadyProcessed(context: Context, reference: String): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getStringSet(PROCESSED_REFS_KEY, emptySet())?.contains(reference) == true
 
     private fun markProcessed(context: Context, reference: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
