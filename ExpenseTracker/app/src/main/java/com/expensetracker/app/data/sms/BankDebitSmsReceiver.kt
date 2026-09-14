@@ -47,7 +47,12 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
     private suspend fun processMessage(context: Context, message: String) {
         val debit = BankDebitSmsParser.parse(message)
         val credit = if (debit == null) BankCreditSmsParser.parse(message) else null
-        if (debit == null && credit == null) return
+        if (debit == null && credit == null) {
+            if (looksLikeTransactionSms(message)) {
+                notificationHelper.notifySmsImportMissed()
+            }
+            return
+        }
 
         val reference = when {
             debit != null -> debit.reference ?: "debit|${debit.amountMinor}|${debit.date}|${debit.merchant}|${message.hashCode()}"
@@ -99,6 +104,16 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
                 is AddExpenseResult.Error -> Unit
             }
         }
+    }
+
+    private fun looksLikeTransactionSms(message: String): Boolean {
+        val normalized = message.replace(Regex("\\s+"), " ").trim()
+        val hasMoney = Regex("(?i)\\b(?:Rs\\.?|INR)\\s*[0-9,]+(?:\\.[0-9]{1,2})?\\b").containsMatchIn(normalized)
+        val hasTransactionWord = Regex(
+            "(?i)\\b(?:sent|debited|debit|withdrawn|withdrawal|credited|credit|received|deposited|deposit)\\b",
+        ).containsMatchIn(normalized)
+        val hasPaymentWord = Regex("(?i)\\b(?:UPI|transaction|txn|payment)\\b").containsMatchIn(normalized)
+        return hasMoney && (hasTransactionWord || hasPaymentWord)
     }
 
     private fun extractMessages(extras: Bundle?): List<String> {

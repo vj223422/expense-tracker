@@ -86,6 +86,28 @@ class NotificationHelper(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
+    fun notifySmsImportMissed() {
+        if (!hasNotificationPermission()) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle("Possible transaction missed")
+            .setContentText("A bank SMS was received but couldn't be added automatically.")
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    "A bank transaction SMS was received, but Expense Tracker couldn't process it automatically. Please check the SMS and add the transaction manually if needed.",
+                ),
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        NotificationManagerCompat.from(context).notify(
+            "sms_import_missed".hashCode(),
+            notification,
+        )
+    }
+
+    @SuppressLint("MissingPermission")
     private fun notifyTransactionAdded(title: String, body: String, summary: String) {
         if (!hasNotificationPermission()) return
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
