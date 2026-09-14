@@ -16,6 +16,7 @@ internal fun ExpenseEntity.toDomain(): Expense = Expense(
     note = note,
     date = LocalDate.ofEpochDay(epochDay),
     createdAtEpochMillis = createdAtEpochMillis,
+    isIncome = isIncome,
 )
 
 internal fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
@@ -24,6 +25,7 @@ internal fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
     amountMinor = amountMinor,
     category = category,
     note = note,
+    isIncome = isIncome,
     epochDay = date.toEpochDay(),
     createdAtEpochMillis = createdAtEpochMillis,
 )
