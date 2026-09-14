@@ -15,7 +15,7 @@ import com.expensetracker.app.data.local.dao.NoteDao
 import com.expensetracker.app.data.local.dao.ProfileDao
 import com.expensetracker.app.data.local.dao.ReminderDao
 
-@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class], version = 5, exportSchema = true)
+@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class], version = 6, exportSchema = true)
 abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun budgetLimitDao(): BudgetLimitDao
@@ -56,6 +56,11 @@ abstract class ExpenseDatabase : RoomDatabase() {
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `reminders` ADD COLUMN `endDateEpochMillis` INTEGER")
+            }
+        }
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `expenses` ADD COLUMN `isIncome` INTEGER NOT NULL DEFAULT 0")
             }
         }
     }
