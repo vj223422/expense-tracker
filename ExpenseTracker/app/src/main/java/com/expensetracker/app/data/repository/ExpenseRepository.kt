@@ -24,6 +24,7 @@ interface ExpenseRepository {
         category: ExpenseCategory,
         note: String,
         date: LocalDate,
+        isIncome: Boolean = false,
     ): AddExpenseResult
 
     suspend fun getExpenseById(id: Long, profileId: Long): Expense?
@@ -34,11 +35,6 @@ interface ExpenseRepository {
     /** [expense] already carries its own profileId — deletion doesn't need a separate one. */
     suspend fun deleteExpense(expense: Expense)
 
-    /**
-     * Re-inserts a just-deleted [expense] (undo) at its original id/createdAt instead of
-     * fabricating a new row — unlike [addExpense], which always mints a fresh id and "now" as the
-     * creation time, appropriate for a genuinely new expense but not for restoring one that was
-     * only ever meant to look untouched by the delete-then-undo round trip.
-     */
+    /** Re-inserts a just-deleted [expense] at its original id/createdAt. */
     suspend fun restoreExpense(expense: Expense): AddExpenseResult
 }
