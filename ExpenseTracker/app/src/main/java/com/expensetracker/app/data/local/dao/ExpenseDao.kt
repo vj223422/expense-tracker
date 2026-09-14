@@ -37,19 +37,19 @@ interface ExpenseDao {
 
     @Query(
         "SELECT category, SUM(amountMinor) AS totalMinor FROM expenses " +
-            "WHERE profileId = :profileId AND epochDay BETWEEN :startEpochDay AND :endEpochDay GROUP BY category",
+            "WHERE profileId = :profileId AND isIncome = 0 AND epochDay BETWEEN :startEpochDay AND :endEpochDay GROUP BY category",
     )
     fun observeCategoryTotals(profileId: Long, startEpochDay: Long, endEpochDay: Long): Flow<List<CategoryTotal>>
 
     @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM expenses " +
-            "WHERE profileId = :profileId AND category = :category AND epochDay BETWEEN :startEpochDay AND :endEpochDay",
+            "WHERE profileId = :profileId AND isIncome = 0 AND category = :category AND epochDay BETWEEN :startEpochDay AND :endEpochDay",
     )
     suspend fun getCategoryTotal(profileId: Long, category: ExpenseCategory, startEpochDay: Long, endEpochDay: Long): Long
 
     @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM expenses " +
-            "WHERE profileId = :profileId AND epochDay BETWEEN :startEpochDay AND :endEpochDay",
+            "WHERE profileId = :profileId AND isIncome = 0 AND epochDay BETWEEN :startEpochDay AND :endEpochDay",
     )
     suspend fun getOverallTotal(profileId: Long, startEpochDay: Long, endEpochDay: Long): Long
 }
