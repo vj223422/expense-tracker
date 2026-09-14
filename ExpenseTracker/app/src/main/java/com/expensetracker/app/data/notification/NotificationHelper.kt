@@ -68,26 +68,43 @@ class NotificationHelper(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun notifyExpenseAdded(amountMinor: Long, merchant: String, date: LocalDate) {
         if (!hasNotificationPermission()) return
+        notifyTransactionAdded(
+            title = "Expense added automatically",
+            body = "${amountMinor.formatAsCurrency()} paid to $merchant on ${formatDate(date)} was added to your expenses.",
+            summary = "${amountMinor.formatAsCurrency()} • $merchant • ${formatDate(date)}",
+        )
+    }
 
-        val dateText = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.US))
+    @SuppressLint("MissingPermission")
+    fun notifyIncomeAdded(amountMinor: Long, source: String, date: LocalDate) {
+        if (!hasNotificationPermission()) return
+        notifyTransactionAdded(
+            title = "Money received automatically",
+            body = "${amountMinor.formatAsCurrency()} received from $source on ${formatDate(date)} was added to your income.",
+            summary = "+${amountMinor.formatAsCurrency()} • $source • ${formatDate(date)}",
+        )
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun notifyTransactionAdded(title: String, body: String, summary: String) {
+        if (!hasNotificationPermission()) return
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Expense added automatically")
-            .setContentText("${amountMinor.formatAsCurrency()} • $merchant • $dateText")
-            .setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    "${amountMinor.formatAsCurrency()} paid to $merchant on $dateText was added to your expenses."
-                )
-            )
+            .setContentTitle(title)
+            .setContentText(summary)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()
 
         NotificationManagerCompat.from(context).notify(
-            "sms_expense_${System.currentTimeMillis()}".hashCode(),
+            "sms_transaction_${System.currentTimeMillis()}".hashCode(),
             notification,
         )
     }
+
+    private fun formatDate(date: LocalDate): String =
+        date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.US))
 
     private fun hasNotificationPermission(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
