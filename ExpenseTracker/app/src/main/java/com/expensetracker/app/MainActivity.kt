@@ -14,7 +14,10 @@ import com.expensetracker.app.navigation.ExpenseTrackerApp
 class MainActivity : ComponentActivity() {
 
     private val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* alerts simply stay in-app if declined */ }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { requestSmsPermissionIfNeeded() }
+
+    private val smsPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* SMS automation simply stays disabled if declined */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,29 +30,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Only asks once per process — without [hasRequestedNotificationPermission] this re-launches
-     * on every onCreate, including every rotation, re-showing the system dialog each time until
-     * the user permanently denies it.
-     */
     private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || hasRequestedNotificationPermission) return
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || hasRequestedNotificationPermission) {
+            requestSmsPermissionIfNeeded()
+            return
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            requestSmsPermissionIfNeeded()
             return
         }
         hasRequestedNotificationPermission = true
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
-    /**
-     * Many devices (Samsung especially) default third-party apps to 60Hz even on 90/120Hz
-     * hardware — Android only auto-matches refresh rate to content on some OEM skins, not all.
-     * Explicitly requesting the display's highest-refresh-rate mode here is what actually makes
-     * scrolling and the tab-switch/screen transitions render at that rate; on devices that
-     * already auto-switch, this is a harmless no-op.
-     */
+    private fun requestSmsPermissionIfNeeded() {
+        if (hasRequestedSmsPermission) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED) return
+        hasRequestedSmsPermission = true
+        smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
+    }
+
     private fun requestHighestRefreshRate() {
         val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             display
@@ -66,5 +66,6 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         private var hasRequestedNotificationPermission = false
+        private var hasRequestedSmsPermission = false
     }
 }
