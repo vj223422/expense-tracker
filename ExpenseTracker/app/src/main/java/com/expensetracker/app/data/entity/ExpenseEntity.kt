@@ -24,6 +24,8 @@ data class ExpenseEntity(
     val amountMinor: Long,
     val category: ExpenseCategory,
     val note: String,
+    /** True when money was received; false for an expense/debit. */
+    val isIncome: Boolean = false,
     /** [java.time.LocalDate.toEpochDay] — a plain Long sorts/filters without a TypeConverter. */
     val epochDay: Long,
     val createdAtEpochMillis: Long,
