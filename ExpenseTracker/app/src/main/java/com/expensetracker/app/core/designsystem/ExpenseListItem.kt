@@ -34,12 +34,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.expensetracker.app.core.theme.LocalExtendedColors
 import com.expensetracker.app.core.util.formatAsCurrency
 import com.expensetracker.app.data.model.Expense
 import kotlinx.coroutines.launch
 
 @Composable
 fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    val amountColor = if (expense.isIncome) {
+        LocalExtendedColors.current.safe
+    } else {
+        MaterialTheme.colorScheme.error
+    }
+    val amountPrefix = if (expense.isIncome) "+" else "-"
+    val typeLabel = if (expense.isIncome) "Income" else expense.category.displayName
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -63,31 +72,27 @@ fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: ((
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = expense.note.ifBlank { expense.category.displayName },
+                text = expense.note.ifBlank { typeLabel },
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = expense.category.displayName,
+                text = typeLabel,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = "-" + expense.amountMinor.formatAsCurrency(), style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = amountPrefix + expense.amountMinor.formatAsCurrency(),
+            style = MaterialTheme.typography.bodyLarge,
+            color = amountColor,
+        )
     }
 }
 
-/**
- * Swipe end-to-start to delete, revealing a danger-tinted background with a trash icon.
- *
- * [onDelete] is suspend and returns whether the delete actually succeeded — the swipe gesture
- * commits visually the instant the user releases (returning `true` from confirmValueChange), but
- * the real delete happens afterwards and can fail (e.g. a local storage error). Without awaiting
- * that result, a failed delete would leave the row stuck fully swiped-away on screen while the
- * expense is still sitting in the database. On failure, the swipe is reset back to visible.
- */
+/** Swipe end-to-start to delete, revealing a danger-tinted background with a trash icon. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeToDeleteExpenseItem(
