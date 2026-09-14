@@ -1,6 +1,7 @@
 package com.expensetracker.app.data.notification
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -32,9 +33,9 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
+    @SuppressLint("MissingPermission")
     fun notify(alert: LimitAlert) {
-        val hasPermission = hasNotificationPermission()
-        if (!hasPermission) return
+        if (!hasNotificationPermission()) return
 
         val scopeLabel = alert.category?.displayName ?: "Overall"
         val overLimit = alert.spentMinor > alert.limitMinor
@@ -53,16 +54,18 @@ class NotificationHelper(private val context: Context) {
             .setAutoCancel(true)
             .build()
 
+        val manager = NotificationManagerCompat.from(context)
         val warningNotificationId = "${alert.profileId}_$scopeLabel".hashCode()
         val notificationId = if (alert.tier == AlertTier.CRITICAL) {
-            NotificationManagerCompat.from(context).cancel(warningNotificationId)
+            manager.cancel(warningNotificationId)
             "${alert.profileId}_${scopeLabel}_${alert.spentMinor}".hashCode()
         } else {
             warningNotificationId
         }
-        NotificationManagerCompat.from(context).notify(notificationId, notification)
+        manager.notify(notificationId, notification)
     }
 
+    @SuppressLint("MissingPermission")
     fun notifyExpenseAdded(amountMinor: Long, merchant: String, date: LocalDate) {
         if (!hasNotificationPermission()) return
 
