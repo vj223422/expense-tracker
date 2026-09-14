@@ -38,6 +38,10 @@ import com.expensetracker.app.core.theme.LocalExtendedColors
 import com.expensetracker.app.core.util.formatAsCurrency
 import com.expensetracker.app.data.model.Expense
 import kotlinx.coroutines.launch
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+private val transactionDateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US)
 
 @Composable
 fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
@@ -77,11 +81,19 @@ fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: ((
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = typeLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = typeLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "  |  ${expense.date.format(transactionDateFormatter)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
