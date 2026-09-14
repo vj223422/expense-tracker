@@ -11,6 +11,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.expensetracker.app.R
 import com.expensetracker.app.core.util.formatAsCurrency
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private const val CHANNEL_ID = "budget_alerts"
 
@@ -30,13 +33,10 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun notify(alert: LimitAlert) {
-        val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+        val hasPermission = hasNotificationPermission()
         if (!hasPermission) return
 
         val scopeLabel = alert.category?.displayName ?: "Overall"
-        // Strictly greater than: spending exactly the limit means it's been reached, not exceeded.
         val overLimit = alert.spentMinor > alert.limitMinor
         val title = when {
             overLimit -> "$scopeLabel budget exceeded"
@@ -53,14 +53,8 @@ class NotificationHelper(private val context: Context) {
             .setAutoCancel(true)
             .build()
 
-        // CRITICAL repeats on every qualifying expense (see maybeAlert) — key it by the running
-        // total so each one lands as its own notification instead of silently overwriting the
-        // last. WARNING only ever fires once, so a stable per-scope id is fine there.
         val warningNotificationId = "${alert.profileId}_$scopeLabel".hashCode()
         val notificationId = if (alert.tier == AlertTier.CRITICAL) {
-            // The one-shot WARNING notification for this scope is now stale information (spend
-            // has moved past "halfway" into CRITICAL territory) — cancel it instead of leaving it
-            // sitting in the shade alongside the new, more urgent one.
             NotificationManagerCompat.from(context).cancel(warningNotificationId)
             "${alert.profileId}_${scopeLabel}_${alert.spentMinor}".hashCode()
         } else {
@@ -68,4 +62,32 @@ class NotificationHelper(private val context: Context) {
         }
         NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
+
+    fun notifyExpenseAdded(amountMinor: Long, merchant: String, date: LocalDate) {
+        if (!hasNotificationPermission()) return
+
+        val dateText = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.US))
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Expense added automatically")
+            .setContentText("${amountMinor.formatAsCurrency()} • $merchant • $dateText")
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    "${amountMinor.formatAsCurrency()} paid to $merchant on $dateText was added to your expenses."
+                )
+            )
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+
+        NotificationManagerCompat.from(context).notify(
+            "sms_expense_${System.currentTimeMillis()}".hashCode(),
+            notification,
+        )
+    }
+
+    private fun hasNotificationPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
 }
