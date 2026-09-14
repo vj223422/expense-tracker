@@ -57,7 +57,6 @@ import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
 import com.expensetracker.app.feature.reminders.RemindersScreen
 import com.expensetracker.app.feature.settings.SettingsScreen
 import com.expensetracker.app.feature.transactions.TransactionsScreen
-import com.expensetracker.app.feature.upipay.UpiScanPayScreen
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -74,10 +73,10 @@ fun ExpenseTrackerApp() {
         val navController = rememberNavController()
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
-        val showChrome = currentRoute != Destination.AddExpense.route && currentRoute != Destination.ScanPay.route
+        val showChrome = currentRoute != Destination.AddExpense.route
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            topBar = { if (showChrome) AppTopBar(onScanPayClick = { navController.navigate(Destination.ScanPay.route) }) },
+            topBar = { if (showChrome) AppTopBar() },
             bottomBar = {
                 if (showChrome) NavigationBar {
                     bottomNavItems.forEach { item ->
@@ -114,9 +113,6 @@ fun ExpenseTrackerApp() {
                     val expenseId = entry.arguments?.getLong(Destination.AddExpense.ARG_EXPENSE_ID)?.takeIf { it != Destination.AddExpense.NO_EXPENSE_ID }
                     AddExpenseScreen(expenseId = expenseId, onNavigateBack = { navController.popBackStack() })
                 }
-                composable(Destination.ScanPay.route) {
-                    UpiScanPayScreen(onNavigateBack = { navController.popBackStack() })
-                }
             }
         }
     }
@@ -125,7 +121,6 @@ fun ExpenseTrackerApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppTopBar(
-    onScanPayClick: () -> Unit,
     profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel(),
 ) {
     val uiState by profileSwitcherViewModel.uiState.collectAsStateWithLifecycle()
@@ -138,7 +133,6 @@ private fun AppTopBar(
     TopAppBar(
         title = { Text(activeProfile?.name ?: "Expense Tracker") },
         actions = {
-            TextButton(onClick = onScanPayClick) { Text("Scan & Pay") }
             Box {
                 TextButton(onClick = { expanded = true }) { Text("Profile") }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
