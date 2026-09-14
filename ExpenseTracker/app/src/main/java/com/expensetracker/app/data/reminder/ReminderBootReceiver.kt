@@ -20,6 +20,7 @@ class ReminderBootReceiver : BroadcastReceiver() {
                     ExpenseDatabase.MIGRATION_2_3,
                     ExpenseDatabase.MIGRATION_3_4,
                     ExpenseDatabase.MIGRATION_4_5,
+                    ExpenseDatabase.MIGRATION_5_6,
                 )
                 .build()
             try {
