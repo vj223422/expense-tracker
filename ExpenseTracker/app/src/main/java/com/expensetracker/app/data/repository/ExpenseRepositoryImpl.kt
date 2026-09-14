@@ -50,6 +50,7 @@ class ExpenseRepositoryImpl(
         category: ExpenseCategory,
         note: String,
         date: LocalDate,
+        isIncome: Boolean,
     ): AddExpenseResult = withContext(ioDispatcher) {
         try {
             expenseDao.insert(
@@ -58,17 +59,19 @@ class ExpenseRepositoryImpl(
                     amountMinor = amountMinor,
                     category = category,
                     note = note,
+                    isIncome = isIncome,
                     epochDay = date.toEpochDay(),
                     createdAtEpochMillis = System.currentTimeMillis(),
                 ),
             )
         } catch (e: SQLiteException) {
-            return@withContext AddExpenseResult.Error("Couldn't save expense — local storage error.")
+            return@withContext AddExpenseResult.Error("Couldn't save transaction — local storage error.")
         }
 
-        // The expense is already committed at this point, so a failure here is a lost/duplicate
-        // alert at worst — it must never be reported back as a failed save, or the caller (and
-        // user) may retry and insert the same expense twice.
+        if (isIncome) {
+            return@withContext AddExpenseResult.Success(emptyList())
+        }
+
         val alerts = try {
             evaluateAndNotify(profileId, YearMonth.from(date), category)
         } catch (e: SQLiteException) {
@@ -88,6 +91,8 @@ class ExpenseRepositoryImpl(
             return@withContext AddExpenseResult.Error("Couldn't update expense — local storage error.")
         }
 
+        if (expense.isIncome) return@withContext AddExpenseResult.Success(emptyList())
+
         val alerts = try {
             evaluateAndNotify(expense.profileId, YearMonth.from(expense.date), expense.category)
         } catch (e: SQLiteException) {
@@ -102,13 +107,12 @@ class ExpenseRepositoryImpl(
 
     override suspend fun restoreExpense(expense: Expense): AddExpenseResult = withContext(ioDispatcher) {
         try {
-            // expense.toEntity() carries the original id/createdAtEpochMillis (unlike building a
-            // fresh ExpenseEntity the way addExpense does), so the restored row keeps its original
-            // identity and position instead of jumping to the top of its date group as "new".
             expenseDao.insert(expense.toEntity())
         } catch (e: SQLiteException) {
             return@withContext AddExpenseResult.Error("Couldn't restore expense — local storage error.")
         }
+
+        if (expense.isIncome) return@withContext AddExpenseResult.Success(emptyList())
 
         val alerts = try {
             evaluateAndNotify(expense.profileId, YearMonth.from(expense.date), expense.category)
@@ -118,7 +122,6 @@ class ExpenseRepositoryImpl(
         AddExpenseResult.Success(alerts)
     }
 
-    /** Notifies at most once per (profile, period, scope) for WARNING; see maybeAlert for CRITICAL. */
     private suspend fun evaluateAndNotify(profileId: Long, yearMonth: YearMonth, changedCategory: ExpenseCategory): List<LimitAlert> {
         val alerts = mutableListOf<LimitAlert>()
         val periodPrefix = "${profileId}_$yearMonth"
@@ -136,12 +139,6 @@ class ExpenseRepositoryImpl(
         return alerts
     }
 
-    /**
-     * WARNING notifies once per (period, scope) — suppressed once that tier is already recorded.
-     * CRITICAL notifies unconditionally on every call: once spending is at or past 80% of the
-     * limit, every further expense in that scope this month is worth a fresh alert, not just the
-     * first crossing — including every expense after 100% is passed too.
-     */
     private suspend fun maybeAlert(
         profileId: Long,
         periodKey: String,
