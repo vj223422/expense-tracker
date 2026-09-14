@@ -29,22 +29,25 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
         val pending = goAsync()
-        val messages = extractMessages(intent.extras)
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        scope.launch {
+        val rawMessage = extractMessages(intent.extras).joinToString("\n")
+        if (rawMessage.isBlank()) {
+            pending.finish()
+            return
+        }
+
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                messages.forEach { rawMessage -> processMessage(rawMessage) }
+                processMessage(context.applicationContext, rawMessage)
             } finally {
                 pending.finish()
-                scope.coroutineContext[SupervisorJob]?.cancel()
             }
         }
     }
 
-    private suspend fun processMessage(message: String) {
+    private suspend fun processMessage(context: Context, message: String) {
         val parsed = BankDebitSmsParser.parse(message) ?: return
         val reference = parsed.reference ?: buildFallbackKey(parsed, message)
-        if (isAlreadyProcessed(reference)) return
+        if (isAlreadyProcessed(context, reference)) return
 
         val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
         val category = inferCategory(parsed.merchant)
@@ -64,7 +67,7 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
             date = parsed.date,
         )) {
             is AddExpenseResult.Success -> {
-                markProcessed(reference)
+                markProcessed(context, reference)
                 notificationHelper.notifyExpenseAdded(
                     amountMinor = parsed.amountMinor,
                     merchant = parsed.merchant,
@@ -106,13 +109,13 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
     private fun buildFallbackKey(parsed: BankDebitSms, rawMessage: String): String =
         "${parsed.amountMinor}|${parsed.date}|${parsed.merchant}|${rawMessage.hashCode()}"
 
-    private fun isAlreadyProcessed(reference: String): Boolean {
-        val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private fun isAlreadyProcessed(context: Context, reference: String): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getStringSet(PROCESSED_REFS_KEY, emptySet())?.contains(reference) == true
     }
 
-    private fun markProcessed(reference: String) {
-        val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private fun markProcessed(context: Context, reference: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val refs = (prefs.getStringSet(PROCESSED_REFS_KEY, emptySet()) ?: emptySet()).toMutableSet()
         refs.add(reference)
         if (refs.size > MAX_STORED_REFS) {
@@ -120,12 +123,6 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
         }
         prefs.edit().putStringSet(PROCESSED_REFS_KEY, refs).apply()
     }
-
-    private val applicationContext: Context
-        get() = notificationHelperContext
-
-    private val notificationHelperContext: Context
-        get() = notificationHelper.contextForSmsDedup
 
     companion object {
         private const val PREFS_NAME = "bank_sms_import"
