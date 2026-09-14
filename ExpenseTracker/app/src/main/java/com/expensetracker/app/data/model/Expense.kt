@@ -19,4 +19,5 @@ data class Expense(
     val note: String,
     val date: LocalDate,
     val createdAtEpochMillis: Long,
+    val isIncome: Boolean = false,
 )
