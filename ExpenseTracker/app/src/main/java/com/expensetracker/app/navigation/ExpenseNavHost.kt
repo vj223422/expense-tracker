@@ -8,9 +8,9 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -23,11 +23,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,7 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -53,6 +55,7 @@ import com.expensetracker.app.core.theme.ExpenseTrackerTheme
 import com.expensetracker.app.data.prefs.AppPreferences
 import com.expensetracker.app.data.prefs.ThemeMode
 import com.expensetracker.app.feature.addexpense.AddExpenseScreen
+import com.expensetracker.app.feature.budgets.BudgetsScreen
 import com.expensetracker.app.feature.dashboard.DashboardScreen
 import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
 import com.expensetracker.app.feature.reminders.RemindersScreen
@@ -89,24 +92,37 @@ fun ExpenseTrackerApp(
         }
 
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier,
             topBar = { if (showChrome) AppTopBar() },
             bottomBar = {
-                if (showChrome) NavigationBar {
-                    bottomNavItems.forEach { item ->
-                        val selected = backStackEntry?.destination?.hierarchy?.any { it.route == item.destination.route } == true
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(item.destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, item.label) },
-                            label = { Text(item.label) },
-                        )
+                if (showChrome) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp,
+                    ) {
+                        bottomNavItems.forEach { item ->
+                            val selected = backStackEntry?.destination?.hierarchy?.any { it.route == item.destination.route } == true
+                            NavigationBarItem(
+                                selected = selected,
+                                onClick = {
+                                    navController.navigate(item.destination.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.label) },
+                                label = { Text(item.label, style = MaterialTheme.typography.labelMedium) },
+                                alwaysShowLabel = true,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            )
+                        }
                     }
                 }
             },
@@ -121,6 +137,7 @@ fun ExpenseTrackerApp(
                 }
                 composable(Destination.Transactions.route) { TransactionsScreen(onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) }) }
                 composable(Destination.Reminders.route) { RemindersScreen() }
+                composable(Destination.Budgets.route) { BudgetsScreen() }
                 composable(Destination.Settings.route) { SettingsScreen() }
                 composable(
                     route = Destination.AddExpense.route,
@@ -144,36 +161,69 @@ private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinV
     val activeProfileId = uiState.activeProfileId
     var expanded by remember { mutableStateOf(false) }
     var showCreateProfile by remember { mutableStateOf(false) }
-    val activeProfile = uiState.activeProfile
 
     TopAppBar(
         title = {
             Column {
-                Text(activeProfile?.name ?: "My Expenses", style = MaterialTheme.typography.headlineSmall)
-                Text("All your transactions in one place", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "My Expenses",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    "All your transactions in one place",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         actions = {
             Box {
-                TextButton(onClick = { expanded = true }) {
+                TextButton(
+                    onClick = { expanded = true },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+                ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Surface(Modifier.size(40.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                        Surface(
+                            modifier = Modifier.size(52.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp),
+                                )
                             }
                         }
-                        Text("Profile", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "Profile",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
                 }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     profiles.forEach { profile ->
-                        DropdownMenuItem(text = { Text(profile.name) }, onClick = { profileSwitcherViewModel.onSwitchProfile(profile.id); expanded = false }, leadingIcon = { if (profile.id == activeProfileId) Icon(Icons.Default.Check, null) })
+                        DropdownMenuItem(
+                            text = { Text(profile.name) },
+                            onClick = { profileSwitcherViewModel.onSwitchProfile(profile.id); expanded = false },
+                            leadingIcon = { if (profile.id == activeProfileId) Icon(Icons.Default.Check, null) },
+                        )
                     }
                     HorizontalDivider()
-                    DropdownMenuItem(text = { Text("Create profile") }, onClick = { expanded = false; showCreateProfile = true }, leadingIcon = { Icon(Icons.Default.Add, null) })
+                    DropdownMenuItem(
+                        text = { Text("Create profile") },
+                        onClick = { expanded = false; showCreateProfile = true },
+                        leadingIcon = { Icon(Icons.Default.Add, null) },
+                    )
                 }
             }
         },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
     )
     if (showCreateProfile) {
         CreateProfileDialog(
