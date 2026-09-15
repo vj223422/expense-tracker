@@ -92,8 +92,9 @@ private fun ThemeModeRow(title: String, subtitle: String, icon: androidx.compose
     val rowColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, animationSpec = tween(150), label = "themeRow")
     Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(rowColor).selectable(selected = selected, onClick = onClick, role = Role.RadioButton).heightIn(min = 72.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = selected, onClick = null)
+        Spacer(Modifier.width(12.dp))
         Surface(Modifier.size(44.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest) { Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) } }
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(16.dp))
         Column { Text(title, style = MaterialTheme.typography.bodyLarge); Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
@@ -120,8 +121,9 @@ private fun ProfilesSection(profiles: List<Profile>, activeProfileId: Long?, can
                 profiles.forEachIndexed { index, profile ->
                     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).clip(MaterialTheme.shapes.medium).selectable(selected = profile.id == activeProfileId, onClick = { onSwitch(profile.id) }, role = Role.RadioButton).heightIn(min = 72.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = profile.id == activeProfileId, onClick = null)
+                        Spacer(Modifier.width(12.dp))
                         Surface(Modifier.size(48.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.primary) } }
-                        Spacer(Modifier.width(14.dp))
+                        Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) { Text(profile.name, style = MaterialTheme.typography.bodyLarge); if (index == 0) Text("Default profile", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         IconButton(onClick = { onRename(profile) }) { Icon(Icons.Default.Edit, "Rename profile") }
                         IconButton(onClick = { onDelete(profile) }, enabled = canDelete) { Icon(Icons.Default.DeleteOutline, "Delete profile") }
