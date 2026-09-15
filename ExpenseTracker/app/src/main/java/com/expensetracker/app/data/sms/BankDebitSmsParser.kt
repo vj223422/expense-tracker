@@ -14,12 +14,13 @@ data class BankDebitSms(
 )
 
 object BankDebitSmsParser {
-    // Keep these patterns tolerant of bank-specific spacing/punctuation while still requiring
-    // the distinctive HDFC-style debit fields. Extra footer text such as "Not You?" is ignored.
     private val amountRegex = Regex("(?i)\\bSent\\s*(?:Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)")
     private val merchantRegex = Regex("(?im)^\\s*To\\s+(.+?)\\s*$")
+    private val inlineMerchantRegex = Regex("(?i)\\bto\\s+(.+?)\\s*\\.\\s*(?:RRN|Ref(?:erence)?)\\b")
     private val dateRegex = Regex("(?im)^\\s*On\\s*[:\\-]?\\s*(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\s*$")
+    private val inlineDateRegex = Regex("(?i)\\bon\\s+(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\b")
     private val referenceRegex = Regex("(?im)^\\s*Ref(?:erence)?(?:\\s+No)?\\s*[:#-]?\\s*([A-Za-z0-9-]+)\\s*$")
+    private val inlineReferenceRegex = Regex("(?i)\\bRRN\\s*[:#-]?\\s*([A-Za-z0-9-]+)")
     private val fromBankRegex = Regex("(?im)^\\s*From\\s+.+?\\bBank\\s+A/C\\b")
     private val dateFormats = listOf(
         DateTimeFormatter.ofPattern("d/M/yy", Locale.US),
@@ -34,12 +35,14 @@ object BankDebitSmsParser {
             .replace(Regex("[ \\t]+"), " ")
             .trim()
 
-        // Do not require the optional "From ... Bank A/C" line: some legitimate bank SMS
-        // variants omit or format that line differently. The Sent + To + On combination is the
-        // reliable debit signature, and the optional bank line is retained only as a signal.
         if (!Regex("(?i)\\bSent\\s*(?:Rs\\.?|INR)\\s*").containsMatchIn(normalized)) return null
-        if (!Regex("(?im)^\\s*To\\s+.+$").containsMatchIn(normalized)) return null
-        if (!Regex("(?im)^\\s*On\\s*[:\\-]?\\s*\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\s*$").containsMatchIn(normalized)) return null
+
+        val isLineBasedFormat = Regex("(?im)^\\s*To\\s+.+$").containsMatchIn(normalized) &&
+            Regex("(?im)^\\s*On\\s*[:\\-]?\\s*\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\s*$").containsMatchIn(normalized)
+        val isInlineFormat = inlineMerchantRegex.containsMatchIn(normalized) &&
+            inlineDateRegex.containsMatchIn(normalized) &&
+            inlineReferenceRegex.containsMatchIn(normalized)
+        if (!isLineBasedFormat && !isInlineFormat) return null
 
         val amountText = amountRegex.find(normalized)?.groupValues?.getOrNull(1) ?: return null
         val amountMinor = runCatching {
@@ -50,14 +53,18 @@ object BankDebitSmsParser {
         }.getOrNull()?.takeIf { it > 0L } ?: return null
 
         val merchant = merchantRegex.find(normalized)?.groupValues?.getOrNull(1)?.trim()
-            ?.takeIf { it.isNotBlank() } ?: return null
-        val dateText = dateRegex.find(normalized)?.groupValues?.getOrNull(1)
-        val date = dateText?.let(::parseDate) ?: return null
-        val reference = referenceRegex.find(normalized)?.groupValues?.getOrNull(1)?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: inlineMerchantRegex.find(normalized)?.groupValues?.getOrNull(1)?.trim()
+                ?.takeIf { it.isNotBlank() }
+            ?: return null
 
-        // A debit must contain the expected bank-account wording when it is present. This check
-        // is intentionally non-blocking so a bank's harmless formatting change won't lose a real
-        // transaction.
+        val dateText = dateRegex.find(normalized)?.groupValues?.getOrNull(1)
+            ?: inlineDateRegex.find(normalized)?.groupValues?.getOrNull(1)
+        val date = dateText?.let(::parseDate) ?: return null
+
+        val reference = referenceRegex.find(normalized)?.groupValues?.getOrNull(1)?.trim()
+            ?: inlineReferenceRegex.find(normalized)?.groupValues?.getOrNull(1)?.trim()
+
         fromBankRegex.containsMatchIn(normalized)
 
         return BankDebitSms(
