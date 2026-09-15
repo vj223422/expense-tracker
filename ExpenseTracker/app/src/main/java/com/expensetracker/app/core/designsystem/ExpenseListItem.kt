@@ -1,5 +1,6 @@
 package com.expensetracker.app.core.designsystem
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,7 @@ import java.util.Locale
 
 private val transactionDateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ExpenseListItem(
     expense: Expense,
