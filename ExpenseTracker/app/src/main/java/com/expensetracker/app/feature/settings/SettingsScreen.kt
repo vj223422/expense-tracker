@@ -90,8 +90,8 @@ private fun SettingsSection(title: String, subtitle: String, content: @Composabl
 @Composable
 private fun ThemeModeRow(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, onClick: () -> Unit) {
     val rowColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, animationSpec = tween(150), label = "themeRow")
-    Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(rowColor).selectable(selected, onClick, role = Role.RadioButton).heightIn(min = 72.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        RadioButton(selected, null)
+    Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(rowColor).selectable(selected = selected, onClick = onClick, role = Role.RadioButton).heightIn(min = 72.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected, onClick = null)
         Surface(Modifier.size(44.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest) { Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) } }
         Spacer(Modifier.width(14.dp))
         Column { Text(title, style = MaterialTheme.typography.bodyLarge); Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -104,7 +104,7 @@ private fun ToggleRow(icon: androidx.compose.ui.graphics.vector.ImageVector, tit
         Surface(Modifier.size(44.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) } }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.bodyLarge); Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        Spacer(Modifier.width(12.dp)); Switch(checked, null)
+        Spacer(Modifier.width(12.dp)); Switch(checked = checked, onCheckedChange = null)
     }
 }
 
@@ -118,13 +118,13 @@ private fun ProfilesSection(profiles: List<Profile>, activeProfileId: Long?, can
         Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
             Column(Modifier.padding(vertical = 6.dp)) {
                 profiles.forEachIndexed { index, profile ->
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).clip(MaterialTheme.shapes.medium).selectable(profile.id == activeProfileId, { onSwitch(profile.id) }, role = Role.RadioButton).heightIn(min = 72.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(profile.id == activeProfileId, null)
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).clip(MaterialTheme.shapes.medium).selectable(selected = profile.id == activeProfileId, onClick = { onSwitch(profile.id) }, role = Role.RadioButton).heightIn(min = 72.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = profile.id == activeProfileId, onClick = null)
                         Surface(Modifier.size(48.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.primary) } }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) { Text(profile.name, style = MaterialTheme.typography.bodyLarge); if (index == 0) Text("Default profile", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                        IconButton({ onRename(profile) }) { Icon(Icons.Default.Edit, "Rename profile") }
-                        IconButton({ onDelete(profile) }, enabled = canDelete) { Icon(Icons.Default.DeleteOutline, "Delete profile") }
+                        IconButton(onClick = { onRename(profile) }) { Icon(Icons.Default.Edit, "Rename profile") }
+                        IconButton(onClick = { onDelete(profile) }, enabled = canDelete) { Icon(Icons.Default.DeleteOutline, "Delete profile") }
                     }
                 }
             }
@@ -135,10 +135,10 @@ private fun ProfilesSection(profiles: List<Profile>, activeProfileId: Long?, can
 @Composable
 private fun RenameProfileDialog(profile: Profile, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var name by remember(profile.id, profile.name) { mutableStateOf(profile.name) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Rename profile") }, text = { OutlinedTextField(name, { name = it }, label = { Text("Profile name") }, singleLine = true) }, confirmButton = { TextButton({ onConfirm(name) }, enabled = name.trim().isNotEmpty()) { Text("Save") } }, dismissButton = { TextButton(onDismiss) { Text("Cancel") } })
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Rename profile") }, text = { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Profile name") }, singleLine = true) }, confirmButton = { TextButton(onClick = { onConfirm(name) }, enabled = name.trim().isNotEmpty()) { Text("Save") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }
 
 @Composable
 private fun DeleteProfileDialog(profile: Profile, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Delete \"${profile.name}\"?") }, text = { Text("All its transactions and budget limits will be deleted too. This can't be undone.") }, confirmButton = { TextButton(onConfirm) { Text("Delete") } }, dismissButton = { TextButton(onDismiss) { Text("Cancel") } })
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Delete \"${profile.name}\"?") }, text = { Text("All its transactions and budget limits will be deleted too. This can't be undone.") }, confirmButton = { TextButton(onClick = onConfirm) { Text("Delete") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }
