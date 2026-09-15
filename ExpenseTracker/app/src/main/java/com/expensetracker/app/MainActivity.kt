@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import com.expensetracker.app.feature.addexpense.AddExpenseViewModel
 import com.expensetracker.app.navigation.ExpenseTrackerApp
 
 class MainActivity : ComponentActivity() {
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
             ACTION_OPEN_EDIT_EXPENSE -> {
                 val expenseId = intent.getLongExtra(EXTRA_EXPENSE_ID, -1L)
                 if (expenseId > 0L) {
+                    AddExpenseViewModel.markNotificationEdit(expenseId)
                     notificationNavigationAction = ACTION_OPEN_EDIT_EXPENSE
                     notificationExpenseId = expenseId
                     notificationNavigationRequest++
