@@ -181,7 +181,7 @@ private fun ModernReminderCard(reminder: ReminderEntity, vm: RemindersViewModel,
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(if (reminder.title.contains("birthday", true) || reminder.note.contains("gift", true)) Icons.Default.Notes else reminderLinkIcon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    Icon(if (reminder.title.contains("birthday", true) || reminder.note.contains("gift", true)) Icons.Default.Notes else Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                 }
                 Spacer(Modifier.size(14.dp))
                 Column(Modifier.weight(1f)) {
