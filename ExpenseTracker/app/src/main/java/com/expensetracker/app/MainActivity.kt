@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
+import com.expensetracker.app.data.crash.CrashReporter
 import com.expensetracker.app.data.prefs.AppPreferences
 import com.expensetracker.app.feature.addexpense.AddExpenseViewModel
 import com.expensetracker.app.navigation.ExpenseTrackerApp
@@ -43,6 +47,7 @@ class MainActivity : FragmentActivity() {
     private var isUnlocked by mutableStateOf(false)
     private var appLockChecked by mutableStateOf(false)
     private var biometricPromptShowing = false
+    private var lastCrashReport by mutableStateOf<String?>(null)
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { requestSmsPermissionIfNeeded() }
@@ -53,6 +58,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestHighestRefreshRate()
+        lastCrashReport = CrashReporter.consumeLastCrash(this)
         handleNavigationIntent(intent)
 
         setContent {
@@ -64,6 +70,29 @@ class MainActivity : FragmentActivity() {
                 )
             } else {
                 LockedAppScreen(onUnlock = ::authenticateApp)
+            }
+
+            lastCrashReport?.let { report ->
+                AlertDialog(
+                    onDismissRequest = { lastCrashReport = null },
+                    title = { Text("Kanakku crashed") },
+                    text = {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            Text(
+                                "The previous crash was recorded. Send this information when reporting the problem:",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                report,
+                                modifier = Modifier.padding(top = 12.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(onClick = { lastCrashReport = null }) { Text("Close") }
+                    },
+                )
             }
         }
 
