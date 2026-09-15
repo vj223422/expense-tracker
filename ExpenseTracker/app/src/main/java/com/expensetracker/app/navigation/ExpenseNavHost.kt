@@ -85,11 +85,13 @@ fun ExpenseTrackerApp(
             if (notificationNavigationRequest <= 0L) return@LaunchedEffect
             when (notificationNavigationAction) {
                 MainActivity.ACTION_OPEN_ADD_EXPENSE -> {
-                    navController.navigate(Destination.AddExpense.routeForAdd())
+                    navController.navigate(Destination.AddExpense.routeForAdd()) {
+                        launchSingleTop = true
+                    }
                 }
                 MainActivity.ACTION_OPEN_EDIT_EXPENSE -> {
                     notificationExpenseId?.let { expenseId ->
-                        navController.navigate(Destination.AddExpense.routeForEdit(expenseId, clearNote = true))
+                        navController.navigate(Destination.AddExpense.routeForEdit(expenseId))
                     }
                 }
             }
@@ -127,26 +129,12 @@ fun ExpenseTrackerApp(
                 composable(Destination.Settings.route) { SettingsScreen() }
                 composable(
                     route = Destination.AddExpense.route,
-                    arguments = listOf(
-                        navArgument(Destination.AddExpense.ARG_EXPENSE_ID) {
-                            type = NavType.LongType
-                            defaultValue = Destination.AddExpense.NO_EXPENSE_ID
-                        },
-                        navArgument(Destination.AddExpense.ARG_CLEAR_NOTE) {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        },
-                    ),
+                    arguments = listOf(navArgument(Destination.AddExpense.ARG_EXPENSE_ID) { type = NavType.LongType; defaultValue = Destination.AddExpense.NO_EXPENSE_ID }),
                     enterTransition = { slideInVertically(tween(350)) { it / 4 } + fadeIn(tween(250)) },
                     exitTransition = { slideOutVertically(tween(300)) { it / 4 } + fadeOut(tween(200)) },
                 ) { entry ->
                     val expenseId = entry.arguments?.getLong(Destination.AddExpense.ARG_EXPENSE_ID)?.takeIf { it != Destination.AddExpense.NO_EXPENSE_ID }
-                    val clearNote = entry.arguments?.getBoolean(Destination.AddExpense.ARG_CLEAR_NOTE) == true
-                    AddExpenseScreen(
-                        expenseId = expenseId,
-                        clearNoteForAutoImportedExpense = clearNote,
-                        onNavigateBack = { navController.popBackStack() },
-                    )
+                    AddExpenseScreen(expenseId = expenseId, onNavigateBack = { navController.popBackStack() })
                 }
             }
         }
