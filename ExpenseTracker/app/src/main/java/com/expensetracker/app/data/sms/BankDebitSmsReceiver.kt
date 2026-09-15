@@ -69,7 +69,7 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
                 debit.reference?.let { append(" Ref: ").append(it) }
                 append(" [SMS]")
             }
-            when (expenseRepository.addExpense(
+            when (val result = expenseRepository.addExpense(
                 profileId = profileId,
                 amountMinor = debit.amountMinor,
                 category = category,
@@ -78,7 +78,9 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
             )) {
                 is AddExpenseResult.Success -> {
                     markProcessed(context, reference)
-                    notificationHelper.notifyExpenseAdded(debit.amountMinor, debit.merchant, debit.date)
+                    result.expenseId?.let { expenseId ->
+                        notificationHelper.notifyExpenseAdded(debit.amountMinor, debit.merchant, debit.date, expenseId)
+                    }
                 }
                 is AddExpenseResult.Error -> Unit
             }
@@ -89,7 +91,7 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
                 incoming.reference?.let { append(" Ref: ").append(it) }
                 append(" [SMS]")
             }
-            when (expenseRepository.addExpense(
+            when (val result = expenseRepository.addExpense(
                 profileId = profileId,
                 amountMinor = incoming.amountMinor,
                 category = ExpenseCategory.OTHER,
