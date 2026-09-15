@@ -17,5 +17,6 @@ data class SettingsUiState(
 
 sealed interface ProfileDialog {
     data object CreateProfile : ProfileDialog
+    data class RenameProfile(val profile: Profile) : ProfileDialog
     data class ConfirmDelete(val profile: Profile) : ProfileDialog
 }
