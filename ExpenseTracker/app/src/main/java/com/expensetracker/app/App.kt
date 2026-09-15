@@ -1,6 +1,7 @@
 package com.expensetracker.app
 
 import android.app.Application
+import com.expensetracker.app.data.crash.CrashReporter
 import com.expensetracker.app.data.repository.ProfileRepository
 import com.expensetracker.app.di.appModules
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +17,8 @@ import org.koin.core.context.startKoin
 class App : Application(), KoinComponent {
     override fun onCreate() {
         super.onCreate()
+        CrashReporter.install(this)
+
         startKoin {
             androidLogger()
             androidContext(this@App)
