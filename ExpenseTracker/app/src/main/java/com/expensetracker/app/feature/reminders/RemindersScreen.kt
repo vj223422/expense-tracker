@@ -24,7 +24,8 @@ import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -63,10 +64,18 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
     val reminders by viewModel.reminders.collectAsStateWithLifecycle()
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     var tab by remember { mutableIntStateOf(0) }
+    var searchQuery by remember { mutableStateOf("") }
     var showReminderEditor by remember { mutableStateOf(false) }
     var editingReminder by remember { mutableStateOf<ReminderEntity?>(null) }
     var showNoteEditor by remember { mutableStateOf(false) }
     var editingNote by remember { mutableStateOf<NoteEntity?>(null) }
+
+    val filteredReminders = remember(reminders, searchQuery) {
+        val query = searchQuery.trim()
+        if (query.isBlank()) reminders else reminders.filter {
+            it.title.contains(query, ignoreCase = true) || it.note.contains(query, ignoreCase = true) || recurrenceLabel(it).contains(query, ignoreCase = true)
+        }
+    }
 
     Scaffold { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -75,7 +84,21 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Notes") }, icon = { Icon(Icons.Default.Notes, null) })
             }
             if (tab == 0) {
-                ReminderContent(reminders, viewModel, onAdd = { editingReminder = null; showReminderEditor = true }, onEdit = { editingReminder = it; showReminderEditor = true })
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                    singleLine = true,
+                    placeholder = { Text("Search reminders") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear search") }
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                )
+                ReminderContent(filteredReminders, viewModel, onAdd = { editingReminder = null; showReminderEditor = true }, onEdit = { editingReminder = it; showReminderEditor = true })
             } else {
                 NotesContent(notes, viewModel, onAdd = { editingNote = null; showNoteEditor = true }, onEdit = { editingNote = it; showNoteEditor = true })
             }
@@ -101,7 +124,7 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
     ) {
         item {
             Row(
@@ -125,8 +148,19 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
                 Text("${reminders.count { it.enabled }} reminders", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        items(reminders, key = { it.id }) { reminder -> ModernReminderCard(reminder, vm, onEdit) }
-        if (reminders.isNotEmpty()) {
+        if (reminders.isEmpty()) {
+            item {
+                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))) {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.size(8.dp))
+                        Text("No reminders found", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text("Try a different search or tap + to add one", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        } else {
+            items(reminders, key = { it.id }) { reminder -> ModernReminderCard(reminder, vm, onEdit) }
             item {
                 Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
