@@ -47,6 +47,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.expensetracker.app.MainActivity
 import com.expensetracker.app.core.designsystem.CreateProfileDialog
 import com.expensetracker.app.core.theme.ExpenseTrackerTheme
 import com.expensetracker.app.data.prefs.AppPreferences
@@ -62,7 +63,11 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
 @Composable
-fun ExpenseTrackerApp(openAddExpenseRequest: Long = 0L) {
+fun ExpenseTrackerApp(
+    notificationNavigationRequest: Long = 0L,
+    notificationNavigationAction: String? = null,
+    notificationExpenseId: Long? = null,
+) {
     val appPreferences: AppPreferences = koinInject()
     val themeMode by appPreferences.themeMode.collectAsStateWithLifecycle(ThemeMode.SYSTEM)
     val darkTheme = when (themeMode) {
@@ -76,10 +81,16 @@ fun ExpenseTrackerApp(openAddExpenseRequest: Long = 0L) {
         val currentRoute = backStackEntry?.destination?.route
         val showChrome = currentRoute != Destination.AddExpense.route
 
-        LaunchedEffect(openAddExpenseRequest) {
-            if (openAddExpenseRequest > 0L) {
-                navController.navigate(Destination.AddExpense.routeForAdd()) {
-                    launchSingleTop = true
+        LaunchedEffect(notificationNavigationRequest) {
+            if (notificationNavigationRequest <= 0L) return@LaunchedEffect
+            when (notificationNavigationAction) {
+                MainActivity.ACTION_OPEN_ADD_EXPENSE -> {
+                    navController.navigate(Destination.AddExpense.routeForAdd())
+                }
+                MainActivity.ACTION_OPEN_EDIT_EXPENSE -> {
+                    notificationExpenseId?.let { expenseId ->
+                        navController.navigate(Destination.AddExpense.routeForEdit(expenseId, clearNote = true))
+                    }
                 }
             }
         }
@@ -116,12 +127,26 @@ fun ExpenseTrackerApp(openAddExpenseRequest: Long = 0L) {
                 composable(Destination.Settings.route) { SettingsScreen() }
                 composable(
                     route = Destination.AddExpense.route,
-                    arguments = listOf(navArgument(Destination.AddExpense.ARG_EXPENSE_ID) { type = NavType.LongType; defaultValue = Destination.AddExpense.NO_EXPENSE_ID }),
+                    arguments = listOf(
+                        navArgument(Destination.AddExpense.ARG_EXPENSE_ID) {
+                            type = NavType.LongType
+                            defaultValue = Destination.AddExpense.NO_EXPENSE_ID
+                        },
+                        navArgument(Destination.AddExpense.ARG_CLEAR_NOTE) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        },
+                    ),
                     enterTransition = { slideInVertically(tween(350)) { it / 4 } + fadeIn(tween(250)) },
                     exitTransition = { slideOutVertically(tween(300)) { it / 4 } + fadeOut(tween(200)) },
                 ) { entry ->
                     val expenseId = entry.arguments?.getLong(Destination.AddExpense.ARG_EXPENSE_ID)?.takeIf { it != Destination.AddExpense.NO_EXPENSE_ID }
-                    AddExpenseScreen(expenseId = expenseId, onNavigateBack = { navController.popBackStack() })
+                    val clearNote = entry.arguments?.getBoolean(Destination.AddExpense.ARG_CLEAR_NOTE) == true
+                    AddExpenseScreen(
+                        expenseId = expenseId,
+                        clearNoteForAutoImportedExpense = clearNote,
+                        onNavigateBack = { navController.popBackStack() },
+                    )
                 }
             }
         }
