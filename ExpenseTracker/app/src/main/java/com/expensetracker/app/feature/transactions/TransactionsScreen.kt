@@ -114,7 +114,7 @@ private fun TransactionsContent(uiState: TransactionsUiState, actions: Transacti
                     val collapsed = group.date in collapsedDates
                     item(key = "header-${group.date}") { DateGroupHeader(group.date, group.totalMinor, collapsed) { collapsedDates = if (collapsed) collapsedDates - group.date else collapsedDates + group.date } }
                     if (!collapsed) items(group.expenses, key = { it.id }) { expense ->
-                        TransactionCard(expense, actions::onDeleteExpense, { onEditExpenseClick(expense.id) }, { selectedExpense = expense })
+                        TransactionCard(expense, actions::onDeleteExpense, { onEditExpenseClick(expense.id) }, { selectedExpense = expense }, { selectedExpense = expense })
                     }
                 }
             }
@@ -212,10 +212,10 @@ private fun DateGroupHeader(date: LocalDate, totalMinor: Long, collapsed: Boolea
 }
 
 @Composable
-private fun TransactionCard(expense: Expense, onDelete: suspend (Expense) -> Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun TransactionCard(expense: Expense, onDelete: suspend (Expense) -> Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onDeleteRequest: (Expense) -> Unit) {
     Card(Modifier.fillMaxWidth(), RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest), elevation = CardDefaults.cardElevation(1.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) { SwipeToDeleteExpenseItem(expense, onDelete, onClick = onClick, onLongClick = onLongClick) }
+            Box(Modifier.weight(1f)) { SwipeToDeleteExpenseItem(expense, onDelete, onClick = onClick, onLongClick = onLongClick, onDeleteRequest = onDeleteRequest) }
             IconButton(onClick = onClick, Modifier.padding(end = 6.dp)) { Icon(Icons.Default.ChevronRight, "Open transaction", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
