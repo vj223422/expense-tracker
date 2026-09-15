@@ -52,7 +52,7 @@ class ExpenseRepositoryImpl(
         date: LocalDate,
         isIncome: Boolean,
     ): AddExpenseResult = withContext(ioDispatcher) {
-        try {
+        val expenseId = try {
             expenseDao.insert(
                 ExpenseEntity(
                     profileId = profileId,
@@ -69,7 +69,7 @@ class ExpenseRepositoryImpl(
         }
 
         if (isIncome) {
-            return@withContext AddExpenseResult.Success(emptyList())
+            return@withContext AddExpenseResult.Success(emptyList(), expenseId)
         }
 
         val alerts = try {
@@ -77,7 +77,7 @@ class ExpenseRepositoryImpl(
         } catch (e: SQLiteException) {
             emptyList()
         }
-        AddExpenseResult.Success(alerts)
+        AddExpenseResult.Success(alerts, expenseId)
     }
 
     override suspend fun getExpenseById(id: Long, profileId: Long): Expense? = withContext(ioDispatcher) {
