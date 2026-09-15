@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.expensetracker.app.data.prefs.AppPreferences
 import com.expensetracker.app.feature.addexpense.AddExpenseViewModel
@@ -36,7 +36,7 @@ import com.expensetracker.app.navigation.ExpenseTrackerApp
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private var notificationNavigationRequest by mutableLongStateOf(0L)
     private var notificationNavigationAction by mutableStateOf<String?>(null)
     private var notificationExpenseId by mutableStateOf<Long?>(null)
