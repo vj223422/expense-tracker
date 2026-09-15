@@ -79,7 +79,11 @@ fun TransactionsScreen(onEditExpenseClick: (Long) -> Unit, viewModel: Transactio
             when (effect) {
                 is TransactionsEffect.ShowUndoDelete -> {
                     val label = effect.expense.note.ifBlank { effect.expense.category.displayName }
-                    val result = snackbarHostState.showSnackbar("Deleted \"$label\"", "Undo", SnackbarDuration.Short)
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Deleted \"$label\"",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short,
+                    )
                     if (result == SnackbarResult.ActionPerformed) viewModel.onUndoDelete(effect.expense)
                 }
                 is TransactionsEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
@@ -114,14 +118,25 @@ private fun TransactionsContent(uiState: TransactionsUiState, actions: Transacti
                     val collapsed = group.date in collapsedDates
                     item(key = "header-${group.date}") { DateGroupHeader(group.date, group.totalMinor, collapsed) { collapsedDates = if (collapsed) collapsedDates - group.date else collapsedDates + group.date } }
                     if (!collapsed) items(group.expenses, key = { it.id }) { expense ->
-                        TransactionCard(expense, actions::onDeleteExpense, { onEditExpenseClick(expense.id) }, { selectedExpense = expense }, { selectedExpense = expense })
+                        TransactionCard(
+                            expense = expense,
+                            onDelete = actions::onDeleteExpense,
+                            onClick = { onEditExpenseClick(expense.id) },
+                            onLongClick = { selectedExpense = expense },
+                            onDeleteRequest = { selectedExpense = expense; showDeleteConfirmation = true },
+                        )
                     }
                 }
             }
         }
     }
     selectedExpense?.let { expense ->
-        TransactionActionDialog(expense, onEdit = { selectedExpense = null; onEditExpenseClick(expense.id) }, onDelete = { showDeleteConfirmation = true }, onDismiss = { selectedExpense = null })
+        TransactionActionDialog(
+            expense = expense,
+            onEdit = { selectedExpense = null; onEditExpenseClick(expense.id) },
+            onDelete = { showDeleteConfirmation = true },
+            onDismiss = { selectedExpense = null },
+        )
     }
     if (showDeleteConfirmation) {
         DeleteTransactionConfirmation(
@@ -146,7 +161,7 @@ private fun DeleteTransactionConfirmation(expense: Expense?, onConfirm: () -> Un
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Delete transaction?") },
-        text = { Text("Are you sure you want to delete \"${expense.note.ifBlank { if (expense.isIncome) "Income" else expense.category.displayName }}\"? This action cannot be undone.") },
+        text = { Text("Are you sure you want to delete \"${expense.note.ifBlank { if (expense.isIncome) "Income" else expense.category.displayName }}\"? You can undo the deletion afterward.") },
         confirmButton = { TextButton(onClick = onConfirm) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
@@ -154,23 +169,34 @@ private fun DeleteTransactionConfirmation(expense: Expense?, onConfirm: () -> Un
 
 @Composable
 private fun TransactionActionDialog(expense: Expense, onEdit: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Transaction options") }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(expense.note.ifBlank { if (expense.isIncome) "Income" else expense.category.displayName }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(expense.amountMinor.formatAsCurrency(), style = MaterialTheme.typography.bodyMedium, color = if (expense.isIncome) LocalExtendedColors.current.safe else MaterialTheme.colorScheme.error)
-        }
-    }, confirmButton = { TextButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, null, Modifier.size(18.dp)); Text("  Edit") } }, dismissButton = {
-        Row {
-            TextButton(onClick = onDelete) { Icon(Icons.Outlined.DeleteOutline, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error); Text("  Delete", color = MaterialTheme.colorScheme.error) }
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    })
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Transaction options") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(expense.note.ifBlank { if (expense.isIncome) "Income" else expense.category.displayName }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(expense.amountMinor.formatAsCurrency(), style = MaterialTheme.typography.bodyMedium, color = if (expense.isIncome) LocalExtendedColors.current.safe else MaterialTheme.colorScheme.error)
+            }
+        },
+        confirmButton = { TextButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, null, Modifier.size(18.dp)); Text("  Edit") } },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDelete) { Icon(Icons.Outlined.DeleteOutline, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error); Text("  Delete", color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+    )
 }
 
 @Composable
 private fun SearchAndFilterBar(query: String, onQueryChange: (String) -> Unit, filterExpanded: Boolean, onFilterClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(Modifier.weight(1f).height(56.dp), RoundedCornerShape(18.dp), MaterialTheme.colorScheme.surfaceContainerLowest, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Surface(
+            modifier = Modifier.weight(1f).height(56.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
                 Box(Modifier.weight(1f).padding(start = 12.dp)) {
@@ -179,7 +205,12 @@ private fun SearchAndFilterBar(query: String, onQueryChange: (String) -> Unit, f
                 }
             }
         }
-        Surface(Modifier.height(56.dp).width(118.dp), RoundedCornerShape(18.dp), if (filterExpanded) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow, onClick = onFilterClick) {
+        Surface(
+            onClick = onFilterClick,
+            modifier = Modifier.height(56.dp).width(118.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = if (filterExpanded) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.FilterList, null, Modifier.size(22.dp)); Text("Filter", Modifier.padding(start = 8.dp), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold) }
         }
     }
@@ -195,16 +226,26 @@ private fun CategoryFilterRow(selected: ExpenseCategory?, onFilterChange: (Expen
 
 @Composable
 private fun CategoryChip(label: String, selected: Boolean, icon: androidx.compose.ui.graphics.vector.ImageVector?, tint: Color, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(16.dp), color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLowest, border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLowest,
+        border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
         Row(Modifier.padding(horizontal = 15.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) { icon?.let { Icon(it, null, tint = tint, modifier = Modifier.size(20.dp)) }; if (icon != null) Box(Modifier.width(7.dp)); Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium) }
     }
 }
 
 @Composable
 private fun DateGroupHeader(date: LocalDate, totalMinor: Long, collapsed: Boolean, onClick: () -> Unit) {
-    Surface(onClick = onClick, Modifier.fillMaxWidth(), RoundedCornerShape(18.dp), MaterialTheme.colorScheme.surfaceContainerLow) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(date.toRelativeOrFormatted(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, Modifier.weight(1f))
+            Text(date.toRelativeOrFormatted(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             AnimatedAmountText(totalMinor, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Icon(if (collapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess, if (collapsed) "Expand" else "Collapse", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 10.dp).size(22.dp))
         }
@@ -213,7 +254,12 @@ private fun DateGroupHeader(date: LocalDate, totalMinor: Long, collapsed: Boolea
 
 @Composable
 private fun TransactionCard(expense: Expense, onDelete: suspend (Expense) -> Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onDeleteRequest: (Expense) -> Unit) {
-    Card(Modifier.fillMaxWidth(), RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest), elevation = CardDefaults.cardElevation(1.dp)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(1.dp),
+    ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) { SwipeToDeleteExpenseItem(expense, onDelete, onClick = onClick, onLongClick = onLongClick, onDeleteRequest = onDeleteRequest) }
             IconButton(onClick = onClick, Modifier.padding(end = 6.dp)) { Icon(Icons.Default.ChevronRight, "Open transaction", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
