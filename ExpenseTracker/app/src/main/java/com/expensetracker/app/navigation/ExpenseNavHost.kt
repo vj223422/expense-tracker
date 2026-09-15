@@ -185,7 +185,7 @@ private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinV
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Surface(
-                            modifier = Modifier.size(52.dp),
+                            modifier = Modifier.size(44.dp),
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primaryContainer,
                         ) {
@@ -194,7 +194,7 @@ private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinV
                                     Icons.Default.Person,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(28.dp),
+                                    modifier = Modifier.size(24.dp),
                                 )
                             }
                         }
