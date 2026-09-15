@@ -1,6 +1,7 @@
 package com.expensetracker.app
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -8,10 +9,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.expensetracker.app.navigation.ExpenseTrackerApp
 
 class MainActivity : ComponentActivity() {
+
+    private var openAddExpenseRequest by mutableLongStateOf(0L)
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { requestSmsPermissionIfNeeded() }
@@ -24,9 +30,23 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         requestHighestRefreshRate()
         requestNotificationPermissionIfNeeded()
+        handleNavigationIntent(intent)
 
         setContent {
-            ExpenseTrackerApp()
+            ExpenseTrackerApp(openAddExpenseRequest = openAddExpenseRequest)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNavigationIntent(intent)
+    }
+
+    private fun handleNavigationIntent(intent: Intent?) {
+        if (intent?.action == ACTION_OPEN_ADD_EXPENSE) {
+            openAddExpenseRequest++
+            intent.action = null
         }
     }
 
@@ -64,7 +84,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private companion object {
+    companion object {
+        const val ACTION_OPEN_ADD_EXPENSE = "com.expensetracker.app.action.OPEN_ADD_EXPENSE"
+
         private var hasRequestedNotificationPermission = false
         private var hasRequestedSmsPermission = false
     }
