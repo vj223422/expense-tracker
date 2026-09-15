@@ -36,9 +36,6 @@ class DashboardViewModel(
     private val _effects = Channel<DashboardEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
-    // Re-checked every minute rather than captured once — a screen left open across midnight on
-    // month-end must not keep showing the previous month's totals. distinctUntilChanged means the
-    // downstream flatMapLatest only actually restarts on a real month rollover, not every tick.
     private val currentYearMonth = flow {
         while (true) {
             emit(YearMonth.now())
@@ -54,12 +51,16 @@ class DashboardViewModel(
                 expenseRepository.observeCategoryTotals(profileId, yearMonth),
                 budgetRepository.observeLimits(profileId),
                 expenseRepository.observeExpensesForMonth(profileId, yearMonth),
-            ) { totals, limits, monthExpenses ->
+                expenseRepository.observeIncomeTotal(profileId, yearMonth),
+            ) { totals, limits, monthExpenses, incomeTotal ->
                 val summary = buildMonthlySummary(totals, limits)
                 DashboardUiState(
                     yearMonth = yearMonth,
                     totalSpentMinor = summary.totalSpentMinor,
-                    overallLimitMinor = summary.overallLimitMinor,
+                    // The existing Remaining card is based on overallLimitMinor - spent.
+                    // Add received income to that base so every credited amount increases the
+                    // available balance without changing budget-alert calculations.
+                    overallLimitMinor = summary.overallLimitMinor?.plus(incomeTotal),
                     categorySpends = summary.categorySpends
                         .filter { it.spentMinor > 0 }
                         .sortedByDescending { it.spentMinor },
@@ -70,9 +71,6 @@ class DashboardViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
 
-    // Launched in viewModelScope (survives the calling composable being disposed, e.g. by the
-    // list item leaving composition) and only awaited by the caller, so a delete already in
-    // flight always finishes even if the swipe item itself goes away first.
     override suspend fun onDeleteExpense(expense: Expense): Boolean = viewModelScope.async {
         try {
             expenseRepository.deleteExpense(expense)
@@ -84,7 +82,6 @@ class DashboardViewModel(
         }
     }.await()
 
-    /** Restores it to its original profile — not necessarily whichever one is active now. */
     override fun onUndoDelete(expense: Expense) {
         viewModelScope.launch {
             when (val result = expenseRepository.restoreExpense(expense)) {
