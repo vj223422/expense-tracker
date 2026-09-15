@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ChevronRight
@@ -195,7 +194,7 @@ private fun ModernReminderCard(reminder: ReminderEntity, vm: RemindersViewModel,
             Divider(Modifier.padding(vertical = 10.dp))
             ReminderDetailRow(Icons.Default.CalendarMonth, "Starts", formatDateTime(reminder.triggerAtEpochMillis))
             ReminderDetailRow(Icons.Default.CalendarMonth, "Ends", reminder.endDateEpochMillis?.let(::formatDate) ?: "No end date")
-            ReminderDetailRow(Icons.Default.EventRepeat, "Repeat", recurrenceLabel(reminder))
+            ReminderDetailRow(Icons.Default.CalendarMonth, "Repeat", recurrenceLabel(reminder))
             if (reminder.note.isNotBlank()) ReminderDetailRow(Icons.Default.Notes, "Note", reminder.note)
         }
     }
