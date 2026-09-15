@@ -95,7 +95,11 @@ fun DashboardScreen(
             when (effect) {
                 is DashboardEffect.ShowUndoDelete -> {
                     val label = effect.expense.note.ifBlank { effect.expense.category.displayName }
-                    val result = snackbarHostState.showSnackbar("Deleted \"$label\"", "Undo", SnackbarDuration.Short)
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Deleted \"$label\"",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short,
+                    )
                     if (result == SnackbarResult.ActionPerformed) viewModel.onUndoDelete(effect.expense)
                 }
                 is DashboardEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
