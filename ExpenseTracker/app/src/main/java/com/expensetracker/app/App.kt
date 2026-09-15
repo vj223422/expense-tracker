@@ -1,7 +1,6 @@
 package com.expensetracker.app
 
 import android.app.Application
-import com.expensetracker.app.data.crash.CrashReporter
 import com.expensetracker.app.data.repository.ProfileRepository
 import com.expensetracker.app.di.appModules
 import kotlinx.coroutines.CoroutineScope
@@ -17,7 +16,6 @@ import org.koin.core.context.startKoin
 class App : Application(), KoinComponent {
     override fun onCreate() {
         super.onCreate()
-        CrashReporter.install(this)
 
         startKoin {
             androidLogger()
@@ -25,8 +23,7 @@ class App : Application(), KoinComponent {
             modules(appModules)
         }
 
-        // Guarantees at least one profile exists before any screen queries "the active profile" —
-        // see ProfileRepository.ensureDefaultProfile. A fresh install has none yet.
+        // Guarantees at least one profile exists before any screen queries "the active profile".
         val profileRepository: ProfileRepository = get()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             profileRepository.ensureDefaultProfile()
