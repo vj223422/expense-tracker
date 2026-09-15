@@ -1,7 +1,7 @@
 package com.expensetracker.app.core.designsystem
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,7 +44,12 @@ import java.util.Locale
 private val transactionDateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US)
 
 @Composable
-fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+fun ExpenseListItem(
+    expense: Expense,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+) {
     val amountColor = if (expense.isIncome) {
         LocalExtendedColors.current.safe
     } else {
@@ -57,7 +62,14 @@ fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: ((
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .let {
+                if (onClick != null || onLongClick != null) {
+                    it.combinedClickable(
+                        onClick = onClick ?: {},
+                        onLongClick = onLongClick,
+                    )
+                } else it
+            }
             .padding(vertical = 10.dp, horizontal = 4.dp)
             .semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
@@ -112,6 +124,7 @@ fun SwipeToDeleteExpenseItem(
     onDelete: suspend (Expense) -> Boolean,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var deleteFailed by remember { mutableStateOf(false) }
@@ -151,6 +164,6 @@ fun SwipeToDeleteExpenseItem(
             }
         },
     ) {
-        ExpenseListItem(expense = expense, onClick = onClick)
+        ExpenseListItem(expense = expense, onClick = onClick, onLongClick = onLongClick)
     }
 }
