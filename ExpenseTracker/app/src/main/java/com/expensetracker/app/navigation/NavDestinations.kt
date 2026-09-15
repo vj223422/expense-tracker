@@ -20,11 +20,13 @@ sealed class Destination(val route: String) {
     data object Budgets : Destination("budgets")
     data object Settings : Destination("settings")
 
-    data object AddExpense : Destination("add_expense?expenseId={expenseId}") {
+    data object AddExpense : Destination("add_expense?expenseId={expenseId}&clearNote={clearNote}") {
         const val ARG_EXPENSE_ID = "expenseId"
+        const val ARG_CLEAR_NOTE = "clearNote"
         const val NO_EXPENSE_ID = -1L
         fun routeForAdd(): String = "add_expense"
-        fun routeForEdit(expenseId: Long): String = "add_expense?expenseId=$expenseId"
+        fun routeForEdit(expenseId: Long, clearNote: Boolean = false): String =
+            "add_expense?expenseId=$expenseId&clearNote=$clearNote"
     }
 }
 
