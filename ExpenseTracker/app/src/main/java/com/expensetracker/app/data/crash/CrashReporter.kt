@@ -19,50 +19,71 @@ object CrashReporter {
         val appContext = context.applicationContext
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            saveCrash(appContext, thread, throwable)
-            notifyCrash(appContext)
+            try {
+                saveCrash(appContext, thread, throwable)
+                notifyCrash(appContext)
+            } catch (_: Throwable) {
+                // Diagnostics must never interfere with the original crash.
+            }
             previous?.uncaughtException(thread, throwable)
         }
     }
 
     fun consumeLastCrash(context: Context): String? {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val crash = prefs.getString(KEY_CRASH, null)
-        if (crash != null) prefs.edit().remove(KEY_CRASH).apply()
-        return crash
+        return prefs.getString(KEY_CRASH, null)
+    }
+
+    fun clearLastCrash(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_CRASH)
+            .apply()
     }
 
     private fun saveCrash(context: Context, thread: Thread, throwable: Throwable) {
         val stack = StringWriter().also { throwable.printStackTrace(PrintWriter(it)) }.toString()
-        val report = "Thread: ${thread.name}\n\n$stack"
+        val report = buildString {
+            appendLine("Kanakku crash report")
+            appendLine("Thread: ${thread.name}")
+            appendLine("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+            appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine()
+            append(stack)
+        }.take(12000)
+
+        // commit() is intentional: the process may be killed immediately after an uncaught exception.
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
-            .putString(KEY_CRASH, report.take(12000))
-            .apply()
+            .putString(KEY_CRASH, report)
+            .commit()
     }
 
     private fun notifyCrash(context: Context) {
         try {
+            val manager = context.getSystemService(NotificationManager::class.java) ?: return
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(
-                    CHANNEL_ID,
-                    "Crash reports",
-                    NotificationManager.IMPORTANCE_HIGH,
-                ).apply { description = "Notifications when Kanakku crashes" }
-                context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        CHANNEL_ID,
+                        "Crash reports",
+                        NotificationManager.IMPORTANCE_HIGH,
+                    ).apply { description = "Notifications when Kanakku crashes" },
+                )
             }
 
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Kanakku crashed")
                 .setContentText("Crash details were saved. Open Kanakku to view them.")
+                .setStyle(NotificationCompat.BigTextStyle().bigText("Crash details were saved. Open Kanakku to view them."))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .build()
 
-            context.getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
+            manager.notify(NOTIFICATION_ID, notification)
         } catch (_: Throwable) {
-            // Never let crash reporting interfere with the original crash.
+            // Notification permission can be denied; the saved report remains available in-app.
         }
     }
 }
