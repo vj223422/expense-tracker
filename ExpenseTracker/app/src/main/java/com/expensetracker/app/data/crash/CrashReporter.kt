@@ -42,24 +42,27 @@ object CrashReporter {
     }
 
     private fun notifyCrash(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Crash reports",
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply { description = "Notifications when Kanakku crashes" }
-            context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    "Crash reports",
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply { description = "Notifications when Kanakku crashes" }
+                context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            }
+
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("Kanakku crashed")
+                .setContentText("Crash details were saved. Open Kanakku to view them.")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .build()
+
+            context.getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
+        } catch (_: Throwable) {
+            // Never let crash reporting interfere with the original crash.
         }
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Kanakku crashed")
-            .setContentText("Crash details were saved. Open Kanakku to view them.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("Crash details were saved. Open Kanakku to view them."))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
-
-        context.getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
     }
 }
