@@ -1,7 +1,8 @@
 package com.expensetracker.app.core.designsystem
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,68 +44,35 @@ import java.util.Locale
 
 private val transactionDateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
-    val amountColor = if (expense.isIncome) {
-        LocalExtendedColors.current.safe
-    } else {
-        MaterialTheme.colorScheme.error
-    }
+fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, onLongClick: (() -> Unit)? = null) {
+    val amountColor = if (expense.isIncome) LocalExtendedColors.current.safe else MaterialTheme.colorScheme.error
     val amountPrefix = if (expense.isIncome) "+" else "-"
     val typeLabel = if (expense.isIncome) "Income" else expense.category.displayName
-
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-            .padding(vertical = 10.dp, horizontal = 4.dp)
-            .semantics(mergeDescendants = true) {},
+        modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).let {
+            if (onClick != null || onLongClick != null) it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick) else it
+        }.padding(vertical = 10.dp, horizontal = 4.dp).semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(expense.category.color().copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = expense.category.icon(),
-                contentDescription = null,
-                tint = expense.category.color(),
-                modifier = Modifier.size(22.dp),
-            )
+        Box(Modifier.size(44.dp).clip(CircleShape).background(expense.category.color().copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Icon(expense.category.icon(), null, tint = expense.category.color(), modifier = Modifier.size(22.dp))
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = expense.note.ifBlank { typeLabel },
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(expense.note.ifBlank { typeLabel }, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = typeLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "  |  ${expense.date.format(transactionDateFormatter)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
+                Text(typeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("  |  ${expense.date.format(transactionDateFormatter)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = amountPrefix + expense.amountMinor.formatAsCurrency(),
-            style = MaterialTheme.typography.bodyLarge,
-            color = amountColor,
-        )
+        Spacer(Modifier.width(12.dp))
+        Text(amountPrefix + expense.amountMinor.formatAsCurrency(), style = MaterialTheme.typography.bodyLarge, color = amountColor)
     }
 }
 
-/** Swipe end-to-start to delete, revealing a danger-tinted background with a trash icon. */
+/** Swipe end-to-start to request deletion. Callers can require confirmation before deleting. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeToDeleteExpenseItem(
@@ -112,19 +80,22 @@ fun SwipeToDeleteExpenseItem(
     onDelete: suspend (Expense) -> Boolean,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    onDeleteRequest: ((Expense) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var deleteFailed by remember { mutableStateOf(false) }
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
+    val dismissState = rememberSwipeToDismissBoxState(confirmValueChange = { value ->
+        if (value == SwipeToDismissBoxValue.EndToStart) {
+            if (onDeleteRequest != null) {
+                onDeleteRequest(expense)
+                false
+            } else {
                 scope.launch { if (!onDelete(expense)) deleteFailed = true }
                 true
-            } else {
-                false
             }
-        },
-    )
+        } else false
+    })
     LaunchedEffect(deleteFailed) {
         if (deleteFailed) {
             dismissState.reset()
@@ -136,21 +107,9 @@ fun SwipeToDeleteExpenseItem(
         modifier = modifier,
         enableDismissFromStartToEnd = false,
         backgroundContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.errorContainer),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.DeleteOutline,
-                    contentDescription = "Delete expense",
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(end = 24.dp).size(24.dp),
-                )
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer), contentAlignment = Alignment.CenterEnd) {
+                Icon(Icons.Filled.DeleteOutline, "Delete expense", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(end = 24.dp).size(24.dp))
             }
         },
-    ) {
-        ExpenseListItem(expense = expense, onClick = onClick)
-    }
+    ) { ExpenseListItem(expense = expense, onClick = onClick, onLongClick = onLongClick) }
 }
