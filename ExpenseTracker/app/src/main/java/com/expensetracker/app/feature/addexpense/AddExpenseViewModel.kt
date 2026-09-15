@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.concurrent.ConcurrentHashMap
 
 class AddExpenseViewModel(
     private val expenseRepository: ExpenseRepository,
@@ -35,9 +36,11 @@ class AddExpenseViewModel(
     val effects = _effects.receiveAsFlow()
 
     private var loadedExpense: Expense? = null
+    private var originalNoteForNotificationEdit: String? = null
 
     init {
         if (expenseId != null) {
+            val clearNoteForNotificationEdit = consumeNotificationEdit(expenseId)
             viewModelScope.launch {
                 val expense = try {
                     val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
@@ -51,11 +54,14 @@ class AddExpenseViewModel(
                     return@launch
                 }
                 loadedExpense = expense
+                if (clearNoteForNotificationEdit) {
+                    originalNoteForNotificationEdit = expense.note
+                }
                 _uiState.update {
                     it.copy(
                         amountText = expense.amountMinor.toAmountInputText(),
                         selectedCategory = expense.category,
-                        note = expense.note,
+                        note = if (clearNoteForNotificationEdit) "" else expense.note,
                         date = expense.date,
                         isLoading = false,
                     )
@@ -134,12 +140,17 @@ class AddExpenseViewModel(
         _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             val existing = loadedExpense
+            val noteToSave = if (originalNoteForNotificationEdit != null && state.note.trim().isEmpty()) {
+                originalNoteForNotificationEdit!!
+            } else {
+                state.note.trim()
+            }
             val result = if (existing != null) {
                 expenseRepository.updateExpense(
                     existing.copy(
                         amountMinor = amountMinor,
                         category = state.selectedCategory,
-                        note = state.note.trim(),
+                        note = noteToSave,
                         date = state.date,
                     ),
                 )
@@ -149,7 +160,7 @@ class AddExpenseViewModel(
                     profileId = profileId,
                     amountMinor = amountMinor,
                     category = state.selectedCategory,
-                    note = state.note.trim(),
+                    note = noteToSave,
                     date = state.date,
                 )
             }
@@ -166,5 +177,16 @@ class AddExpenseViewModel(
                 }
             }
         }
+    }
+
+    companion object {
+        private val notificationEditExpenseIds = ConcurrentHashMap.newKeySet<Long>()
+
+        fun markNotificationEdit(expenseId: Long) {
+            notificationEditExpenseIds.add(expenseId)
+        }
+
+        private fun consumeNotificationEdit(expenseId: Long): Boolean =
+            notificationEditExpenseIds.remove(expenseId)
     }
 }
