@@ -14,6 +14,7 @@ data class DateGroup(val date: LocalDate, val expenses: List<Expense>, val total
 data class TransactionsUiState(
     val expensesByDate: List<DateGroup> = emptyList(),
     val selectedCategoryFilter: ExpenseCategory? = null,
+    val searchQuery: String = "",
     val isLoading: Boolean = true,
 ) {
     val isEmpty: Boolean get() = !isLoading && expensesByDate.isEmpty()
@@ -28,6 +29,7 @@ sealed interface TransactionsEffect {
 @Stable
 interface TransactionsActions {
     fun onFilterChange(category: ExpenseCategory?)
+    fun onSearchQueryChange(query: String)
 
     /** Returns whether the delete actually succeeded — SwipeToDeleteExpenseItem awaits this to
      * know whether to reset the swiped-away row back to visible on failure. */
