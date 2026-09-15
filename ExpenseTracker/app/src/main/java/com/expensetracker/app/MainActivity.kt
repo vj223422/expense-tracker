@@ -18,8 +18,8 @@ import com.expensetracker.app.navigation.ExpenseTrackerApp
 
 class MainActivity : ComponentActivity() {
 
-    private var openAddExpenseRequest by mutableLongStateOf(0L)
-    private var openEditExpenseRequest by mutableLongStateOf(0L)
+    private var notificationNavigationRequest by mutableLongStateOf(0L)
+    private var notificationNavigationAction by mutableStateOf<String?>(null)
     private var notificationExpenseId by mutableStateOf<Long?>(null)
 
     private val notificationPermissionLauncher =
@@ -37,8 +37,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ExpenseTrackerApp(
-                openAddExpenseRequest = openAddExpenseRequest,
-                openEditExpenseRequest = openEditExpenseRequest,
+                notificationNavigationRequest = notificationNavigationRequest,
+                notificationNavigationAction = notificationNavigationAction,
                 notificationExpenseId = notificationExpenseId,
             )
         }
@@ -53,14 +53,17 @@ class MainActivity : ComponentActivity() {
     private fun handleNavigationIntent(intent: Intent?) {
         when (intent?.action) {
             ACTION_OPEN_ADD_EXPENSE -> {
-                openAddExpenseRequest++
+                notificationNavigationAction = ACTION_OPEN_ADD_EXPENSE
+                notificationExpenseId = null
+                notificationNavigationRequest++
                 intent.action = null
             }
             ACTION_OPEN_EDIT_EXPENSE -> {
                 val expenseId = intent.getLongExtra(EXTRA_EXPENSE_ID, -1L)
                 if (expenseId > 0L) {
+                    notificationNavigationAction = ACTION_OPEN_EDIT_EXPENSE
                     notificationExpenseId = expenseId
-                    openEditExpenseRequest++
+                    notificationNavigationRequest++
                 }
                 intent.action = null
             }
