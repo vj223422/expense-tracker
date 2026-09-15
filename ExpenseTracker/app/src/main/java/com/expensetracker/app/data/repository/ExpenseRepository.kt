@@ -8,7 +8,10 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 sealed interface AddExpenseResult {
-    data class Success(val newAlerts: List<LimitAlert>) : AddExpenseResult
+    data class Success(
+        val newAlerts: List<LimitAlert>,
+        val expenseId: Long? = null,
+    ) : AddExpenseResult
     data class Error(val message: String) : AddExpenseResult
 }
 
