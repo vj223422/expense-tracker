@@ -29,6 +29,7 @@ class TransactionsViewModel(
 ) : ViewModel(), TransactionsActions {
 
     private val categoryFilter = MutableStateFlow<ExpenseCategory?>(null)
+    private val searchQuery = MutableStateFlow("")
 
     private val _effects = Channel<TransactionsEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
@@ -36,14 +37,25 @@ class TransactionsViewModel(
     val uiState: StateFlow<TransactionsUiState> = profileRepository.observeActiveProfileId()
         .filterNotNull()
         .flatMapLatest { profileId ->
-            combine(expenseRepository.observeAllExpenses(profileId), categoryFilter) { expenses, filter ->
-                val filtered = if (filter == null) expenses else expenses.filter { it.category == filter }
+            combine(expenseRepository.observeAllExpenses(profileId), categoryFilter, searchQuery) { expenses, filter, query ->
+                val normalizedQuery = query.trim().lowercase()
+                val filtered = expenses.filter { expense ->
+                    val matchesCategory = filter == null || expense.category == filter
+                    val matchesSearch = normalizedQuery.isEmpty() || listOf(
+                        expense.note,
+                        expense.category.displayName,
+                        expense.amountMinor.toString(),
+                        String.format(java.util.Locale.US, "%.2f", expense.amountMinor / 100.0),
+                    ).any { it.lowercase().contains(normalizedQuery) }
+                    matchesCategory && matchesSearch
+                }
                 TransactionsUiState(
                     expensesByDate = filtered.groupBy { it.date }
                         .entries
                         .sortedByDescending { it.key }
                         .map { (date, group) -> DateGroup(date, group, group.sumOf { it.amountMinor }) },
                     selectedCategoryFilter = filter,
+                    searchQuery = query,
                     isLoading = false,
                 )
             }
@@ -54,9 +66,10 @@ class TransactionsViewModel(
         categoryFilter.value = category
     }
 
-    // Launched in viewModelScope (survives the calling composable being disposed, e.g. by the
-    // list item leaving composition) and only awaited by the caller, so a delete already in
-    // flight always finishes even if the swipe item itself goes away first.
+    override fun onSearchQueryChange(query: String) {
+        searchQuery.value = query
+    }
+
     override suspend fun onDeleteExpense(expense: Expense): Boolean = viewModelScope.async {
         try {
             expenseRepository.deleteExpense(expense)
@@ -68,7 +81,6 @@ class TransactionsViewModel(
         }
     }.await()
 
-    /** Restores it to its original profile — not necessarily whichever one is active now. */
     override fun onUndoDelete(expense: Expense) {
         viewModelScope.launch {
             when (val result = expenseRepository.restoreExpense(expense)) {
