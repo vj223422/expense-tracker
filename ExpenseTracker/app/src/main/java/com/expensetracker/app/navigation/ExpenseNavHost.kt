@@ -5,14 +5,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -36,8 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -53,7 +47,6 @@ import com.expensetracker.app.core.theme.ExpenseTrackerTheme
 import com.expensetracker.app.data.prefs.AppPreferences
 import com.expensetracker.app.data.prefs.ThemeMode
 import com.expensetracker.app.feature.addexpense.AddExpenseScreen
-import com.expensetracker.app.feature.budgets.BudgetsScreen
 import com.expensetracker.app.feature.dashboard.DashboardScreen
 import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
 import com.expensetracker.app.feature.reminders.RemindersScreen
@@ -84,16 +77,8 @@ fun ExpenseTrackerApp(
         LaunchedEffect(notificationNavigationRequest) {
             if (notificationNavigationRequest <= 0L) return@LaunchedEffect
             when (notificationNavigationAction) {
-                MainActivity.ACTION_OPEN_ADD_EXPENSE -> {
-                    navController.navigate(Destination.AddExpense.routeForAdd()) {
-                        launchSingleTop = true
-                    }
-                }
-                MainActivity.ACTION_OPEN_EDIT_EXPENSE -> {
-                    notificationExpenseId?.let { expenseId ->
-                        navController.navigate(Destination.AddExpense.routeForEdit(expenseId))
-                    }
-                }
+                MainActivity.ACTION_OPEN_ADD_EXPENSE -> navController.navigate(Destination.AddExpense.routeForAdd()) { launchSingleTop = true }
+                MainActivity.ACTION_OPEN_EDIT_EXPENSE -> notificationExpenseId?.let { navController.navigate(Destination.AddExpense.routeForEdit(it)) }
             }
         }
 
@@ -104,13 +89,17 @@ fun ExpenseTrackerApp(
                 if (showChrome) NavigationBar {
                     bottomNavItems.forEach { item ->
                         val selected = backStackEntry?.destination?.hierarchy?.any { it.route == item.destination.route } == true
-                        NavigationBarItem(selected = selected, onClick = {
-                            navController.navigate(item.destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }, icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, item.label) })
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(item.destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, item.label) },
+                        )
                     }
                 }
             },
@@ -125,7 +114,6 @@ fun ExpenseTrackerApp(
                 }
                 composable(Destination.Transactions.route) { TransactionsScreen(onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) }) }
                 composable(Destination.Reminders.route) { RemindersScreen() }
-                composable(Destination.Budgets.route) { BudgetsScreen() }
                 composable(Destination.Settings.route) { SettingsScreen() }
                 composable(
                     route = Destination.AddExpense.route,
@@ -143,9 +131,7 @@ fun ExpenseTrackerApp(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppTopBar(
-    profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel(),
-) {
+private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel()) {
     val uiState by profileSwitcherViewModel.uiState.collectAsStateWithLifecycle()
     val profiles = uiState.profiles
     val activeProfileId = uiState.activeProfileId
@@ -160,26 +146,10 @@ private fun AppTopBar(
                 TextButton(onClick = { expanded = true }) { Text("Profile") }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     profiles.forEach { profile ->
-                        DropdownMenuItem(
-                            text = { Text(profile.name) },
-                            onClick = {
-                                profileSwitcherViewModel.onSwitchProfile(profile.id)
-                                expanded = false
-                            },
-                            leadingIcon = {
-                                if (profile.id == activeProfileId) Icon(Icons.Default.Check, null)
-                            },
-                        )
+                        DropdownMenuItem(text = { Text(profile.name) }, onClick = { profileSwitcherViewModel.onSwitchProfile(profile.id); expanded = false }, leadingIcon = { if (profile.id == activeProfileId) Icon(Icons.Default.Check, null) })
                     }
                     HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text("Create profile") },
-                        onClick = {
-                            expanded = false
-                            showCreateProfile = true
-                        },
-                        leadingIcon = { Icon(Icons.Default.Add, null) },
-                    )
+                    DropdownMenuItem(text = { Text("Create profile") }, onClick = { expanded = false; showCreateProfile = true }, leadingIcon = { Icon(Icons.Default.Add, null) })
                 }
             }
         },
@@ -188,10 +158,7 @@ private fun AppTopBar(
         CreateProfileDialog(
             existingNames = profiles.map { it.name },
             onDismiss = { showCreateProfile = false },
-            onConfirm = { name ->
-                profileSwitcherViewModel.onCreateProfile(name)
-                showCreateProfile = false
-            },
+            onConfirm = { name -> profileSwitcherViewModel.onCreateProfile(name); showCreateProfile = false },
         )
     }
 }
