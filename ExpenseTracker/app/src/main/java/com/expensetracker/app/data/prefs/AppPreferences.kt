@@ -18,15 +18,11 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 private val Context.dataStore by preferencesDataStore(name = "app_preferences")
 
-/**
- * Small typed settings + the alert-dedup ledger (data/notification/LimitAlertEvaluator) — no
- * relational queries needed, so Preferences DataStore over Room (android-skills:datastore).
- */
 class AppPreferences(private val context: Context) {
-
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
+        val APP_LOCK = booleanPreferencesKey("app_lock_enabled")
         val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
         fun lastNotifiedTier(periodCategoryKey: String) = intPreferencesKey("alert_tier_$periodCategoryKey")
     }
@@ -35,43 +31,21 @@ class AppPreferences(private val context: Context) {
         if (e is IOException) emit(emptyPreferences()) else throw e
     }
 
-    val themeMode: Flow<ThemeMode> = safeData.map { prefs ->
-        prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM
-    }
-
+    val themeMode: Flow<ThemeMode> = safeData.map { prefs -> prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM }
     val dynamicColorEnabled: Flow<Boolean> = safeData.map { prefs -> prefs[Keys.DYNAMIC_COLOR] ?: true }
-
-    /** null until ProfileRepository.ensureDefaultProfile() has run at least once (see App.kt). */
+    val appLockEnabled: Flow<Boolean> = safeData.map { prefs -> prefs[Keys.APP_LOCK] ?: false }
     val activeProfileId: Flow<Long?> = safeData.map { prefs -> prefs[Keys.ACTIVE_PROFILE_ID] }
 
-    suspend fun setThemeMode(mode: ThemeMode) {
-        context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }
-    }
+    suspend fun setThemeMode(mode: ThemeMode) { context.dataStore.edit { it[Keys.THEME_MODE] = mode.name } }
+    suspend fun setDynamicColorEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled } }
+    suspend fun setAppLockEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.APP_LOCK] = enabled } }
+    suspend fun setActiveProfileId(profileId: Long) { context.dataStore.edit { it[Keys.ACTIVE_PROFILE_ID] = profileId } }
 
-    suspend fun setDynamicColorEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled }
-    }
+    suspend fun getLastNotifiedTier(periodCategoryKey: String): Int = safeData.map { it[Keys.lastNotifiedTier(periodCategoryKey)] ?: 0 }.first()
+    suspend fun setLastNotifiedTier(periodCategoryKey: String, tier: Int) { context.dataStore.edit { it[Keys.lastNotifiedTier(periodCategoryKey)] = tier } }
 
-    suspend fun setActiveProfileId(profileId: Long) {
-        context.dataStore.edit { it[Keys.ACTIVE_PROFILE_ID] = profileId }
-    }
-
-    /** 0 = none notified yet for this period+scope; see LimitAlertEvaluator.Tier.ordinal. */
-    suspend fun getLastNotifiedTier(periodCategoryKey: String): Int =
-        safeData.map { it[Keys.lastNotifiedTier(periodCategoryKey)] ?: 0 }.first()
-
-    suspend fun setLastNotifiedTier(periodCategoryKey: String, tier: Int) {
-        context.dataStore.edit { it[Keys.lastNotifiedTier(periodCategoryKey)] = tier }
-    }
-
-    /** Call when a profile is deleted — its alert-tier keys aren't scoped by any FK cascade
-     * (they live in DataStore, not Room), so they'd otherwise accumulate here forever. */
     suspend fun clearAlertTiersForProfile(profileId: Long) {
         val prefix = "alert_tier_${profileId}_"
-        context.dataStore.edit { prefs ->
-            prefs.asMap().keys
-                .filter { it.name.startsWith(prefix) }
-                .forEach { prefs.remove(it) }
-        }
+        context.dataStore.edit { prefs -> prefs.asMap().keys.filter { it.name.startsWith(prefix) }.forEach { prefs.remove(it) } }
     }
 }
