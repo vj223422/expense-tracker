@@ -4,11 +4,10 @@ import androidx.compose.runtime.Immutable
 import com.expensetracker.app.data.model.Profile
 import com.expensetracker.app.data.prefs.ThemeMode
 
-/** @Immutable — see data/model/Expense.kt. */
 @Immutable
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColorEnabled: Boolean = true,
+    val appLockEnabled: Boolean = false,
     val profiles: List<Profile> = emptyList(),
     val activeProfileId: Long? = null,
     val profileDialog: ProfileDialog? = null,
