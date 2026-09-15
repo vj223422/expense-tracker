@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,7 +62,7 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
 @Composable
-fun ExpenseTrackerApp() {
+fun ExpenseTrackerApp(openAddExpenseRequest: Long = 0L) {
     val appPreferences: AppPreferences = koinInject()
     val themeMode by appPreferences.themeMode.collectAsStateWithLifecycle(ThemeMode.SYSTEM)
     val darkTheme = when (themeMode) {
@@ -74,6 +75,15 @@ fun ExpenseTrackerApp() {
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
         val showChrome = currentRoute != Destination.AddExpense.route
+
+        LaunchedEffect(openAddExpenseRequest) {
+            if (openAddExpenseRequest > 0L) {
+                navController.navigate(Destination.AddExpense.routeForAdd()) {
+                    launchSingleTop = true
+                }
+            }
+        }
+
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = { if (showChrome) AppTopBar() },
