@@ -4,12 +4,15 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.expensetracker.app.MainActivity
 import com.expensetracker.app.R
 import com.expensetracker.app.core.util.formatAsCurrency
 import java.time.LocalDate
@@ -88,16 +91,29 @@ class NotificationHelper(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun notifySmsImportMissed() {
         if (!hasNotificationPermission()) return
+
+        val openAddExpenseIntent = Intent(context, MainActivity::class.java).apply {
+            action = MainActivity.ACTION_OPEN_ADD_EXPENSE
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            SMS_IMPORT_MISSED_REQUEST_CODE,
+            openAddExpenseIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("Possible transaction missed")
             .setContentText("A bank SMS was received but couldn't be added automatically.")
             .setStyle(
                 NotificationCompat.BigTextStyle().bigText(
-                    "A bank transaction SMS was received, but Expense Tracker couldn't process it automatically. Please check the SMS and add the transaction manually if needed.",
+                    "A bank transaction SMS was received, but Expense Tracker couldn't process it automatically. Tap to add the transaction manually.",
                 ),
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 
@@ -132,4 +148,8 @@ class NotificationHelper(private val context: Context) {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
+
+    companion object {
+        private const val SMS_IMPORT_MISSED_REQUEST_CODE = 2201
+    }
 }
