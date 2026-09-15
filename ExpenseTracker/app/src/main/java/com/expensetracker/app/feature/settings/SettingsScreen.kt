@@ -19,10 +19,13 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -30,6 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,9 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.core.designsystem.CreateProfileDialog
 import com.expensetracker.app.core.designsystem.SectionHeader
-import com.expensetracker.app.core.theme.LocalReducedMotion
-import com.expensetracker.app.core.theme.MotionDurations
-import com.expensetracker.app.core.theme.MotionEasing
 import com.expensetracker.app.data.model.Profile
 import com.expensetracker.app.data.prefs.ThemeMode
 import org.koin.androidx.compose.koinViewModel
@@ -50,27 +53,11 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    SettingsContent(
-        uiState = uiState,
-        onThemeModeChange = viewModel::onThemeModeChange,
-        onDynamicColorToggle = viewModel::onDynamicColorToggle,
-        onSwitchProfile = viewModel::onSwitchProfile,
-        onAddProfileClick = viewModel::onCreateProfileClick,
-        onDeleteProfileClick = viewModel::onDeleteProfileClick,
-    )
-
+    SettingsContent(uiState, viewModel::onThemeModeChange, viewModel::onAppLockToggle, viewModel::onSwitchProfile, viewModel::onCreateProfileClick, viewModel::onRenameProfileClick, viewModel::onDeleteProfileClick)
     when (val dialog = uiState.profileDialog) {
-        is ProfileDialog.CreateProfile -> CreateProfileDialog(
-            existingNames = uiState.profiles.map { it.name },
-            onConfirm = viewModel::onCreateProfileConfirm,
-            onDismiss = viewModel::onProfileDialogDismiss,
-        )
-        is ProfileDialog.ConfirmDelete -> DeleteProfileDialog(
-            profile = dialog.profile,
-            onConfirm = viewModel::onDeleteProfileConfirm,
-            onDismiss = viewModel::onProfileDialogDismiss,
-        )
+        is ProfileDialog.CreateProfile -> CreateProfileDialog(uiState.profiles.map { it.name }, viewModel::onCreateProfileConfirm, viewModel::onProfileDialogDismiss)
+        is ProfileDialog.RenameProfile -> RenameProfileDialog(dialog.profile, viewModel::onRenameProfileConfirm, viewModel::onProfileDialogDismiss)
+        is ProfileDialog.ConfirmDelete -> DeleteProfileDialog(dialog.profile, viewModel::onDeleteProfileConfirm, viewModel::onProfileDialogDismiss)
         null -> Unit
     }
 }
@@ -79,91 +66,34 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
 private fun SettingsContent(
     uiState: SettingsUiState,
     onThemeModeChange: (ThemeMode) -> Unit,
-    onDynamicColorToggle: (Boolean) -> Unit,
+    onAppLockToggle: (Boolean) -> Unit,
     onSwitchProfile: (Long) -> Unit,
     onAddProfileClick: () -> Unit,
+    onRenameProfileClick: (Profile) -> Unit,
     onDeleteProfileClick: (Profile) -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        ProfilesSection(
-            profiles = uiState.profiles,
-            activeProfileId = uiState.activeProfileId,
-            canDelete = uiState.canDeleteProfiles,
-            onSwitchProfile = onSwitchProfile,
-            onAddProfileClick = onAddProfileClick,
-            onDeleteProfileClick = onDeleteProfileClick,
-        )
-
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        ProfilesSection(uiState.profiles, uiState.activeProfileId, uiState.canDeleteProfiles, onSwitchProfile, onAddProfileClick, onRenameProfileClick, onDeleteProfileClick)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SectionHeader(title = "Theme")
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .selectableGroup()
-                        .padding(vertical = 8.dp),
-                ) {
-                    ThemeModeRow(
-                        label = "System default",
-                        selected = uiState.themeMode == ThemeMode.SYSTEM,
-                        onClick = { onThemeModeChange(ThemeMode.SYSTEM) },
-                    )
-                    ThemeModeRow(
-                        label = "Light",
-                        selected = uiState.themeMode == ThemeMode.LIGHT,
-                        onClick = { onThemeModeChange(ThemeMode.LIGHT) },
-                    )
-                    ThemeModeRow(
-                        label = "Dark",
-                        selected = uiState.themeMode == ThemeMode.DARK,
-                        onClick = { onThemeModeChange(ThemeMode.DARK) },
-                    )
+            SectionHeader("Theme")
+            Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Column(Modifier.selectableGroup().padding(vertical = 8.dp)) {
+                    ThemeModeRow("System default", uiState.themeMode == ThemeMode.SYSTEM) { onThemeModeChange(ThemeMode.SYSTEM) }
+                    ThemeModeRow("Light", uiState.themeMode == ThemeMode.LIGHT) { onThemeModeChange(ThemeMode.LIGHT) }
+                    ThemeModeRow("Dark", uiState.themeMode == ThemeMode.DARK) { onThemeModeChange(ThemeMode.DARK) }
                 }
             }
         }
-
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SectionHeader(title = "Dynamic Color")
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-            ) {
-                DynamicColorRow(
-                    checked = uiState.dynamicColorEnabled,
-                    onCheckedChange = onDynamicColorToggle,
-                )
-            }
+            SectionHeader("Security")
+            Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) { SecurityRow(uiState.appLockEnabled, onAppLockToggle) }
         }
-
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SectionHeader(title = "About")
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(text = "Kanakku", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        text = "A lightweight, fully offline expense tracker.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            SectionHeader("About")
+            Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Kanakku", style = MaterialTheme.typography.titleMedium)
+                    Text("A lightweight, fully offline expense tracker.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -171,34 +101,33 @@ private fun SettingsContent(
 }
 
 @Composable
-private fun ProfilesSection(
-    profiles: List<Profile>,
-    activeProfileId: Long?,
-    canDelete: Boolean,
-    onSwitchProfile: (Long) -> Unit,
-    onAddProfileClick: () -> Unit,
-    onDeleteProfileClick: (Profile) -> Unit,
-) {
+private fun SecurityRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().toggleable(value = checked, onValueChange = onCheckedChange, role = Role.Switch).semantics(mergeDescendants = true).heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Fingerprint, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.width(28.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("App lock", style = MaterialTheme.typography.bodyLarge)
+            Text("Use fingerprint or your device biometric to open the app", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+@Composable
+private fun ProfilesSection(profiles: List<Profile>, activeProfileId: Long?, canDelete: Boolean, onSwitchProfile: (Long) -> Unit, onAddProfileClick: () -> Unit, onRenameProfileClick: (Profile) -> Unit, onDeleteProfileClick: (Profile) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader(title = "Profiles", actionLabel = "Add", onActionClick = onAddProfileClick)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceContainer,
-        ) {
-            Column(
-                modifier = Modifier
-                    .selectableGroup()
-                    .padding(vertical = 8.dp),
-            ) {
+        SectionHeader("Profiles", actionLabel = "Add", onActionClick = onAddProfileClick)
+        Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.selectableGroup().padding(vertical = 8.dp)) {
                 profiles.forEach { profile ->
-                    ProfileRow(
-                        profile = profile,
-                        selected = profile.id == activeProfileId,
-                        canDelete = canDelete,
-                        onClick = { onSwitchProfile(profile.id) },
-                        onDeleteClick = { onDeleteProfileClick(profile) },
-                    )
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).clip(MaterialTheme.shapes.medium).selectable(selected = profile.id == activeProfileId, onClick = { onSwitchProfile(profile.id) }, role = Role.RadioButton).heightIn(min = 48.dp).padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = profile.id == activeProfileId, onClick = null)
+                        Spacer(Modifier.width(12.dp))
+                        Text(profile.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { onRenameProfileClick(profile) }) { Icon(Icons.Filled.Edit, "Rename profile") }
+                        IconButton(onClick = { onDeleteProfileClick(profile) }, enabled = canDelete) { Icon(Icons.Filled.DeleteOutline, "Delete profile") }
+                    }
                 }
             }
         }
@@ -206,127 +135,28 @@ private fun ProfilesSection(
 }
 
 @Composable
-private fun ProfileRow(
-    profile: Profile,
-    selected: Boolean,
-    canDelete: Boolean,
-    onClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val reducedMotion = LocalReducedMotion.current
-    val rowColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-        animationSpec = tween(
-            durationMillis = if (reducedMotion) 0 else MotionDurations.SHORT,
-            easing = MotionEasing.Standard,
-        ),
-        label = "profileRowColor",
+private fun RenameProfileDialog(profile: Profile, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by remember(profile.id, profile.name) { mutableStateOf(profile.name) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename profile") },
+        text = { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Profile name") }, singleLine = true, supportingText = { if (name.trim().isEmpty()) Text("Profile name can't be empty") }) },
+        confirmButton = { TextButton(onClick = { onConfirm(name) }, enabled = name.trim().isNotEmpty()) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .background(rowColor)
-            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
-            .semantics(mergeDescendants = true) {}
-            .heightIn(min = 48.dp)
-            .padding(start = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+@Composable
+private fun ThemeModeRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    val rowColor by animateColorAsState(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent, animationSpec = tween(150), label = "themeRow")
+    Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(rowColor).selectable(selected = selected, onClick = onClick, role = Role.RadioButton).heightIn(min = 48.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = selected, onClick = null)
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text = profile.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        IconButton(onClick = onDeleteClick, enabled = canDelete) {
-            Icon(
-                imageVector = Icons.Filled.DeleteOutline,
-                contentDescription = "Delete profile",
-                tint = if (canDelete) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                },
-            )
-        }
+        Spacer(Modifier.width(12.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
 @Composable
 private fun DeleteProfileDialog(profile: Profile, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Delete \"${profile.name}\"?") },
-        text = { Text("All its transactions and budget limits will be deleted too. This can't be undone.") },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Delete") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
-}
-
-@Composable
-private fun ThemeModeRow(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val reducedMotion = LocalReducedMotion.current
-    val rowColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-        animationSpec = tween(
-            durationMillis = if (reducedMotion) 0 else MotionDurations.SHORT,
-            easing = MotionEasing.Standard,
-        ),
-        label = "themeModeRowColor",
-    )
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .background(rowColor)
-            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
-            .semantics(mergeDescendants = true) {}
-            .heightIn(min = 48.dp)
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-@Composable
-private fun DynamicColorRow(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .toggleable(value = checked, onValueChange = onCheckedChange, role = Role.Switch)
-            .semantics(mergeDescendants = true) {}
-            .heightIn(min = 48.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = "Enable dynamic color", style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = "Match the app's colors to your wallpaper (Android 12+)",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = null)
-    }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Delete \"${profile.name}\"?") }, text = { Text("All its transactions and budget limits will be deleted too. This can't be undone.") }, confirmButton = { TextButton(onClick = onConfirm) { Text("Delete") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }

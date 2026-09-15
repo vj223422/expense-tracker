@@ -17,63 +17,42 @@ class SettingsViewModel(
     private val appPreferences: AppPreferences,
     private val profileRepository: ProfileRepository,
 ) : ViewModel() {
-
     private val profileDialog = MutableStateFlow<ProfileDialog?>(null)
 
     val uiState: StateFlow<SettingsUiState> = combine(
         appPreferences.themeMode,
-        appPreferences.dynamicColorEnabled,
+        appPreferences.appLockEnabled,
         profileRepository.observeProfiles(),
         profileRepository.observeActiveProfileId(),
         profileDialog,
-    ) { themeMode, dynamicColorEnabled, profiles, activeProfileId, dialog ->
-        SettingsUiState(
-            themeMode = themeMode,
-            dynamicColorEnabled = dynamicColorEnabled,
-            profiles = profiles,
-            activeProfileId = activeProfileId,
-            profileDialog = dialog,
-        )
+    ) { themeMode, appLockEnabled, profiles, activeProfileId, dialog ->
+        SettingsUiState(themeMode, appLockEnabled, profiles, activeProfileId, dialog)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
-    fun onThemeModeChange(mode: ThemeMode) {
-        viewModelScope.launch { appPreferences.setThemeMode(mode) }
-    }
-
-    fun onDynamicColorToggle(enabled: Boolean) {
-        viewModelScope.launch { appPreferences.setDynamicColorEnabled(enabled) }
-    }
-
-    fun onSwitchProfile(profileId: Long) {
-        viewModelScope.launch { profileRepository.switchProfile(profileId) }
-    }
-
-    fun onCreateProfileClick() {
-        profileDialog.value = ProfileDialog.CreateProfile
-    }
+    fun onThemeModeChange(mode: ThemeMode) { viewModelScope.launch { appPreferences.setThemeMode(mode) } }
+    fun onAppLockToggle(enabled: Boolean) { viewModelScope.launch { appPreferences.setAppLockEnabled(enabled) } }
+    fun onSwitchProfile(profileId: Long) { viewModelScope.launch { profileRepository.switchProfile(profileId) } }
+    fun onCreateProfileClick() { profileDialog.value = ProfileDialog.CreateProfile }
 
     fun onCreateProfileConfirm(name: String) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
-        viewModelScope.launch {
-            profileRepository.createProfile(trimmed)
-            profileDialog.value = null
-        }
+        viewModelScope.launch { profileRepository.createProfile(trimmed); profileDialog.value = null }
     }
 
-    fun onDeleteProfileClick(profile: Profile) {
-        profileDialog.value = ProfileDialog.ConfirmDelete(profile)
+    fun onRenameProfileClick(profile: Profile) { profileDialog.value = ProfileDialog.RenameProfile(profile) }
+
+    fun onRenameProfileConfirm(name: String) {
+        val target = (profileDialog.value as? ProfileDialog.RenameProfile)?.profile ?: return
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch { profileRepository.renameProfile(target.id, trimmed); profileDialog.value = null }
     }
 
+    fun onDeleteProfileClick(profile: Profile) { profileDialog.value = ProfileDialog.ConfirmDelete(profile) }
     fun onDeleteProfileConfirm() {
         val target = (profileDialog.value as? ProfileDialog.ConfirmDelete)?.profile ?: return
-        viewModelScope.launch {
-            profileRepository.deleteProfile(target.id)
-            profileDialog.value = null
-        }
+        viewModelScope.launch { profileRepository.deleteProfile(target.id); profileDialog.value = null }
     }
-
-    fun onProfileDialogDismiss() {
-        profileDialog.value = null
-    }
+    fun onProfileDialogDismiss() { profileDialog.value = null }
 }

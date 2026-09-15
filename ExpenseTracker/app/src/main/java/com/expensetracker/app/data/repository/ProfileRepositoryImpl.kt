@@ -18,16 +18,11 @@ class ProfileRepositoryImpl(
     private val appPreferences: AppPreferences,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ProfileRepository {
-
-    override fun observeProfiles(): Flow<List<Profile>> =
-        profileDao.observeAll().map { entities -> entities.map { it.toDomain() } }
-
+    override fun observeProfiles(): Flow<List<Profile>> = profileDao.observeAll().map { entities -> entities.map { it.toDomain() } }
     override fun observeActiveProfileId(): Flow<Long?> = appPreferences.activeProfileId
 
     override suspend fun ensureDefaultProfile() = withContext(ioDispatcher) {
-        if (profileDao.count() == 0) {
-            createProfile(DEFAULT_PROFILE_NAME)
-        }
+        if (profileDao.count() == 0) createProfile(DEFAULT_PROFILE_NAME)
         Unit
     }
 
@@ -37,6 +32,10 @@ class ProfileRepositoryImpl(
         id
     }
 
+    override suspend fun renameProfile(profileId: Long, name: String) = withContext(ioDispatcher) {
+        profileDao.rename(profileId, name)
+    }
+
     override suspend fun switchProfile(profileId: Long) = withContext(ioDispatcher) {
         appPreferences.setActiveProfileId(profileId)
     }
@@ -44,16 +43,9 @@ class ProfileRepositoryImpl(
     override suspend fun deleteProfile(profileId: Long): Boolean = withContext(ioDispatcher) {
         val deleted = profileDao.deleteIfNotLast(profileId)
         if (!deleted) return@withContext false
-
         appPreferences.clearAlertTiersForProfile(profileId)
-
         if (appPreferences.activeProfileId.first() == profileId) {
-            // Re-query rather than reuse the pre-delete list — that snapshot could be stale if
-            // another delete happened concurrently, and could name a profile that's now also gone.
-            val fallback = profileDao.observeAll().first().firstOrNull()
-            if (fallback != null) {
-                appPreferences.setActiveProfileId(fallback.id)
-            }
+            profileDao.observeAll().first().firstOrNull()?.let { appPreferences.setActiveProfileId(it.id) }
         }
         true
     }

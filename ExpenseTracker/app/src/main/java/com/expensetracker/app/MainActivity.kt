@@ -9,39 +9,69 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.expensetracker.app.data.prefs.AppPreferences
 import com.expensetracker.app.feature.addexpense.AddExpenseViewModel
 import com.expensetracker.app.navigation.ExpenseTrackerApp
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
     private var notificationNavigationRequest by mutableLongStateOf(0L)
     private var notificationNavigationAction by mutableStateOf<String?>(null)
     private var notificationExpenseId by mutableStateOf<Long?>(null)
+    private var isUnlocked by mutableStateOf(false)
+    private var appLockChecked by mutableStateOf(false)
+    private var biometricPromptShowing = false
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { requestSmsPermissionIfNeeded() }
-
     private val smsPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* SMS automation simply stays disabled if declined */ }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestHighestRefreshRate()
-        requestNotificationPermissionIfNeeded()
         handleNavigationIntent(intent)
 
         setContent {
-            ExpenseTrackerApp(
-                notificationNavigationRequest = notificationNavigationRequest,
-                notificationNavigationAction = notificationNavigationAction,
-                notificationExpenseId = notificationExpenseId,
-            )
+            if (appLockChecked && isUnlocked) {
+                ExpenseTrackerApp(
+                    notificationNavigationRequest = notificationNavigationRequest,
+                    notificationNavigationAction = notificationNavigationAction,
+                    notificationExpenseId = notificationExpenseId,
+                )
+            } else {
+                LockedAppScreen(onUnlock = ::authenticateApp)
+            }
+        }
+
+        requestNotificationPermissionIfNeeded()
+        lifecycleScope.launch {
+            val appLockEnabled = AppPreferences(this@MainActivity).appLockEnabled.first()
+            appLockChecked = true
+            if (appLockEnabled) authenticateApp() else isUnlocked = true
         }
     }
 
@@ -49,6 +79,37 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleNavigationIntent(intent)
+    }
+
+    private fun authenticateApp() {
+        if (biometricPromptShowing) return
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+            BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        val manager = BiometricManager.from(this)
+        if (manager.canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
+            isUnlocked = true
+            return
+        }
+        biometricPromptShowing = true
+        val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                biometricPromptShowing = false
+                isUnlocked = true
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                biometricPromptShowing = false
+                isUnlocked = false
+            }
+            override fun onAuthenticationFailed() {
+                // Keep the lock screen visible; the biometric dialog remains available for retry.
+            }
+        })
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Unlock Kanakku")
+            .setSubtitle("Use fingerprint or your device credentials")
+            .setAllowedAuthenticators(authenticators)
+            .build()
+        prompt.authenticate(promptInfo)
     }
 
     private fun handleNavigationIntent(intent: Intent?) {
@@ -93,25 +154,32 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestHighestRefreshRate() {
-        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            display
-        } else {
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay
+        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else {
+            @Suppress("DEPRECATION") windowManager.defaultDisplay
         } ?: return
-
         val bestMode = display.supportedModes.maxByOrNull { it.refreshRate } ?: return
-        window.attributes = window.attributes.apply {
-            preferredDisplayModeId = bestMode.modeId
-        }
+        window.attributes = window.attributes.apply { preferredDisplayModeId = bestMode.modeId }
     }
 
     companion object {
         const val ACTION_OPEN_ADD_EXPENSE = "com.expensetracker.app.action.OPEN_ADD_EXPENSE"
         const val ACTION_OPEN_EDIT_EXPENSE = "com.expensetracker.app.action.OPEN_EDIT_EXPENSE"
         const val EXTRA_EXPENSE_ID = "extra_expense_id"
-
         private var hasRequestedNotificationPermission = false
         private var hasRequestedSmsPermission = false
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun LockedAppScreen(onUnlock: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(Icons.Filled.Fingerprint, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 16.dp))
+        Text("Kanakku is locked", style = MaterialTheme.typography.headlineSmall)
+        Text("Authenticate to view your expenses", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp, bottom = 20.dp))
+        Button(onClick = onUnlock) { Text("Unlock") }
     }
 }
