@@ -20,12 +20,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,10 +48,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,7 +65,9 @@ import com.expensetracker.app.core.designsystem.icon
 import com.expensetracker.app.core.theme.LocalExtendedColors
 import com.expensetracker.app.core.util.formatAsCurrency
 import com.expensetracker.app.core.util.toRelativeOrFormatted
+import com.expensetracker.app.data.model.Expense
 import com.expensetracker.app.data.model.ExpenseCategory
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import org.koin.androidx.compose.koinViewModel
 
@@ -115,6 +120,8 @@ private fun TransactionsContent(
 ) {
     var collapsedDates by remember { mutableStateOf<Set<LocalDate>>(emptySet()) }
     var filterExpanded by remember { mutableStateOf(true) }
+    var selectedExpense by remember { mutableStateOf<Expense?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(uiState.expensesByDate) {
         if (collapsedDates.isEmpty() && uiState.expensesByDate.size > 1) {
@@ -169,13 +176,76 @@ private fun TransactionsContent(
                     }
                     if (!collapsed) {
                         items(group.expenses, key = { it.id }) { expense ->
-                            TransactionCard(expense = expense, onDelete = actions::onDeleteExpense, onClick = { onEditExpenseClick(expense.id) })
+                            TransactionCard(
+                                expense = expense,
+                                onDelete = actions::onDeleteExpense,
+                                onClick = { onEditExpenseClick(expense.id) },
+                                onLongClick = { selectedExpense = expense },
+                            )
                         }
                     }
                 }
             }
         }
     }
+
+    selectedExpense?.let { expense ->
+        TransactionActionDialog(
+            expense = expense,
+            onEdit = {
+                selectedExpense = null
+                onEditExpenseClick(expense.id)
+            },
+            onDelete = {
+                scope.launch {
+                    if (actions.onDeleteExpense(expense)) selectedExpense = null
+                }
+            },
+            onDismiss = { selectedExpense = null },
+        )
+    }
+}
+
+@Composable
+private fun TransactionActionDialog(
+    expense: Expense,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Transaction options") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    expense.note.ifBlank { if (expense.isIncome) "Income" else expense.category.displayName },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    expense.amountMinor.formatAsCurrency(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (expense.isIncome) LocalExtendedColors.current.safe else MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onEdit) {
+                Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text("  Edit")
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDelete) {
+                    Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                    Text("  Delete", color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+    )
 }
 
 @Composable
@@ -283,11 +353,7 @@ private fun DateGroupHeader(
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(date.toRelativeOrFormatted(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            AnimatedAmountText(
-                amountMinor = totalMinor,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            AnimatedAmountText(amountMinor = totalMinor, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Icon(if (collapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess, contentDescription = if (collapsed) "Expand" else "Collapse", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 10.dp).size(22.dp))
         }
     }
@@ -295,9 +361,10 @@ private fun DateGroupHeader(
 
 @Composable
 private fun TransactionCard(
-    expense: com.expensetracker.app.data.model.Expense,
-    onDelete: suspend (com.expensetracker.app.data.model.Expense) -> Boolean,
+    expense: Expense,
+    onDelete: suspend (Expense) -> Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -307,7 +374,12 @@ private fun TransactionCard(
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) {
-                SwipeToDeleteExpenseItem(expense = expense, onDelete = onDelete, onClick = onClick)
+                SwipeToDeleteExpenseItem(
+                    expense = expense,
+                    onDelete = onDelete,
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                )
             }
             IconButton(onClick = onClick, modifier = Modifier.padding(end = 6.dp)) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Open transaction", tint = MaterialTheme.colorScheme.onSurfaceVariant)
