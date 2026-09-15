@@ -57,10 +57,8 @@ class DashboardViewModel(
                 DashboardUiState(
                     yearMonth = yearMonth,
                     totalSpentMinor = summary.totalSpentMinor,
-                    // The existing Remaining card is based on overallLimitMinor - spent.
-                    // Add received income to that base so every credited amount increases the
-                    // available balance without changing budget-alert calculations.
-                    overallLimitMinor = summary.overallLimitMinor?.plus(incomeTotal),
+                    totalIncomeMinor = incomeTotal,
+                    overallLimitMinor = summary.overallLimitMinor,
                     categorySpends = summary.categorySpends
                         .filter { it.spentMinor > 0 }
                         .sortedByDescending { it.spentMinor },
