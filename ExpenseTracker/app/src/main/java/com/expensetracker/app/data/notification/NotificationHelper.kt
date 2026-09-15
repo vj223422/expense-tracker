@@ -69,12 +69,13 @@ class NotificationHelper(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun notifyExpenseAdded(amountMinor: Long, merchant: String, date: LocalDate) {
+    fun notifyExpenseAdded(amountMinor: Long, merchant: String, date: LocalDate, expenseId: Long) {
         if (!hasNotificationPermission()) return
         notifyTransactionAdded(
             title = "Expense added automatically",
-            body = "${amountMinor.formatAsCurrency()} paid to $merchant on ${formatDate(date)} was added to your expenses.",
+            body = "${amountMinor.formatAsCurrency()} paid to $merchant on ${formatDate(date)} was added to your expenses. Tap to add a note.",
             summary = "${amountMinor.formatAsCurrency()} • $merchant • ${formatDate(date)}",
+            contentIntent = createEditExpensePendingIntent(expenseId),
         )
     }
 
@@ -124,22 +125,40 @@ class NotificationHelper(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    private fun notifyTransactionAdded(title: String, body: String, summary: String) {
+    private fun notifyTransactionAdded(
+        title: String,
+        body: String,
+        summary: String,
+        contentIntent: PendingIntent? = null,
+    ) {
         if (!hasNotificationPermission()) return
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(summary)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
-            .build()
+
+        contentIntent?.let(builder::setContentIntent)
 
         NotificationManagerCompat.from(context).notify(
             "sms_transaction_${System.currentTimeMillis()}".hashCode(),
-            notification,
+            builder.build(),
         )
     }
+
+    private fun createEditExpensePendingIntent(expenseId: Long): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            expenseId.hashCode(),
+            Intent(context, MainActivity::class.java).apply {
+                action = MainActivity.ACTION_OPEN_EDIT_EXPENSE
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(MainActivity.EXTRA_EXPENSE_ID, expenseId)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 
     private fun formatDate(date: LocalDate): String =
         date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.US))
