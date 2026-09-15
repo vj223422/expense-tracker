@@ -74,12 +74,15 @@ class MainActivity : FragmentActivity() {
 
             lastCrashReport?.let { report ->
                 AlertDialog(
-                    onDismissRequest = { lastCrashReport = null },
+                    onDismissRequest = {
+                        CrashReporter.clearLastCrash(this@MainActivity)
+                        lastCrashReport = null
+                    },
                     title = { Text("Kanakku crashed") },
                     text = {
                         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                             Text(
-                                "The previous crash was recorded. Send this information when reporting the problem:",
+                                "The previous crash was recorded. Reproduce the problem again only after saving this report:",
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             Text(
@@ -90,7 +93,10 @@ class MainActivity : FragmentActivity() {
                         }
                     },
                     confirmButton = {
-                        Button(onClick = { lastCrashReport = null }) { Text("Close") }
+                        Button(onClick = {
+                            CrashReporter.clearLastCrash(this@MainActivity)
+                            lastCrashReport = null
+                        }) { Text("Close") }
                     },
                 )
             }
