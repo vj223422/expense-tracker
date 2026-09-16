@@ -33,11 +33,14 @@ class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budg
     override suspend fun addExpense(profileId: Long, amountMinor: Long, category: ExpenseCategory, note: String, date: LocalDate, isIncome: Boolean): AddExpenseResult = withContext(ioDispatcher) {
         val now = System.currentTimeMillis()
         val activeBudgetMonth = appPreferences.getActiveBudgetMonth(profileId) ?: YearMonth.from(date).toString()
+        val activeCycleStart = appPreferences.getActiveBudgetCycleStart(profileId) ?: 0L
+        val budgetMonth = if (activeCycleStart > 0L && now >= activeCycleStart) activeBudgetMonth else YearMonth.from(date).toString()
+        val cycleStart = if (activeCycleStart > 0L && now >= activeCycleStart) activeCycleStart else 0L
         val expenseId = try {
-            expenseDao.insert(ExpenseEntity(profileId = profileId, amountMinor = amountMinor, category = category, note = note, isIncome = isIncome, budgetMonth = activeBudgetMonth, epochDay = date.toEpochDay(), createdAtEpochMillis = now))
+            expenseDao.insert(ExpenseEntity(profileId = profileId, amountMinor = amountMinor, category = category, note = note, isIncome = isIncome, budgetMonth = budgetMonth, budgetCycleStartEpochMillis = cycleStart, epochDay = date.toEpochDay(), createdAtEpochMillis = now))
         } catch (_: SQLiteException) { return@withContext AddExpenseResult.Error("Couldn't save transaction — local storage error.") }
         if (isIncome) return@withContext AddExpenseResult.Success(emptyList(), expenseId)
-        val alerts = try { evaluateAndNotify(profileId, activeBudgetMonth, category) } catch (_: SQLiteException) { emptyList() }
+        val alerts = try { evaluateAndNotify(profileId, budgetMonth, category) } catch (_: SQLiteException) { emptyList() }
         AddExpenseResult.Success(alerts, expenseId)
     }
 
@@ -57,17 +60,24 @@ class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budg
         val alerts = try { evaluateAndNotify(expense.profileId, budgetMonth, expense.category) } catch (_: SQLiteException) { emptyList() }
         AddExpenseResult.Success(alerts)
     }
+
+    /** Starts a salary-to-salary cycle at the exact time the income was recorded. */
     override suspend fun startBudgetCycle(profileId: Long, incomeExpenseId: Long): Boolean = withContext(ioDispatcher) {
         val income = expenseDao.getById(incomeExpenseId, profileId) ?: return@withContext false
         if (!income.isIncome) return@withContext false
-        val nextBudgetMonth = YearMonth.from(LocalDate.ofEpochDay(income.epochDay)).plusMonths(1).toString()
+        val cycleStart = income.createdAtEpochMillis
+        val cycleLabel = YearMonth.from(LocalDate.ofEpochDay(income.epochDay)).plusMonths(1).toString()
         try {
-            expenseDao.update(income.copy(budgetMonth = nextBudgetMonth))
-            expenseDao.assignExpensesToBudgetFrom(profileId, income.createdAtEpochMillis, nextBudgetMonth)
-            appPreferences.setActiveBudgetMonth(profileId, nextBudgetMonth)
+            // The salary itself belongs to the cycle it starts.
+            expenseDao.update(income.copy(budgetMonth = cycleLabel, budgetCycleStartEpochMillis = cycleStart))
+            // Every transaction recorded at/after the salary receipt moves into this cycle.
+            expenseDao.assignExpensesToBudgetFrom(profileId, cycleStart, cycleLabel, cycleStart)
+            appPreferences.setActiveBudgetMonth(profileId, cycleLabel)
+            appPreferences.setActiveBudgetCycleStart(profileId, cycleStart)
             true
         } catch (_: SQLiteException) { false }
     }
+
     private suspend fun evaluateAndNotify(profileId: Long, budgetMonth: String, changedCategory: ExpenseCategory): List<LimitAlert> {
         val alerts = mutableListOf<LimitAlert>()
         val periodPrefix = "${profileId}_$budgetMonth"
