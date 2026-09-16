@@ -15,4 +15,5 @@ data class Expense(
     val createdAtEpochMillis: Long,
     val isIncome: Boolean = false,
     val budgetMonth: String = "",
+    val budgetCycleStartEpochMillis: Long = 0L,
 )
