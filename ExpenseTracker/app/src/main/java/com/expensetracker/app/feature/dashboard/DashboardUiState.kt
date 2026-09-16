@@ -35,4 +35,6 @@ sealed interface DashboardEffect {
 interface DashboardActions {
     suspend fun onDeleteExpense(expense: Expense): Boolean
     fun onUndoDelete(expense: Expense)
+    fun onPreviousMonth()
+    fun onNextMonth()
 }
