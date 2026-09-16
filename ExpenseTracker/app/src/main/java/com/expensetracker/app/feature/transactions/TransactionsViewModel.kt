@@ -14,13 +14,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.YearMonth
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TransactionsViewModel(
@@ -30,16 +30,18 @@ class TransactionsViewModel(
 
     private val categoryFilter = MutableStateFlow<ExpenseCategory?>(null)
     private val searchQuery = MutableStateFlow("")
+    private val selectedMonth = MutableStateFlow(YearMonth.now())
 
     private val _effects = Channel<TransactionsEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
-    val uiState: StateFlow<TransactionsUiState> = profileRepository.observeActiveProfileId()
+    val uiState: kotlinx.coroutines.flow.StateFlow<TransactionsUiState> = profileRepository.observeActiveProfileId()
         .filterNotNull()
         .flatMapLatest { profileId ->
-            combine(expenseRepository.observeAllExpenses(profileId), categoryFilter, searchQuery) { expenses, filter, query ->
+            combine(expenseRepository.observeAllExpenses(profileId), categoryFilter, searchQuery, selectedMonth) { expenses, filter, query, month ->
                 val normalizedQuery = query.trim().lowercase()
                 val filtered = expenses.filter { expense ->
+                    val matchesMonth = YearMonth.from(expense.date) == month
                     val matchesCategory = filter == null || expense.category == filter
                     val matchesSearch = normalizedQuery.isEmpty() || listOf(
                         expense.note,
@@ -47,7 +49,7 @@ class TransactionsViewModel(
                         expense.amountMinor.toString(),
                         String.format(java.util.Locale.US, "%.2f", expense.amountMinor / 100.0),
                     ).any { it.lowercase().contains(normalizedQuery) }
-                    matchesCategory && matchesSearch
+                    matchesMonth && matchesCategory && matchesSearch
                 }
                 TransactionsUiState(
                     expensesByDate = filtered.groupBy { it.date }
@@ -56,6 +58,7 @@ class TransactionsViewModel(
                         .map { (date, group) -> DateGroup(date, group, group.sumOf { it.amountMinor }) },
                     selectedCategoryFilter = filter,
                     searchQuery = query,
+                    selectedMonth = month,
                     isLoading = false,
                 )
             }
@@ -68,6 +71,10 @@ class TransactionsViewModel(
 
     override fun onSearchQueryChange(query: String) {
         searchQuery.value = query
+    }
+
+    override fun onMonthChange(month: YearMonth) {
+        selectedMonth.value = month
     }
 
     override suspend fun onDeleteExpense(expense: Expense): Boolean = viewModelScope.async {
