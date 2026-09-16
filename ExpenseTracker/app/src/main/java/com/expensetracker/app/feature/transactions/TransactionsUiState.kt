@@ -33,6 +33,8 @@ interface TransactionsActions {
     fun onFilterChange(category: ExpenseCategory?)
     fun onSearchQueryChange(query: String)
     fun onMonthChange(month: YearMonth)
+    fun onPreviousMonth()
+    fun onNextMonth()
 
     /** Returns whether the delete actually succeeded — SwipeToDeleteExpenseItem awaits this to
      * know whether to reset the swiped-away row back to visible on failure. */
