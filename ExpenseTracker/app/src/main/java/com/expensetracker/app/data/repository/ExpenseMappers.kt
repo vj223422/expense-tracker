@@ -26,6 +26,7 @@ internal fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
     category = category,
     note = note,
     isIncome = isIncome,
+    budgetMonth = date.toString().substring(0, 7),
     epochDay = date.toEpochDay(),
     createdAtEpochMillis = createdAtEpochMillis,
 )
