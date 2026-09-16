@@ -24,6 +24,7 @@ class AppPreferences(private val context: Context) {
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
         val APP_LOCK = booleanPreferencesKey("app_lock_enabled")
         val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
+        fun activeBudgetMonth(profileId: Long) = stringPreferencesKey("active_budget_month_$profileId")
         fun lastNotifiedTier(periodCategoryKey: String) = intPreferencesKey("alert_tier_$periodCategoryKey")
     }
 
@@ -40,6 +41,9 @@ class AppPreferences(private val context: Context) {
     suspend fun setDynamicColorEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled } }
     suspend fun setAppLockEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.APP_LOCK] = enabled } }
     suspend fun setActiveProfileId(profileId: Long) { context.dataStore.edit { it[Keys.ACTIVE_PROFILE_ID] = profileId } }
+
+    suspend fun getActiveBudgetMonth(profileId: Long): String? = safeData.map { it[Keys.activeBudgetMonth(profileId)] }.first()
+    suspend fun setActiveBudgetMonth(profileId: Long, budgetMonth: String) { context.dataStore.edit { it[Keys.activeBudgetMonth(profileId)] = budgetMonth } }
 
     suspend fun getLastNotifiedTier(periodCategoryKey: String): Int = safeData.map { it[Keys.lastNotifiedTier(periodCategoryKey)] ?: 0 }.first()
     suspend fun setLastNotifiedTier(periodCategoryKey: String, tier: Int) { context.dataStore.edit { it[Keys.lastNotifiedTier(periodCategoryKey)] = tier } }
