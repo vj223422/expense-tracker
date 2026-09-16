@@ -16,7 +16,7 @@ import com.expensetracker.app.data.model.ExpenseCategory
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("profileId")],
+    indices = [Index("profileId"), Index("profileId", "budgetMonth")],
 )
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -26,6 +26,8 @@ data class ExpenseEntity(
     val note: String,
     /** True when money was received; false for an expense/debit. */
     val isIncome: Boolean = false,
+    /** Budget period displayed as YYYY-MM. This can differ from the transaction date month. */
+    val budgetMonth: String,
     /** [java.time.LocalDate.toEpochDay] — a plain Long sorts/filters without a TypeConverter. */
     val epochDay: Long,
     val createdAtEpochMillis: Long,
