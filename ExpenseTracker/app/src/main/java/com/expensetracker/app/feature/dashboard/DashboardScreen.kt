@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -90,8 +91,8 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onEditExpenseClick: (Long) ->
         is DashboardEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
         is DashboardEffect.ShowError -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
     } } }
-    Scaffold(modifier = Modifier.fillMaxSize(), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { MonthSelector(uiState.yearMonth, viewModel::onPreviousMonth, viewModel::onNextMonth) }
             item { SummaryCard(uiState, onRemainingClick = viewModel::onRemainingClick) }
             item { AddExpenseButton(onAddExpenseClick) }
@@ -130,11 +131,11 @@ private fun SummaryCard(uiState: DashboardUiState, onRemainingClick: () -> Unit)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(176.dp), contentAlignment = Alignment.Center) { CategoryDonutChart(segments = segments, modifier = Modifier.fillMaxSize(), centerContent = { Column(horizontalAlignment = Alignment.CenterHorizontally) { AnimatedAmountText(amountMinor = uiState.totalSpentMinor, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)); Text("spent this month", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } }) }
                 Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) { SummaryMetric("Budget", uiState.overallLimitMinor, Icons.Default.Wallet, MaterialTheme.colorScheme.primary); SummaryMetric("Spent", uiState.totalSpentMinor, Icons.Default.ArrowDownward, MaterialTheme.colorScheme.error); SummaryMetric("Received", uiState.totalIncomeMinor, Icons.Default.ArrowUpward, extended.safe) }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) { SummaryMetric("Budget", uiState.effectiveBudgetMinor, Icons.Default.Wallet, MaterialTheme.colorScheme.primary); SummaryMetric("Spent", uiState.totalSpentMinor, Icons.Default.ArrowDownward, MaterialTheme.colorScheme.error); SummaryMetric("Received", uiState.totalIncomeMinor, Icons.Default.ArrowUpward, extended.safe) }
             }
             Spacer(Modifier.height(14.dp))
-            Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onRemainingClick), shape = RoundedCornerShape(20.dp), color = extended.safe.copy(alpha = .10f)) { Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(40.dp), shape = CircleShape, color = extended.safe.copy(alpha = .12f)) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Wallet, null, tint = extended.safe, modifier = Modifier.size(21.dp)) } }; Spacer(Modifier.width(11.dp)); Column(Modifier.weight(1f)) { Text("Remaining", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(remaining?.formatAsCurrency() ?: "No limit set", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = remainingColor) }; if (remaining != null && uiState.overallLimitMinor != null && uiState.overallLimitMinor > 0) { val left = ((remaining.toDouble() / uiState.overallLimitMinor.toDouble()) * 100).toInt().coerceIn(0, 100); Text("$left% left", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = extended.safe) } } }
-            if (uiState.overallLimitMinor != null) { Spacer(Modifier.height(9.dp)); LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape), color = MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest) }
+            Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onRemainingClick), shape = RoundedCornerShape(20.dp), color = extended.safe.copy(alpha = .10f)) { Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(40.dp), shape = CircleShape, color = extended.safe.copy(alpha = .12f)) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Wallet, null, tint = extended.safe, modifier = Modifier.size(21.dp)) } }; Spacer(Modifier.width(11.dp)); Column(Modifier.weight(1f)) { Text("Remaining", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(remaining?.formatAsCurrency() ?: "No limit set", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = remainingColor) }; if (remaining != null && uiState.effectiveBudgetMinor != null && uiState.effectiveBudgetMinor > 0) { val left = ((remaining.toDouble() / uiState.effectiveBudgetMinor.toDouble()) * 100).toInt().coerceIn(0, 100); Text("$left% left", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = extended.safe) } } }
+            if (uiState.effectiveBudgetMinor != null) { Spacer(Modifier.height(9.dp)); LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape), color = MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest) }
         }
     }
 }
