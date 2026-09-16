@@ -20,7 +20,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -69,6 +71,9 @@ import com.expensetracker.app.data.model.Expense
 import com.expensetracker.app.data.model.ExpenseCategory
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -102,13 +107,14 @@ private fun TransactionsContent(uiState: TransactionsUiState, actions: Transacti
     val scope = rememberCoroutineScope()
     LaunchedEffect(uiState.expensesByDate) { if (collapsedDates.isEmpty() && uiState.expensesByDate.size > 1) collapsedDates = uiState.expensesByDate.drop(1).map { it.date }.toSet() }
     Column(modifier.fillMaxSize()) {
+        MonthSelector(uiState.selectedMonth, actions::onMonthChange)
         SearchAndFilterBar(uiState.searchQuery, actions::onSearchQueryChange, filterExpanded) { filterExpanded = !filterExpanded }
         if (filterExpanded) CategoryFilterRow(uiState.selectedCategoryFilter, actions::onFilterChange)
         when {
             uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(strokeWidth = 2.dp) }
             uiState.isEmpty -> {
                 val hasFilter = uiState.selectedCategoryFilter != null || uiState.searchQuery.isNotBlank()
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { EmptyState(Icons.Filled.ReceiptLong, if (hasFilter) "No matching transactions" else "No transactions yet", if (hasFilter) "Try a different search or category filter." else "Add an expense from the Home tab to see it here.") }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { EmptyState(Icons.Filled.ReceiptLong, if (hasFilter) "No matching transactions" else "No transactions in ${uiState.selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault()))}", if (hasFilter) "Try a different search or category filter." else "Choose another month or add an expense from the Home tab.") }
             }
             else -> LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 uiState.expensesByDate.forEach { group ->
@@ -131,6 +137,29 @@ private fun TransactionsContent(uiState: TransactionsUiState, actions: Transacti
             val expense = selectedExpense ?: return@DeleteTransactionConfirmation
             scope.launch { if (actions.onDeleteExpense(expense)) { showDeleteConfirmation = false; selectedExpense = null } }
         }, onDismiss = { showDeleteConfirmation = false; selectedExpense = null })
+    }
+}
+
+@Composable
+private fun MonthSelector(month: YearMonth, onMonthChange: (YearMonth) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
+    ) {
+        Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { onMonthChange(month.minusMonths(1)) }) {
+                Icon(Icons.Default.ChevronLeft, "Previous month", modifier = Modifier.size(28.dp))
+            }
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(month.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+            IconButton(onClick = { onMonthChange(month.plusMonths(1)) }) {
+                Icon(Icons.Default.ChevronRight, "Next month", modifier = Modifier.size(28.dp))
+            }
+        }
     }
 }
 
