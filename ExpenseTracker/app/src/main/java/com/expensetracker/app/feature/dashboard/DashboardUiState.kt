@@ -16,13 +16,16 @@ data class DashboardUiState(
     val recentExpenses: List<Expense> = emptyList(),
     val isLoading: Boolean = true,
 ) {
+    val effectiveBudgetMinor: Long?
+        get() = overallLimitMinor?.plus(totalIncomeMinor)
+
     val overallProgress: Float
-        get() = if (overallLimitMinor != null && overallLimitMinor > 0) {
-            (totalSpentMinor.toDouble() / overallLimitMinor.toDouble()).toFloat()
-        } else 0f
+        get() = effectiveBudgetMinor?.takeIf { it > 0L }?.let {
+            (totalSpentMinor.toDouble() / it.toDouble()).toFloat()
+        } ?: 0f
 
     val remainingMinor: Long?
-        get() = overallLimitMinor?.let { it - totalSpentMinor + totalIncomeMinor }
+        get() = effectiveBudgetMinor?.minus(totalSpentMinor)
 }
 
 sealed interface DashboardEffect {
