@@ -25,16 +25,8 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-            .addMigrations(
-                ExpenseDatabase.MIGRATION_1_2,
-                ExpenseDatabase.MIGRATION_2_3,
-                ExpenseDatabase.MIGRATION_3_4,
-                ExpenseDatabase.MIGRATION_4_5,
-                ExpenseDatabase.MIGRATION_5_6,
-                ExpenseDatabase.MIGRATION_6_7,
-            )
-            .fallbackToDestructiveMigrationOnDowngrade()
-            .build()
+            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7)
+            .fallbackToDestructiveMigrationOnDowngrade().build()
     }
     single { get<ExpenseDatabase>().expenseDao() }
     single { get<ExpenseDatabase>().budgetLimitDao() }
@@ -42,7 +34,6 @@ val databaseModule = module {
     single { get<ExpenseDatabase>().reminderDao() }
     single { get<ExpenseDatabase>().noteDao() }
 }
-
 val dataModule = module {
     single { AppPreferences(androidContext()) }
     single { NotificationHelper(androidContext()) }
@@ -51,15 +42,13 @@ val dataModule = module {
     single<BudgetRepository> { BudgetRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get(), get()) }
 }
-
 val viewModelModule = module {
-    viewModel { DashboardViewModel(get(), get(), get()) }
+    viewModel { DashboardViewModel(get(), get(), get(), get()) }
     viewModel { TransactionsViewModel(get(), get()) }
     viewModel { (expenseId: Long?) -> AddExpenseViewModel(get(), get(), expenseId) }
-    viewModel { BudgetsViewModel(get(), get(), get()) }
+    viewModel { BudgetsViewModel(get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { ProfileSwitcherViewModel(get()) }
     viewModel { RemindersViewModel(get(), get(), get(), get()) }
 }
-
 val appModules = listOf(databaseModule, dataModule, viewModelModule)
