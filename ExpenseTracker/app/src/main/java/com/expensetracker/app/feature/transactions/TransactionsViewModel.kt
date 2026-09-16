@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.YearMonth
 
@@ -75,6 +76,14 @@ class TransactionsViewModel(
 
     override fun onMonthChange(month: YearMonth) {
         selectedMonth.value = month
+    }
+
+    override fun onPreviousMonth() {
+        selectedMonth.update { it.minusMonths(1) }
+    }
+
+    override fun onNextMonth() {
+        selectedMonth.update { it.plusMonths(1) }
     }
 
     override suspend fun onDeleteExpense(expense: Expense): Boolean = viewModelScope.async {
