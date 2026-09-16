@@ -107,7 +107,7 @@ private fun TransactionsContent(uiState: TransactionsUiState, actions: Transacti
     val scope = rememberCoroutineScope()
     LaunchedEffect(uiState.expensesByDate) { if (collapsedDates.isEmpty() && uiState.expensesByDate.size > 1) collapsedDates = uiState.expensesByDate.drop(1).map { it.date }.toSet() }
     Column(modifier.fillMaxSize()) {
-        MonthSelector(uiState.selectedMonth, actions::onMonthChange)
+        MonthSelector(uiState.selectedMonth, actions::onPreviousMonth, actions::onNextMonth)
         SearchAndFilterBar(uiState.searchQuery, actions::onSearchQueryChange, filterExpanded) { filterExpanded = !filterExpanded }
         if (filterExpanded) CategoryFilterRow(uiState.selectedCategoryFilter, actions::onFilterChange)
         when {
@@ -141,14 +141,14 @@ private fun TransactionsContent(uiState: TransactionsUiState, actions: Transacti
 }
 
 @Composable
-private fun MonthSelector(month: YearMonth, onMonthChange: (YearMonth) -> Unit) {
+private fun MonthSelector(month: YearMonth, onPreviousMonth: () -> Unit, onNextMonth: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
     ) {
         Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { onMonthChange(month.minusMonths(1)) }) {
+            IconButton(onClick = onPreviousMonth) {
                 Icon(Icons.Default.ChevronLeft, "Previous month", modifier = Modifier.size(28.dp))
             }
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -156,7 +156,7 @@ private fun MonthSelector(month: YearMonth, onMonthChange: (YearMonth) -> Unit) 
                 Spacer(Modifier.width(12.dp))
                 Text(month.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
-            IconButton(onClick = { onMonthChange(month.plusMonths(1)) }) {
+            IconButton(onClick = onNextMonth) {
                 Icon(Icons.Default.ChevronRight, "Next month", modifier = Modifier.size(28.dp))
             }
         }
