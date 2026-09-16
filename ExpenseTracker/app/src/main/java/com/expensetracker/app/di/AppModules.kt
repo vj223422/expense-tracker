@@ -31,6 +31,7 @@ val databaseModule = module {
                 ExpenseDatabase.MIGRATION_3_4,
                 ExpenseDatabase.MIGRATION_4_5,
                 ExpenseDatabase.MIGRATION_5_6,
+                ExpenseDatabase.MIGRATION_6_7,
             )
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
