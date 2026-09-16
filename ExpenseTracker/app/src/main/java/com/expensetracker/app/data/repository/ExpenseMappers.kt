@@ -30,6 +30,7 @@ internal fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
     budgetMonth = budgetMonth.ifBlank { date.toString().substring(0, 7) },
     epochDay = date.toEpochDay(),
     createdAtEpochMillis = createdAtEpochMillis,
+    budgetCycleStartEpochMillis = 0L,
 )
 
 internal fun BudgetLimitEntity.toDomain(): BudgetLimit = BudgetLimit(
