@@ -27,20 +27,11 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-
         val pending = goAsync()
         val rawMessage = extractMessages(intent.extras).joinToString("\n")
-        if (rawMessage.isBlank()) {
-            pending.finish()
-            return
-        }
-
+        if (rawMessage.isBlank()) { pending.finish(); return }
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try {
-                processMessage(context.applicationContext, rawMessage)
-            } finally {
-                pending.finish()
-            }
+            try { processMessage(context.applicationContext, rawMessage) } finally { pending.finish() }
         }
     }
 
@@ -48,72 +39,48 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
         val debit = BankDebitSmsParser.parse(message)
         val credit = if (debit == null) BankCreditSmsParser.parse(message) else null
         if (debit == null && credit == null) {
-            if (looksLikeTransactionSms(message)) {
-                notificationHelper.notifySmsImportMissed()
-            }
+            if (looksLikeTransactionSms(message)) notificationHelper.notifySmsImportMissed()
             return
         }
-
         val reference = when {
             debit != null -> debit.reference ?: "debit|${debit.amountMinor}|${debit.date}|${debit.merchant}|${message.hashCode()}"
             else -> credit!!.reference ?: "credit|${credit.amountMinor}|${credit.date}|${credit.source}|${message.hashCode()}"
         }
         if (isAlreadyProcessed(context, reference)) return
-
         val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
 
         if (debit != null) {
             val category = inferCategory(debit.merchant)
-            val note = buildString {
-                append("To: ").append(debit.merchant)
-                debit.reference?.let { append(" Ref: ").append(it) }
-                append(" [SMS]")
-            }
-            when (val result = expenseRepository.addExpense(
-                profileId = profileId,
-                amountMinor = debit.amountMinor,
-                category = category,
-                note = note,
-                date = debit.date,
-            )) {
-                is AddExpenseResult.Success -> {
-                    markProcessed(context, reference)
-                    result.expenseId?.let { expenseId ->
-                        notificationHelper.notifyExpenseAdded(debit.amountMinor, debit.merchant, debit.date, expenseId)
-                    }
-                }
+            val note = buildString { append("To: ").append(debit.merchant); debit.reference?.let { append(" Ref: ").append(it) }; append(" [SMS]") }
+            when (val result = expenseRepository.addExpense(profileId, debit.amountMinor, category, note, debit.date)) {
+                is AddExpenseResult.Success -> { markProcessed(context, reference); result.expenseId?.let { notificationHelper.notifyExpenseAdded(debit.amountMinor, debit.merchant, debit.date, it) } }
                 is AddExpenseResult.Error -> Unit
             }
         } else {
             val incoming = credit!!
-            val note = buildString {
-                append("From: ").append(incoming.source)
-                incoming.reference?.let { append(" Ref: ").append(it) }
-                append(" [SMS]")
-            }
-            when (val result = expenseRepository.addExpense(
-                profileId = profileId,
-                amountMinor = incoming.amountMinor,
-                category = ExpenseCategory.OTHER,
-                note = note,
-                date = incoming.date,
-                isIncome = true,
-            )) {
+            val salaryDetected = looksLikeSalarySms(message, incoming.source)
+            val note = buildString { append("From: ").append(incoming.source); incoming.reference?.let { append(" Ref: ").append(it) }; if (salaryDetected) append(" [SALARY]"); append(" [SMS]") }
+            when (val result = expenseRepository.addExpense(profileId, incoming.amountMinor, ExpenseCategory.OTHER, note, incoming.date, isIncome = true)) {
                 is AddExpenseResult.Success -> {
                     markProcessed(context, reference)
-                    notificationHelper.notifyIncomeAdded(incoming.amountMinor, incoming.source, incoming.date)
+                    val expenseId = result.expenseId ?: return
+                    if (salaryDetected) expenseRepository.startBudgetCycle(profileId, expenseId)
+                    notificationHelper.notifyIncomeAdded(incoming.amountMinor, incoming.source, incoming.date, expenseId, salaryDetected)
                 }
                 is AddExpenseResult.Error -> Unit
             }
         }
     }
 
+    private fun looksLikeSalarySms(message: String, source: String): Boolean {
+        val value = "$message $source".lowercase()
+        return Regex("\\b(salary|payroll|wages|salary credit|salary credited|pay credit|payroll credit)\\b").containsMatchIn(value)
+    }
+
     private fun looksLikeTransactionSms(message: String): Boolean {
         val normalized = message.replace(Regex("\\s+"), " ").trim()
         val hasMoney = Regex("(?i)\\b(?:Rs\\.?|INR)\\s*[0-9,]+(?:\\.[0-9]{1,2})?\\b").containsMatchIn(normalized)
-        val hasTransactionWord = Regex(
-            "(?i)\\b(?:sent|debited|debit|withdrawn|withdrawal|credited|credit|received|deposited|deposit)\\b",
-        ).containsMatchIn(normalized)
+        val hasTransactionWord = Regex("(?i)\\b(?:sent|debited|debit|withdrawn|withdrawal|credited|credit|received|deposited|deposit)\\b").containsMatchIn(normalized)
         val hasPaymentWord = Regex("(?i)\\b(?:UPI|transaction|txn|payment)\\b").containsMatchIn(normalized)
         return hasMoney && (hasTransactionWord || hasPaymentWord)
     }
@@ -121,17 +88,7 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
     private fun extractMessages(extras: Bundle?): List<String> {
         val pdus = extras?.get("pdus") as? Array<*> ?: return emptyList()
         val format = extras.getString("format")
-        return pdus.mapNotNull { pdu ->
-            runCatching {
-                val sms = if (format != null) {
-                    SmsMessage.createFromPdu(pdu as ByteArray, format)
-                } else {
-                    @Suppress("DEPRECATION")
-                    SmsMessage.createFromPdu(pdu as ByteArray)
-                }
-                sms.messageBody
-            }.getOrNull()
-        }
+        return pdus.mapNotNull { pdu -> runCatching { if (format != null) SmsMessage.createFromPdu(pdu as ByteArray, format) else { @Suppress("DEPRECATION") SmsMessage.createFromPdu(pdu as ByteArray) } }.getOrNull()?.messageBody }
     }
 
     private fun inferCategory(merchant: String): ExpenseCategory {
@@ -146,23 +103,13 @@ class BankDebitSmsReceiver : BroadcastReceiver(), KoinComponent {
         }
     }
 
-    private fun isAlreadyProcessed(context: Context, reference: String): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getStringSet(PROCESSED_REFS_KEY, emptySet())?.contains(reference) == true
-
+    private fun isAlreadyProcessed(context: Context, reference: String): Boolean = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getStringSet(PROCESSED_REFS_KEY, emptySet())?.contains(reference) == true
     private fun markProcessed(context: Context, reference: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val refs = (prefs.getStringSet(PROCESSED_REFS_KEY, emptySet()) ?: emptySet()).toMutableSet()
         refs.add(reference)
-        if (refs.size > MAX_STORED_REFS) {
-            refs.take(refs.size - MAX_STORED_REFS).forEach(refs::remove)
-        }
+        if (refs.size > MAX_STORED_REFS) refs.take(refs.size - MAX_STORED_REFS).forEach(refs::remove)
         prefs.edit().putStringSet(PROCESSED_REFS_KEY, refs).apply()
     }
-
-    companion object {
-        private const val PREFS_NAME = "bank_sms_import"
-        private const val PROCESSED_REFS_KEY = "processed_refs"
-        private const val MAX_STORED_REFS = 200
-    }
+    companion object { private const val PREFS_NAME = "bank_sms_import"; private const val PROCESSED_REFS_KEY = "processed_refs"; private const val MAX_STORED_REFS = 200 }
 }
