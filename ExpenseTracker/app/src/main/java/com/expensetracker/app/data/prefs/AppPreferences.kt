@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
-
 private val Context.dataStore by preferencesDataStore(name = "app_preferences")
 
 class AppPreferences(private val context: Context) {
@@ -27,27 +26,20 @@ class AppPreferences(private val context: Context) {
         fun activeBudgetMonth(profileId: Long) = stringPreferencesKey("active_budget_month_$profileId")
         fun lastNotifiedTier(periodCategoryKey: String) = intPreferencesKey("alert_tier_$periodCategoryKey")
     }
-
-    private val safeData = context.dataStore.data.catch { e ->
-        if (e is IOException) emit(emptyPreferences()) else throw e
-    }
-
-    val themeMode: Flow<ThemeMode> = safeData.map { prefs -> prefs[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM }
-    val dynamicColorEnabled: Flow<Boolean> = safeData.map { prefs -> prefs[Keys.DYNAMIC_COLOR] ?: true }
-    val appLockEnabled: Flow<Boolean> = safeData.map { prefs -> prefs[Keys.APP_LOCK] ?: false }
-    val activeProfileId: Flow<Long?> = safeData.map { prefs -> prefs[Keys.ACTIVE_PROFILE_ID] }
-
+    private val safeData = context.dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+    val themeMode: Flow<ThemeMode> = safeData.map { it[Keys.THEME_MODE]?.let { value -> runCatching { ThemeMode.valueOf(value) }.getOrNull() } ?: ThemeMode.SYSTEM }
+    val dynamicColorEnabled: Flow<Boolean> = safeData.map { it[Keys.DYNAMIC_COLOR] ?: true }
+    val appLockEnabled: Flow<Boolean> = safeData.map { it[Keys.APP_LOCK] ?: false }
+    val activeProfileId: Flow<Long?> = safeData.map { it[Keys.ACTIVE_PROFILE_ID] }
+    fun activeBudgetMonth(profileId: Long): Flow<String?> = safeData.map { it[Keys.activeBudgetMonth(profileId)] }
     suspend fun setThemeMode(mode: ThemeMode) { context.dataStore.edit { it[Keys.THEME_MODE] = mode.name } }
     suspend fun setDynamicColorEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled } }
     suspend fun setAppLockEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.APP_LOCK] = enabled } }
     suspend fun setActiveProfileId(profileId: Long) { context.dataStore.edit { it[Keys.ACTIVE_PROFILE_ID] = profileId } }
-
-    suspend fun getActiveBudgetMonth(profileId: Long): String? = safeData.map { it[Keys.activeBudgetMonth(profileId)] }.first()
+    suspend fun getActiveBudgetMonth(profileId: Long): String? = activeBudgetMonth(profileId).first()
     suspend fun setActiveBudgetMonth(profileId: Long, budgetMonth: String) { context.dataStore.edit { it[Keys.activeBudgetMonth(profileId)] = budgetMonth } }
-
     suspend fun getLastNotifiedTier(periodCategoryKey: String): Int = safeData.map { it[Keys.lastNotifiedTier(periodCategoryKey)] ?: 0 }.first()
     suspend fun setLastNotifiedTier(periodCategoryKey: String, tier: Int) { context.dataStore.edit { it[Keys.lastNotifiedTier(periodCategoryKey)] = tier } }
-
     suspend fun clearAlertTiersForProfile(profileId: Long) {
         val prefix = "alert_tier_${profileId}_"
         context.dataStore.edit { prefs -> prefs.asMap().keys.filter { it.name.startsWith(prefix) }.forEach { prefs.remove(it) } }
