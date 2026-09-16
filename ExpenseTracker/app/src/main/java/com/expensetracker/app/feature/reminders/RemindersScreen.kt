@@ -212,16 +212,115 @@ private fun ReminderDetailRow(icon: androidx.compose.ui.graphics.vector.ImageVec
 
 @Composable
 private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd: () -> Unit, onEdit: (NoteEntity) -> Unit) {
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
-        item { Button(onClick = onAdd, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.size(8.dp)); Text("Add note") } }
-        items(notes, key = { it.id }) { note ->
-            Card(Modifier.fillMaxWidth().clickable { onEdit(note) }, shape = RoundedCornerShape(20.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(note.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { vm.deleteNote(note) }) { Icon(Icons.Default.Delete, "Delete") }
+    var noteSearch by remember { mutableStateOf("") }
+    val filteredNotes = remember(notes, noteSearch) {
+        val query = noteSearch.trim()
+        if (query.isBlank()) notes else notes.filter {
+            it.title.contains(query, ignoreCase = true) || it.content.contains(query, ignoreCase = true)
+        }
+    }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    Text("Your notes", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (notes.isEmpty()) "Keep important thoughts in one place" else "${notes.size} ${if (notes.size == 1) "note" else "notes"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                }
+            }
+        }
+        item {
+            OutlinedTextField(
+                value = noteSearch,
+                onValueChange = { noteSearch = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text("Search notes") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (noteSearch.isNotEmpty()) {
+                        IconButton(onClick = { noteSearch = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                        }
                     }
-                    if (note.content.isNotBlank()) Text(note.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                },
+                shape = RoundedCornerShape(16.dp),
+            )
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primary).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onPrimary)
+                }
+                Spacer(Modifier.size(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Create a note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                    Text("Write something you want to remember", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f))
+                }
+                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onPrimary)
+            }
+        }
+        if (filteredNotes.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 34.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(Modifier.size(14.dp))
+                        Text(if (noteSearch.isBlank()) "No notes yet" else "No notes found", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.size(5.dp))
+                        Text(
+                            if (noteSearch.isBlank()) "Tap Create a note to add your first note." else "Try a different search term.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        } else {
+            items(filteredNotes, key = { it.id }) { note ->
+                Card(
+                    Modifier.fillMaxWidth().clickable { onEdit(note) },
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
+                        Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
+                        }
+                        Spacer(Modifier.size(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(note.title.ifBlank { "Untitled note" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            if (note.content.isNotBlank()) {
+                                Spacer(Modifier.size(5.dp))
+                                Text(note.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)
+                            } else {
+                                Spacer(Modifier.size(5.dp))
+                                Text("Empty note", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        IconButton(onClick = { onEdit(note) }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Edit, "Edit note", modifier = Modifier.size(20.dp)) }
+                        IconButton(onClick = { vm.deleteNote(note) }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Delete, "Delete note", modifier = Modifier.size(20.dp)) }
+                    }
                 }
             }
         }
@@ -232,12 +331,56 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
 private fun NoteEditorDialog(initial: NoteEntity?, onSave: (String, String) -> Unit, onDismiss: () -> Unit) {
     var title by remember(initial) { mutableStateOf(initial?.title.orEmpty()) }
     var content by remember(initial) { mutableStateOf(initial?.content.orEmpty()) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(if (initial == null) "New note" else "Edit note") }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(title, { title = it }, label = { Text("Title") }, singleLine = true)
-            OutlinedTextField(content, { content = it }, label = { Text("Note") }, minLines = 5)
-        }
-    }, confirmButton = { Button(enabled = title.isNotBlank() || content.isNotBlank(), onClick = { onSave(title, content) }) { Text("Save") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+    val canSave = title.isNotBlank() || content.isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                }
+                Spacer(Modifier.size(12.dp))
+                Column {
+                    Text(if (initial == null) "New note" else "Edit note", fontWeight = FontWeight.Bold)
+                    Text("Capture it before you forget", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Title") },
+                    placeholder = { Text("Give your note a title") },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                )
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = { if (it.length <= 2000) content = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Note") },
+                    placeholder = { Text("Write your note here...") },
+                    leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    minLines = 7,
+                    maxLines = 10,
+                    supportingText = { Text("${content.length}/2000") },
+                    shape = RoundedCornerShape(16.dp),
+                )
+            }
+        },
+        confirmButton = {
+            Button(enabled = canSave, onClick = { onSave(title.trim(), content.trim()) }, shape = RoundedCornerShape(14.dp)) {
+                Text("Save note")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 private fun formatDateTime(epoch: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(epoch))
