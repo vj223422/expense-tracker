@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import com.expensetracker.app.data.model.Expense
 import com.expensetracker.app.data.model.ExpenseCategory
 import java.time.LocalDate
+import java.time.YearMonth
 
 /** @Immutable — see data/model/Expense.kt. */
 @Immutable
@@ -15,6 +16,7 @@ data class TransactionsUiState(
     val expensesByDate: List<DateGroup> = emptyList(),
     val selectedCategoryFilter: ExpenseCategory? = null,
     val searchQuery: String = "",
+    val selectedMonth: YearMonth = YearMonth.now(),
     val isLoading: Boolean = true,
 ) {
     val isEmpty: Boolean get() = !isLoading && expensesByDate.isEmpty()
@@ -30,6 +32,7 @@ sealed interface TransactionsEffect {
 interface TransactionsActions {
     fun onFilterChange(category: ExpenseCategory?)
     fun onSearchQueryChange(query: String)
+    fun onMonthChange(month: YearMonth)
 
     /** Returns whether the delete actually succeeded — SwipeToDeleteExpenseItem awaits this to
      * know whether to reset the swiped-away row back to visible on failure. */
