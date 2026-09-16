@@ -38,14 +38,14 @@ class DashboardViewModel(
     val effects = _effects.receiveAsFlow()
     private val _showBudgetEditor = MutableStateFlow(false)
     val showBudgetEditor: StateFlow<Boolean> = _showBudgetEditor
-    private val selectedMonth = MutableStateFlow(YearMonth.now())
+    private val selectedMonth = MutableStateFlow<YearMonth?>(null)
 
     val uiState: StateFlow<DashboardUiState> = profileRepository.observeActiveProfileId()
         .filterNotNull()
         .flatMapLatest { profileId ->
             appPreferences.activeBudgetMonth(profileId).combine(selectedMonth) { storedMonth, selected ->
                 val defaultMonth = storedMonth?.let { runCatching { YearMonth.parse(it) }.getOrNull() } ?: YearMonth.now()
-                profileId to if (selected == YearMonth.now()) defaultMonth else selected
+                profileId to (selected ?: defaultMonth)
             }
         }
         .flatMapLatest { (profileId, yearMonth) ->
@@ -69,8 +69,8 @@ class DashboardViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
 
-    override fun onPreviousMonth() { selectedMonth.value = selectedMonth.value.minusMonths(1) }
-    override fun onNextMonth() { selectedMonth.value = selectedMonth.value.plusMonths(1) }
+    override fun onPreviousMonth() { selectedMonth.value = (selectedMonth.value ?: YearMonth.now()).minusMonths(1) }
+    override fun onNextMonth() { selectedMonth.value = (selectedMonth.value ?: YearMonth.now()).plusMonths(1) }
 
     fun onRemainingClick() { _showBudgetEditor.value = true }
     fun onDismissBudgetEditor() { _showBudgetEditor.value = false }
