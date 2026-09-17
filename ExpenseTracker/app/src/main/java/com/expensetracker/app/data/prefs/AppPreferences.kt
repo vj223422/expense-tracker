@@ -25,6 +25,7 @@ class AppPreferences(private val context: Context) {
         val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
         fun activeBudgetMonth(profileId: Long) = stringPreferencesKey("active_budget_month_$profileId")
         fun activeBudgetCycleStart(profileId: Long) = longPreferencesKey("active_budget_cycle_start_$profileId")
+        fun carryForward(profileId: Long, budgetMonth: String) = longPreferencesKey("budget_carry_forward_${profileId}_$budgetMonth")
         fun lastNotifiedTier(periodCategoryKey: String) = intPreferencesKey("alert_tier_$periodCategoryKey")
     }
     private val safeData = context.dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
@@ -34,6 +35,7 @@ class AppPreferences(private val context: Context) {
     val activeProfileId: Flow<Long?> = safeData.map { it[Keys.ACTIVE_PROFILE_ID] }
     fun activeBudgetMonth(profileId: Long): Flow<String?> = safeData.map { it[Keys.activeBudgetMonth(profileId)] }
     fun activeBudgetCycleStart(profileId: Long): Flow<Long?> = safeData.map { it[Keys.activeBudgetCycleStart(profileId)] }
+    fun carryForward(profileId: Long, budgetMonth: String): Flow<Long> = safeData.map { it[Keys.carryForward(profileId, budgetMonth)] ?: 0L }
     suspend fun setThemeMode(mode: ThemeMode) { context.dataStore.edit { it[Keys.THEME_MODE] = mode.name } }
     suspend fun setDynamicColorEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled } }
     suspend fun setAppLockEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.APP_LOCK] = enabled } }
@@ -42,6 +44,8 @@ class AppPreferences(private val context: Context) {
     suspend fun setActiveBudgetMonth(profileId: Long, budgetMonth: String) { context.dataStore.edit { it[Keys.activeBudgetMonth(profileId)] = budgetMonth } }
     suspend fun getActiveBudgetCycleStart(profileId: Long): Long? = activeBudgetCycleStart(profileId).first()
     suspend fun setActiveBudgetCycleStart(profileId: Long, startEpochMillis: Long) { context.dataStore.edit { it[Keys.activeBudgetCycleStart(profileId)] = startEpochMillis } }
+    suspend fun getCarryForward(profileId: Long, budgetMonth: String): Long = carryForward(profileId, budgetMonth).first()
+    suspend fun setCarryForward(profileId: Long, budgetMonth: String, amountMinor: Long) { context.dataStore.edit { it[Keys.carryForward(profileId, budgetMonth)] = amountMinor.coerceAtLeast(0L) } }
     suspend fun getLastNotifiedTier(periodCategoryKey: String): Int = safeData.map { it[Keys.lastNotifiedTier(periodCategoryKey)] ?: 0 }.first()
     suspend fun setLastNotifiedTier(periodCategoryKey: String, tier: Int) { context.dataStore.edit { it[Keys.lastNotifiedTier(periodCategoryKey)] = tier } }
     suspend fun clearAlertTiersForProfile(profileId: Long) {
