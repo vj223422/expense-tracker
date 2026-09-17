@@ -43,19 +43,26 @@ class DashboardViewModel(
     val uiState: StateFlow<DashboardUiState> = profileRepository.observeActiveProfileId()
         .filterNotNull()
         .flatMapLatest { profileId ->
-            appPreferences.activeBudgetMonth(profileId).combine(selectedMonth) { storedMonth, selected ->
+            combine(
+                appPreferences.activeBudgetMonth(profileId),
+                selectedMonth,
+            ) { storedMonth, selected ->
                 val defaultMonth = storedMonth?.let { runCatching { YearMonth.parse(it) }.getOrNull() } ?: YearMonth.now()
-                profileId to (selected ?: defaultMonth)
+                profileId to (selected ?: defaultMonth) to storedMonth
             }
         }
-        .flatMapLatest { (profileId, yearMonth) ->
+        .flatMapLatest { (selection, activeBudgetMonth) ->
+            val (profileId, yearMonth) = selection
             combine(
                 expenseRepository.observeCategoryTotals(profileId, yearMonth),
                 budgetRepository.observeLimits(profileId),
                 expenseRepository.observeExpensesForBudgetPeriod(profileId, yearMonth),
                 expenseRepository.observeIncomeTotal(profileId, yearMonth),
             ) { totals, limits, monthExpenses, incomeTotal ->
-                val summary = buildMonthlySummary(totals, limits)
+                // A saved budget belongs to the active budget cycle. Do not carry it into
+                // a new cycle until the user explicitly enters a budget for that cycle.
+                val limitsForSelectedCycle = if (activeBudgetMonth == yearMonth.toString()) limits else emptyList()
+                val summary = buildMonthlySummary(totals, limitsForSelectedCycle)
                 DashboardUiState(
                     yearMonth = yearMonth,
                     totalSpentMinor = summary.totalSpentMinor,
