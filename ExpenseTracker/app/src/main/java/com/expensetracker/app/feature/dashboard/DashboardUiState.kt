@@ -12,12 +12,13 @@ data class DashboardUiState(
     val totalSpentMinor: Long = 0L,
     val totalIncomeMinor: Long = 0L,
     val overallLimitMinor: Long? = null,
+    val carryForwardMinor: Long = 0L,
     val categorySpends: List<CategorySpend> = emptyList(),
     val recentExpenses: List<Expense> = emptyList(),
     val isLoading: Boolean = true,
 ) {
     val effectiveBudgetMinor: Long?
-        get() = overallLimitMinor?.plus(totalIncomeMinor)
+        get() = overallLimitMinor?.plus(totalIncomeMinor)?.plus(carryForwardMinor)
 
     val overallProgress: Float
         get() = effectiveBudgetMinor?.takeIf { it > 0L }?.let {
