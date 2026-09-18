@@ -67,10 +67,22 @@ class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budg
         if (!income.isIncome) return@withContext false
         val cycleStart = income.createdAtEpochMillis
         val cycleLabel = YearMonth.from(LocalDate.ofEpochDay(income.epochDay)).plusMonths(1).toString()
+        val previousCycleLabel = YearMonth.parse(cycleLabel).minusMonths(1).toString()
+        val previousActiveCycle = appPreferences.getActiveBudgetMonth(profileId)
         try {
-            // The salary itself belongs to the cycle it starts.
+            if (previousActiveCycle != null) {
+                val previousBase = appPreferences.getCycleBaseBudget(profileId, previousCycleLabel) ?: 0L
+                val previousIncome = expenseDao.getIncomeTotalForBudget(profileId, previousCycleLabel)
+                val previousSpent = expenseDao.getOverallTotalForBudget(profileId, previousCycleLabel)
+                val carryForward = (previousBase + previousIncome - previousSpent).coerceAtLeast(0L)
+                appPreferences.setCarryForward(profileId, cycleLabel, carryForward)
+                appPreferences.setCycleBaseBudget(profileId, cycleLabel, 0L)
+            } else {
+                val initialBase = budgetLimitDao.getByKey(profileId, OVERALL_BUDGET_KEY)?.limitMinor ?: 0L
+                appPreferences.setCycleBaseBudget(profileId, cycleLabel, initialBase)
+                appPreferences.setCarryForward(profileId, cycleLabel, 0L)
+            }
             expenseDao.update(income.copy(budgetMonth = cycleLabel, budgetCycleStartEpochMillis = cycleStart))
-            // Every transaction recorded at/after the salary receipt moves into this cycle.
             expenseDao.assignExpensesToBudgetFrom(profileId, cycleStart, cycleLabel, cycleStart)
             appPreferences.setActiveBudgetMonth(profileId, cycleLabel)
             appPreferences.setActiveBudgetCycleStart(profileId, cycleStart)
