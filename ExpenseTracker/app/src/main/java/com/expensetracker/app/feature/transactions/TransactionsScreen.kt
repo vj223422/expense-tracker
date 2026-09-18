@@ -265,13 +265,13 @@ private fun DateGroupHeader(
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(date.toRelativeOrFormatted(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Row(Modifier.width(238.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-                Row(Modifier.width(92.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+            Row(Modifier.width(205.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+                Row(Modifier.width(78.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
                     Text("↑", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = safeColor)
                     Text(receivedMinor.formatAsCurrency(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = safeColor, modifier = Modifier.padding(start = 3.dp))
                 }
-                Text("|", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 10.dp))
-                Row(Modifier.width(105.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+                Text("|", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 6.dp))
+                Row(Modifier.width(95.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
                     Text("↓", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                     Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 3.dp))
                 }
