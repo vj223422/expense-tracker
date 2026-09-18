@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -27,6 +28,7 @@ class AppPreferences(private val context: Context) {
         fun activeBudgetCycleStart(profileId: Long) = longPreferencesKey("active_budget_cycle_start_$profileId")
         fun carryForward(profileId: Long, budgetMonth: String) = longPreferencesKey("budget_carry_forward_${profileId}_$budgetMonth")
         fun cycleBaseBudget(profileId: Long, budgetMonth: String) = longPreferencesKey("budget_base_budget_${profileId}_$budgetMonth")
+        fun configuredBudgetMonths(profileId: Long) = stringSetPreferencesKey("configured_budget_months_${profileId}")
         fun lastNotifiedTier(periodCategoryKey: String) = intPreferencesKey("alert_tier_$periodCategoryKey")
     }
     private val safeData = context.dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
@@ -50,7 +52,23 @@ class AppPreferences(private val context: Context) {
     fun cycleBaseBudget(profileId: Long, budgetMonth: String): Flow<Long?> = safeData.map { it[Keys.cycleBaseBudget(profileId, budgetMonth)] }
     suspend fun getCycleBaseBudget(profileId: Long, budgetMonth: String): Long? = cycleBaseBudget(profileId, budgetMonth).first()
     suspend fun setCycleBaseBudget(profileId: Long, budgetMonth: String, amountMinor: Long) { context.dataStore.edit { it[Keys.cycleBaseBudget(profileId, budgetMonth)] = amountMinor.coerceAtLeast(0L) } }
-    suspend fun clearCycleBaseBudget(profileId: Long, budgetMonth: String) { context.dataStore.edit { it.remove(Keys.cycleBaseBudget(profileId, budgetMonth)) } }
+    suspend fun clearCycleBaseBudget(profileId: Long, budgetMonth: String) {
+        context.dataStore.edit { prefs ->
+            prefs.remove(Keys.cycleBaseBudget(profileId, budgetMonth))
+            val months = prefs[Keys.configuredBudgetMonths(profileId)]?.toMutableSet() ?: mutableSetOf()
+            months.remove(budgetMonth)
+            prefs[Keys.configuredBudgetMonths(profileId)] = months
+        }
+    }
+    suspend fun markBudgetMonthConfigured(profileId: Long, budgetMonth: String) {
+        context.dataStore.edit { prefs ->
+            val months = prefs[Keys.configuredBudgetMonths(profileId)]?.toMutableSet() ?: mutableSetOf()
+            months.add(budgetMonth)
+            prefs[Keys.configuredBudgetMonths(profileId)] = months
+        }
+    }
+    suspend fun isBudgetMonthConfigured(profileId: Long, budgetMonth: String): Boolean =
+        safeData.map { it[Keys.configuredBudgetMonths(profileId)]?.contains(budgetMonth) == true }.first()
     suspend fun getLastNotifiedTier(periodCategoryKey: String): Int = safeData.map { it[Keys.lastNotifiedTier(periodCategoryKey)] ?: 0 }.first()
     suspend fun setLastNotifiedTier(periodCategoryKey: String, tier: Int) { context.dataStore.edit { it[Keys.lastNotifiedTier(periodCategoryKey)] = tier } }
     suspend fun clearAlertTiersForProfile(profileId: Long) {
