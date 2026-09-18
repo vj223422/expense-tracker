@@ -265,9 +265,9 @@ private fun DateGroupHeader(
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(date.toRelativeOrFormatted(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            if (receivedMinor > 0L) Text("↑ ${receivedMinor.formatAsCurrency()}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = safeColor)
-            if (receivedMinor > 0L && spentMinor > 0L) Text("  |  ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outlineVariant)
-            if (spentMinor > 0L) Text("↓ ${spentMinor.formatAsCurrency()}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
+            Text("↑ ${receivedMinor.formatAsCurrency()}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = safeColor)
+            Text("  |  ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outlineVariant)
+            Text("↓ ${spentMinor.formatAsCurrency()}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
             Icon(if (collapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess, if (collapsed) "Expand" else "Collapse", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 8.dp).size(22.dp))
         }
     }
