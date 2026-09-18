@@ -66,7 +66,7 @@ private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Un
                     }
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Kanakku", style = MaterialTheme.typography.titleMedium)
+                        Text("FinTrack", style = MaterialTheme.typography.titleMedium)
                         Text("A lightweight, fully offline expense tracker.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Version 1.0.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                     }
