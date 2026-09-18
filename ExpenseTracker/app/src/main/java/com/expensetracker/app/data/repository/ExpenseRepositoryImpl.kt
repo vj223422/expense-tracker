@@ -71,7 +71,7 @@ class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budg
         val previousActiveCycle = appPreferences.getActiveBudgetMonth(profileId)
         try {
             if (previousActiveCycle != null) {
-                val previousBase = appPreferences.getCycleBaseBudget(profileId, previousCycleLabel) ?: 0L
+                val previousBase = appPreferences.getCycleBaseBudget(profileId, previousCycleLabel) ?: (budgetLimitDao.getByKey(profileId, OVERALL_BUDGET_KEY)?.limitMinor ?: 0L)
                 val previousIncome = expenseDao.getIncomeTotalForBudget(profileId, previousCycleLabel)
                 val previousSpent = expenseDao.getOverallTotalForBudget(profileId, previousCycleLabel)
                 val carryForward = (previousBase + previousIncome - previousSpent).coerceAtLeast(0L)
