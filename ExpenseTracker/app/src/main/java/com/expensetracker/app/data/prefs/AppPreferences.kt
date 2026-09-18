@@ -26,6 +26,7 @@ class AppPreferences(private val context: Context) {
         fun activeBudgetMonth(profileId: Long) = stringPreferencesKey("active_budget_month_$profileId")
         fun activeBudgetCycleStart(profileId: Long) = longPreferencesKey("active_budget_cycle_start_$profileId")
         fun carryForward(profileId: Long, budgetMonth: String) = longPreferencesKey("budget_carry_forward_${profileId}_$budgetMonth")
+        fun cycleBaseBudget(profileId: Long, budgetMonth: String) = longPreferencesKey("budget_base_budget_${profileId}_$budgetMonth")
         fun lastNotifiedTier(periodCategoryKey: String) = intPreferencesKey("alert_tier_$periodCategoryKey")
     }
     private val safeData = context.dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
@@ -46,6 +47,10 @@ class AppPreferences(private val context: Context) {
     suspend fun setActiveBudgetCycleStart(profileId: Long, startEpochMillis: Long) { context.dataStore.edit { it[Keys.activeBudgetCycleStart(profileId)] = startEpochMillis } }
     suspend fun getCarryForward(profileId: Long, budgetMonth: String): Long = carryForward(profileId, budgetMonth).first()
     suspend fun setCarryForward(profileId: Long, budgetMonth: String, amountMinor: Long) { context.dataStore.edit { it[Keys.carryForward(profileId, budgetMonth)] = amountMinor.coerceAtLeast(0L) } }
+    fun cycleBaseBudget(profileId: Long, budgetMonth: String): Flow<Long?> = safeData.map { it[Keys.cycleBaseBudget(profileId, budgetMonth)] }
+    suspend fun getCycleBaseBudget(profileId: Long, budgetMonth: String): Long? = cycleBaseBudget(profileId, budgetMonth).first()
+    suspend fun setCycleBaseBudget(profileId: Long, budgetMonth: String, amountMinor: Long) { context.dataStore.edit { it[Keys.cycleBaseBudget(profileId, budgetMonth)] = amountMinor.coerceAtLeast(0L) } }
+    suspend fun clearCycleBaseBudget(profileId: Long, budgetMonth: String) { context.dataStore.edit { it.remove(Keys.cycleBaseBudget(profileId, budgetMonth)) } }
     suspend fun getLastNotifiedTier(periodCategoryKey: String): Int = safeData.map { it[Keys.lastNotifiedTier(periodCategoryKey)] ?: 0 }.first()
     suspend fun setLastNotifiedTier(periodCategoryKey: String, tier: Int) { context.dataStore.edit { it[Keys.lastNotifiedTier(periodCategoryKey)] = tier } }
     suspend fun clearAlertTiersForProfile(profileId: Long) {
