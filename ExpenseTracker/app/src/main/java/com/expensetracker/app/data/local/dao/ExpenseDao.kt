@@ -24,6 +24,7 @@ interface ExpenseDao {
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM expenses WHERE profileId = :profileId AND isIncome = 0 AND budgetMonth = :budgetMonth AND category = :category") suspend fun getCategoryTotalForBudget(profileId: Long, category: ExpenseCategory, budgetMonth: String): Long
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM expenses WHERE profileId = :profileId AND isIncome = 0 AND budgetMonth = :budgetMonth") suspend fun getOverallTotalForBudget(profileId: Long, budgetMonth: String): Long
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM expenses WHERE profileId = :profileId AND isIncome = 1 AND budgetMonth = :budgetMonth") fun observeIncomeTotalForBudget(profileId: Long, budgetMonth: String): Flow<Long>
+    @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM expenses WHERE profileId = :profileId AND isIncome = 1 AND budgetMonth = :budgetMonth") suspend fun getIncomeTotalForBudget(profileId: Long, budgetMonth: String): Long
 
     @Query("UPDATE expenses SET budgetMonth = :budgetMonth, budgetCycleStartEpochMillis = :cycleStartEpochMillis WHERE profileId = :profileId AND createdAtEpochMillis >= :fromEpochMillis")
     suspend fun assignExpensesToBudgetFrom(profileId: Long, fromEpochMillis: Long, budgetMonth: String, cycleStartEpochMillis: Long)
