@@ -57,10 +57,18 @@ class DashboardViewModel(
                 expenseRepository.observeIncomeTotal(profileId, yearMonth),
             ) { totals, limits, monthExpenses, incomeTotal ->
                 val cycleMonth = yearMonth.toString()
-                val baseBudget = if (activeBudgetMonth == null) {
-                    limits.firstOrNull { it.category == null }?.limitMinor ?: 0L
-                } else {
+                val isActiveCycle = activeBudgetMonth == cycleMonth
+                val isConfiguredForMonth = appPreferences.isBudgetMonthConfigured(profileId, cycleMonth)
+                val baseBudget = if (isConfiguredForMonth) {
                     appPreferences.getCycleBaseBudget(profileId, cycleMonth) ?: 0L
+                } else if (isActiveCycle) {
+                    // Legacy migration: keep the existing active-cycle budget, but never
+                    // reuse it for another month.
+                    appPreferences.getCycleBaseBudget(profileId, cycleMonth)
+                        ?: limits.firstOrNull { it.category == null }?.limitMinor
+                        ?: 0L
+                } else {
+                    0L
                 }
                 val carryForward = appPreferences.getCarryForward(profileId, cycleMonth)
                 val cycleLimits = limits.filter { it.category != null } + com.expensetracker.app.data.model.BudgetLimit(null, baseBudget)
@@ -89,7 +97,14 @@ class DashboardViewModel(
         viewModelScope.launch {
             val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
             when (val result = budgetRepository.setLimit(profileId, null, limitMinor)) {
-                is BudgetSaveResult.Success -> { appPreferences.setCycleBaseBudget(profileId, selectedMonth.value?.toString() ?: appPreferences.getActiveBudgetMonth(profileId) ?: YearMonth.now().toString(), limitMinor); _showBudgetEditor.value = false }
+                is BudgetSaveResult.Success -> {
+                    val month = selectedMonth.value?.toString()
+                        ?: appPreferences.getActiveBudgetMonth(profileId)
+                        ?: YearMonth.now().toString()
+                    appPreferences.setCycleBaseBudget(profileId, month, limitMinor)
+                    appPreferences.markBudgetMonthConfigured(profileId, month)
+                    _showBudgetEditor.value = false
+                }
                 is BudgetSaveResult.Error -> _effects.send(DashboardEffect.ShowError(result.message))
             }
         }
