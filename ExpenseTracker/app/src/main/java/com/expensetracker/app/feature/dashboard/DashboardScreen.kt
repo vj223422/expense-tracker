@@ -134,6 +134,22 @@ private fun SummaryCard(uiState: DashboardUiState, onRemainingClick: () -> Unit)
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) { SummaryMetric("Budget", effectiveBudget, Icons.Default.Wallet, MaterialTheme.colorScheme.primary); SummaryMetric("Spent", uiState.totalSpentMinor, Icons.Default.ArrowDownward, MaterialTheme.colorScheme.error); SummaryMetric("Received", uiState.totalIncomeMinor, Icons.Default.ArrowUpward, extended.safe) }
             }
+            if (uiState.carryForwardMinor > 0L) {
+                Spacer(Modifier.height(10.dp))
+                Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .55f)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(Modifier.size(36.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = .12f)) {
+                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.ArrowUpward, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp)) }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Carry forwarded", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                            Text("From previous cycle", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(uiState.carryForwardMinor.formatAsCurrency(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
             Spacer(Modifier.height(14.dp))
             Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onRemainingClick), shape = RoundedCornerShape(20.dp), color = extended.safe.copy(alpha = .10f)) { Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(40.dp), shape = CircleShape, color = extended.safe.copy(alpha = .12f)) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Wallet, null, tint = extended.safe, modifier = Modifier.size(21.dp)) } }; Spacer(Modifier.width(11.dp)); Column(Modifier.weight(1f)) { Text("Remaining", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(remaining?.formatAsCurrency() ?: "No limit set", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = remainingColor) }; if (remaining != null && effectiveBudget != null && effectiveBudget > 0) { val left = ((remaining.toDouble() / effectiveBudget.toDouble()) * 100).toInt().coerceIn(0, 100); Text("$left% left", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = extended.safe) } } }
             if (effectiveBudget != null) { Spacer(Modifier.height(9.dp)); LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape), color = MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest) }
