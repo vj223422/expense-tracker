@@ -56,15 +56,21 @@ class DashboardViewModel(
                 expenseRepository.observeExpensesForBudgetPeriod(profileId, yearMonth),
                 expenseRepository.observeIncomeTotal(profileId, yearMonth),
             ) { totals, limits, monthExpenses, incomeTotal ->
-                // Budget limits are for the active cycle. A newly started cycle has no budget
-                // until the user explicitly enters one for that cycle.
-                val limitsForSelectedCycle = if (activeBudgetMonth == null || activeBudgetMonth == yearMonth.toString()) limits else emptyList()
-                val summary = buildMonthlySummary(totals, limitsForSelectedCycle)
+                val cycleMonth = yearMonth.toString()
+                val baseBudget = if (activeBudgetMonth == null) {
+                    limits.firstOrNull { it.category == null }?.limitMinor ?: 0L
+                } else {
+                    appPreferences.getCycleBaseBudget(profileId, cycleMonth) ?: 0L
+                }
+                val carryForward = appPreferences.getCarryForward(profileId, cycleMonth)
+                val cycleLimits = limits.filter { it.category != null } + com.expensetracker.app.data.model.BudgetLimit(null, baseBudget)
+                val summary = buildMonthlySummary(totals, cycleLimits)
                 DashboardUiState(
                     yearMonth = yearMonth,
                     totalSpentMinor = summary.totalSpentMinor,
                     totalIncomeMinor = incomeTotal,
-                    overallLimitMinor = summary.overallLimitMinor,
+                    overallLimitMinor = baseBudget,
+                    carryForwardMinor = carryForward,
                     categorySpends = summary.categorySpends.filter { it.spentMinor > 0 }.sortedByDescending { it.spentMinor },
                     recentExpenses = monthExpenses.filter { !it.isIncome }.take(5),
                     isLoading = false,
@@ -83,7 +89,7 @@ class DashboardViewModel(
         viewModelScope.launch {
             val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
             when (val result = budgetRepository.setLimit(profileId, null, limitMinor)) {
-                is BudgetSaveResult.Success -> _showBudgetEditor.value = false
+                is BudgetSaveResult.Success -> { appPreferences.setCycleBaseBudget(profileId, selectedMonth.value?.toString() ?: appPreferences.getActiveBudgetMonth(profileId) ?: YearMonth.now().toString(), limitMinor); _showBudgetEditor.value = false }
                 is BudgetSaveResult.Error -> _effects.send(DashboardEffect.ShowError(result.message))
             }
         }
@@ -92,7 +98,7 @@ class DashboardViewModel(
         viewModelScope.launch {
             val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
             when (val result = budgetRepository.clearLimit(profileId, null)) {
-                is BudgetSaveResult.Success -> _showBudgetEditor.value = false
+                is BudgetSaveResult.Success -> { appPreferences.clearCycleBaseBudget(profileId, selectedMonth.value?.toString() ?: appPreferences.getActiveBudgetMonth(profileId) ?: YearMonth.now().toString()); _showBudgetEditor.value = false }
                 is BudgetSaveResult.Error -> _effects.send(DashboardEffect.ShowError(result.message))
             }
         }
