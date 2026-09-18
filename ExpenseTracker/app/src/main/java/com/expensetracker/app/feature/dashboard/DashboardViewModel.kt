@@ -60,7 +60,7 @@ class DashboardViewModel(
                 val baseBudget = if (activeBudgetMonth == null) {
                     limits.firstOrNull { it.category == null }?.limitMinor ?: 0L
                 } else {
-                    appPreferences.getCycleBaseBudget(profileId, cycleMonth) ?: 0L
+                    appPreferences.getCycleBaseBudget(profileId, cycleMonth) ?: (limits.firstOrNull { it.category == null }?.limitMinor ?: 0L)
                 }
                 val carryForward = appPreferences.getCarryForward(profileId, cycleMonth)
                 val cycleLimits = limits.filter { it.category != null } + com.expensetracker.app.data.model.BudgetLimit(null, baseBudget)
