@@ -5,35 +5,27 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- FinTrack wallet + growth mark -->
+    <!-- FinTrack emblem: stylized F with ascending chart and growth arrow -->
     <path
-        android:pathData="M24,35 C24,29 29,24 35,24 H73 C79,24 84,29 84,35 V74 C84,80 79,84 73,84 H35 C29,84 24,80 24,74 Z"
-        android:fillColor="#FFFFFF" />
-    <path
-        android:pathData="M29,35 H73 C79,35 84,40 84,46 V52 H69 C64,52 60,48 60,43 V41 H29 Z"
-        android:fillColor="#DDF5E9" />
-    <path
-        android:pathData="M61,53 H84 V70 H64 C59,70 55,66 55,61 C55,56 59,53 64,53 Z"
+        android:pathData="M24,28 C24,20 31,14 39,14 H84 V28 H44 C39,28 36,31 36,36 V39 C39,34 44,31 51,31 H76 V44 H51 C42,44 36,49 36,58 V88 H24 Z"
         android:fillColor="#0878E5" />
+
     <path
-        android:pathData="M64,58 H78 V63 H64 C62,63 61,62 61,60.5 C61,59 62,58 64,58 Z"
-        android:fillColor="#FFFFFF" />
+        android:pathData="M36,58 C40,49 48,44 58,44 H76 V57 H58 C49,57 43,62 40,70 L36,78 Z"
+        android:fillColor="#12BFA3" />
+
     <path
-        android:pathData="M34,69 H42 V60 H34 Z"
-        android:fillColor="#12B886" />
+        android:pathData="M43,87 V70 H51 V87 Z M55,87 V61 H63 V87 Z M67,87 V51 H75 V87 Z"
+        android:fillColor="#20C96B" />
+
     <path
-        android:pathData="M45,69 H53 V53 H45 Z"
-        android:fillColor="#12B886" />
-    <path
-        android:pathData="M56,69 H64 V45 H56 Z"
-        android:fillColor="#22C55E" />
-    <path
-        android:pathData="M33,74 C43,72 52,68 60,61 C66,56 70,51 74,44"
-        android:strokeColor="#22C55E"
-        android:strokeWidth="3"
+        android:pathData="M31,90 C43,88 54,83 64,76 C73,70 79,61 85,49"
+        android:strokeColor="#20C96B"
+        android:strokeWidth="3.5"
         android:fillColor="@android:color/transparent"
         android:strokeLineCap="round" />
+
     <path
-        android:pathData="M70,45 L75,43 L75,49 Z"
-        android:fillColor="#22C55E" />
+        android:pathData="M80,50 L86,46 L87,54 Z"
+        android:fillColor="#20C96B" />
 </vector>
