@@ -97,7 +97,8 @@ private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Un
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }\n        SettingsSection("App Settings", "Customize your experience") {
+        }
+        SettingsSection("App Settings", "Customize your experience") {
             ToggleRow(Icons.Default.BarChart, "Show received in home summary", "Include income in home dashboard cards", showReceived, onShowReceived)
             ToggleRow(Icons.Default.NotificationsActive, "Reminder notifications", "Get notified about your reminders", reminders, onReminders)
             ReminderSoundRow(reminderSound, onReminderSoundChange)
