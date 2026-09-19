@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.room.Room
 import com.expensetracker.app.data.local.ExpenseDatabase
+import com.expensetracker.app.data.prefs.AppPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,7 +28,7 @@ class ReminderBootReceiver : BroadcastReceiver() {
                 )
                 .build()
             try {
-                val scheduler = ReminderScheduler(context.applicationContext)
+                val scheduler = ReminderScheduler(context.applicationContext, AppPreferences(context.applicationContext))
                 db.reminderDao().getEnabled().forEach { scheduler.schedule(it) }
             } finally {
                 db.close()
