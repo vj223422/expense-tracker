@@ -165,7 +165,7 @@ class AddExpenseViewModel(
     override fun onSaveClick() {
         val state = _uiState.value
         if (state.isSaving) return
-        val amountMinor = if (state.selectedCategory == ExpenseCategory.PETROL) {
+        val amountMinor = if (state.selectedCategory == ExpenseCategory.PETROL && !state.isEditMode) {
             val liters = state.fuelLitersText.toDoubleOrNull() ?: 0.0
             val price = state.fuelPricePerLiterText.toDoubleOrNull() ?: 0.0
             if (liters > 0 && price > 0) (liters * price * 100.0).toLong() else null
@@ -177,7 +177,7 @@ class AddExpenseViewModel(
             return
         }
 
-        if (state.selectedCategory == ExpenseCategory.PETROL && (state.fuelOdometerText.toDoubleOrNull() ?: -1.0) < 0.0) {
+        if (state.selectedCategory == ExpenseCategory.PETROL && !state.isEditMode && (state.fuelOdometerText.toDoubleOrNull() ?: -1.0) < 0.0) {
             _uiState.update { it.copy(amountError = "Enter the starting odometer") }
             return
         }
