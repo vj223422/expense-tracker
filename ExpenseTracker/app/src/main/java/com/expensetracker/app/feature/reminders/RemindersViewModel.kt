@@ -43,7 +43,6 @@ class RemindersViewModel(
         endDate: Long?,
         recurrence: String,
         intervalDays: Int,
-        sound: String,
     ) {
         val profileId = activeProfileId.value ?: return
         if (title.isBlank()) return
@@ -62,7 +61,6 @@ class RemindersViewModel(
                 endDateEpochMillis = endDate?.endOfDay(),
                 recurrence = recurrence,
                 customIntervalDays = intervalDays.coerceAtLeast(1),
-                sound = sound,
                 enabled = true,
                 createdAtEpochMillis = now,
             )
