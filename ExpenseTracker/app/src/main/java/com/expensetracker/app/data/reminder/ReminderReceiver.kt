@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.room.Room
 import com.expensetracker.app.R
 import com.expensetracker.app.data.local.ExpenseDatabase
+import com.expensetracker.app.data.prefs.AppPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -59,7 +60,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 if (existing?.enabled == true && (existing.endDateEpochMillis == null || next <= existing.endDateEpochMillis)) {
                     val updated = existing.copy(triggerAtEpochMillis = next, sound = sound)
                     db.reminderDao().update(updated)
-                    ReminderScheduler(context.applicationContext).schedule(updated)
+                    ReminderScheduler(context.applicationContext, AppPreferences(context.applicationContext)).schedule(updated)
                 }
             } finally {
                 db.close()
