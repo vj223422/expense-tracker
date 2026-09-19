@@ -25,7 +25,7 @@ data class AddExpenseUiState(
 ) {
     // 2. Derived
     val canSave: Boolean
-        get() = !isSaving && !isLoading && if (selectedCategory == ExpenseCategory.PETROL) {
+        get() = !isSaving && !isLoading && if (selectedCategory == ExpenseCategory.PETROL && !isEditMode) {
             (fuelLitersText.toDoubleOrNull() ?: 0.0) > 0.0 &&
                 (fuelPricePerLiterText.toDoubleOrNull() ?: 0.0) > 0.0 &&
                 (fuelOdometerText.toDoubleOrNull() ?: -1.0) >= 0.0
