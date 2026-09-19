@@ -23,15 +23,27 @@ class SettingsViewModel(
 ) : ViewModel() {
     private val profileDialog = MutableStateFlow<ProfileDialog?>(null)
 
-    val uiState: StateFlow<SettingsUiState> = combine(
+    private val settingsState: kotlinx.coroutines.flow.Flow<SettingsUiState> = combine(
         appPreferences.themeMode,
         appPreferences.appLockEnabled,
         appPreferences.reminderSound,
         profileRepository.observeProfiles(),
         profileRepository.observeActiveProfileId(),
+    ) { themeMode, appLockEnabled, reminderSound, profiles, activeProfileId ->
+        SettingsUiState(
+            themeMode = themeMode,
+            appLockEnabled = appLockEnabled,
+            profiles = profiles,
+            activeProfileId = activeProfileId,
+            reminderSound = reminderSound,
+        )
+    }
+
+    val uiState: StateFlow<SettingsUiState> = combine(
+        settingsState,
         profileDialog,
-     ) { themeMode, appLockEnabled, reminderSound, profiles, activeProfileId, dialog ->
-        SettingsUiState(themeMode, appLockEnabled, profiles, activeProfileId, dialog, reminderSound)
+    ) { state, dialog ->
+        state.copy(dialog = dialog)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun onThemeModeChange(mode: ThemeMode) { viewModelScope.launch { appPreferences.setThemeMode(mode) } }
