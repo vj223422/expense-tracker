@@ -61,15 +61,22 @@ fun FuelTrackerScreen(onNavigateBack: () -> Unit, viewModel: FuelTrackerViewMode
                 Surface(Modifier.size(44.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.LocalGasStation, null, tint = MaterialTheme.colorScheme.primary) } }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("%.2f L • %.1f km".format(log.liters, log.odometerKm))
-                    Text(currency(log.amountMinor / 100.0) + " • " + currency(log.amountMinor / 100.0 / log.liters) + "/L", style = MaterialTheme.typography.bodyMedium)
+                    Text("Start: ${formatDate(log.epochDay)} • %.1f km".format(log.odometerKm))
+                    Text("End: ${log.endEpochDay?.let(::formatDate) ?: "—"} • ${log.endOdometerKm?.let { "%.1f km".format(it) } ?: "—"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("%.2f L • %s/L • %s".format(log.liters, currency(log.amountMinor / 100.0 / log.liters), currency(log.amountMinor / 100.0)), style = MaterialTheme.typography.bodyMedium)
                     if (log.note.isNotBlank()) Text(log.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = { viewModel.deleteFuel(log) }) { Icon(Icons.Default.DeleteOutline, "Delete") }
             }}}
         }
     }
-    if (showAdd) AddFuelDialog({ showAdd = false }, { amount, liters, odometer, note -> viewModel.addFuel(amount, liters, odometer, note); showAdd = false })
+    if (showAdd) AddFuelDialog(
+        onDismiss = { showAdd = false },
+        onSave = { date, liters, price, odometer, note ->
+            viewModel.addFuel(date, liters, price, odometer, note)
+            showAdd = false
+        },
+    )
 }
 
 @Composable
@@ -78,18 +85,63 @@ private fun FuelStatCard(title: String, value: String, modifier: Modifier = Modi
 }
 
 @Composable
-private fun AddFuelDialog(onDismiss: () -> Unit, onSave: (Double, Double, Double, String) -> Unit) {
-    var amount by rememberSaveable { mutableStateOf("") }
+private fun AddFuelDialog(
+    onDismiss: () -> Unit,
+    onSave: (java.time.LocalDate, Double, Double, Double, String) -> Unit,
+) {
+    var date by rememberSaveable { mutableStateOf(java.time.LocalDate.now()) }
     var liters by rememberSaveable { mutableStateOf("") }
+    var price by rememberSaveable { mutableStateOf("") }
     var odometer by rememberSaveable { mutableStateOf("") }
     var note by rememberSaveable { mutableStateOf("") }
-    val valid = (amount.toDoubleOrNull() ?: 0.0) > 0 && (liters.toDoubleOrNull() ?: 0.0) > 0 && (odometer.toDoubleOrNull() ?: -1.0) >= 0
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Add petrol fill") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(amount, { amount = it }, label = { Text("Amount (₹)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-        OutlinedTextField(liters, { liters = it }, label = { Text("Petrol (liters)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-        OutlinedTextField(odometer, { odometer = it }, label = { Text("Odometer (km)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-        OutlinedTextField(note, { note = it }, label = { Text("Note (optional)") }, singleLine = true)
-    }}, confirmButton = { TextButton(onClick = { onSave(amount.toDouble(), liters.toDouble(), odometer.toDouble(), note) }, enabled = valid) { Text("Save") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+    var showDatePicker by remember { mutableStateOf(false) }
+    val valid = (liters.toDoubleOrNull() ?: 0.0) > 0 &&
+        (price.toDoubleOrNull() ?: 0.0) > 0 &&
+        (odometer.toDoubleOrNull() ?: -1.0) >= 0
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add petrol fill") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("This starts a new fuel cycle. Saving it closes the previous open cycle using this date and odometer.", style = MaterialTheme.typography.bodySmall)
+                Text("Start date: $date", style = MaterialTheme.typography.labelLarge)
+                TextButton(onClick = { showDatePicker = true }) { Text("Choose start date") }
+                OutlinedTextField(liters, { liters = it }, label = { Text("Fuel liters") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                OutlinedTextField(price, { price = it }, label = { Text("Price per liter (₹)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                OutlinedTextField(odometer, { odometer = it }, label = { Text("Odometer start (km)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                OutlinedTextField(note, { note = it }, label = { Text("Note (optional)") }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(date, liters.toDouble(), price.toDouble(), odometer.toDouble(), note) }, enabled = valid) {
+                Text("Save ₹%.2f".format((liters.toDoubleOrNull() ?: 0.0) * (price.toDoubleOrNull() ?: 0.0)))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+    if (showDatePicker) {
+        val today = java.time.LocalDate.now()
+        val picker = rememberDatePickerState(
+            initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    utcTimeMillis <= today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    picker.selectedDateMillis?.let { date = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } },
+        ) { DatePicker(state = picker) }
+    }
 }
+
+private fun formatDate(epochDay: Long): String = java.time.LocalDate.ofEpochDay(epochDay).toString()
 
 private fun currency(value: Double): String = NumberFormat.getCurrencyInstance(Locale("en", "IN")).format(max(0.0, value))
