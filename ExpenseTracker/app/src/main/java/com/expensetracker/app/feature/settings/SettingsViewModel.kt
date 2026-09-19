@@ -30,7 +30,7 @@ class SettingsViewModel(
         profileRepository.observeProfiles(),
         profileRepository.observeActiveProfileId(),
         profileDialog,
-    ) { themeMode, appLockEnabled, profiles, activeProfileId, dialog ->
+     ) { themeMode, appLockEnabled, reminderSound, profiles, activeProfileId, dialog ->
         SettingsUiState(themeMode, appLockEnabled, profiles, activeProfileId, dialog, reminderSound)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
