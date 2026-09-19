@@ -228,7 +228,42 @@ private fun AddExpenseContent(
             amountText = uiState.amountText,
             amountError = uiState.amountError,
             onAmountChange = actions::onAmountChange,
+            readOnly = uiState.selectedCategory == ExpenseCategory.PETROL,
         )
+        if (uiState.selectedCategory == ExpenseCategory.PETROL) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Petrol details", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "This expense will also be added to Fuel & Mileage. The amount is calculated from liters × price per liter.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = uiState.fuelLitersText,
+                    onValueChange = actions::onFuelLitersChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Fuel liters") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                OutlinedTextField(
+                    value = uiState.fuelPricePerLiterText,
+                    onValueChange = actions::onFuelPricePerLiterChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Price per liter (₹)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                OutlinedTextField(
+                    value = uiState.fuelOdometerText,
+                    onValueChange = actions::onFuelOdometerChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Starting odometer (km)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+            }
+        }
         CategoryPicker(
             selected = uiState.selectedCategory,
             onCategoryChange = actions::onCategoryChange,
@@ -253,6 +288,7 @@ private fun AmountField(
     amountText: String,
     amountError: String?,
     onAmountChange: (String) -> Unit,
+    readOnly: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     OutlinedTextField(
@@ -265,6 +301,7 @@ private fun AmountField(
         },
         textStyle = MaterialTheme.typography.displayMedium.copy(textAlign = TextAlign.Center),
         singleLine = true,
+        readOnly = readOnly,
         isError = amountError != null,
         supportingText = {
             if (amountError != null) {
