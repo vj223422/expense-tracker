@@ -42,7 +42,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
 }
 
 @Composable
-private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Unit, onLock: (Boolean) -> Unit,
+private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Unit, onLock: (Boolean) -> Unit, onReminderSoundChange: (String) -> Unit,
     onProfile: (Long) -> Unit, onAdd: () -> Unit, onRename: (Profile) -> Unit, onDelete: (Profile) -> Unit,
     showReceived: Boolean, onShowReceived: (Boolean) -> Unit, reminders: Boolean, onReminders: (Boolean) -> Unit, reminderSound: String) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
