@@ -94,7 +94,7 @@ fun ExpenseTrackerApp(
 
         Scaffold(
             modifier = Modifier,
-            topBar = { if (showChrome) AppTopBar() },
+            topBar = { if (showChrome) AppTopBar(onSettingsClick = { navController.navigate(Destination.Settings.route) { launchSingleTop = true } }) },
             bottomBar = {
                 if (showChrome) {
                     NavigationBar(
@@ -157,7 +157,7 @@ fun ExpenseTrackerApp(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppTopBar(profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel()) {
+private fun AppTopBar(onSettingsClick: () -> Unit, profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel()) {
     val uiState by profileSwitcherViewModel.uiState.collectAsStateWithLifecycle()
     val profiles = uiState.profiles
     val activeProfileId = uiState.activeProfileId
