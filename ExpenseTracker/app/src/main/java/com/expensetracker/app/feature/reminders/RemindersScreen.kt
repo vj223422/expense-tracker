@@ -129,8 +129,8 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
     }
 
     if (showReminderEditor) {
-        ModernReminderEditorDialog(editingReminder, { title, note, startAt, endDate, recurrence, days ->
-            viewModel.saveReminder(editingReminder?.id, title, note, startAt, endDate, recurrence, days)
+        ModernReminderEditorDialog(editingReminder, { title, note, startAt, endDate, recurrence, days, sound ->
+            viewModel.saveReminder(editingReminder?.id, title, note, startAt, endDate, recurrence, days, sound)
             showReminderEditor = false
         }, { showReminderEditor = false })
     }
