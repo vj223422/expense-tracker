@@ -3,6 +3,7 @@ package com.expensetracker.app.core.designsystem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -20,6 +21,7 @@ import com.expensetracker.app.data.model.ExpenseCategory
 fun ExpenseCategory.icon(): ImageVector = when (this) {
     ExpenseCategory.FOOD -> Icons.Filled.Restaurant
     ExpenseCategory.TRANSPORT -> Icons.Filled.DirectionsCar
+    ExpenseCategory.PETROL -> Icons.Filled.LocalGasStation
     ExpenseCategory.SHOPPING -> Icons.Filled.ShoppingBag
     ExpenseCategory.BILLS -> Icons.Filled.ReceiptLong
     ExpenseCategory.ENTERTAINMENT -> Icons.Filled.Movie
@@ -35,6 +37,7 @@ fun ExpenseCategory.color(): Color {
     return when (this) {
         ExpenseCategory.FOOD -> palette.food
         ExpenseCategory.TRANSPORT -> palette.transport
+        ExpenseCategory.PETROL -> palette.transport
         ExpenseCategory.SHOPPING -> palette.shopping
         ExpenseCategory.BILLS -> palette.bills
         ExpenseCategory.ENTERTAINMENT -> palette.entertainment
