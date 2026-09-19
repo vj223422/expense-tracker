@@ -13,5 +13,7 @@ data class FuelLogEntity(
     val liters: Double,
     val odometerKm: Double,
     val epochDay: Long,
+    val endEpochDay: Long? = null,
+    val endOdometerKm: Double? = null,
     val note: String = "",
 )
