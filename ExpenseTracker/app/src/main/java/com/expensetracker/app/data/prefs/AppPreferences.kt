@@ -24,6 +24,7 @@ class AppPreferences(private val context: Context) {
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
         val APP_LOCK = booleanPreferencesKey("app_lock_enabled")
         val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
+        val REMINDER_SOUND = stringPreferencesKey("reminder_sound")
         fun activeBudgetMonth(profileId: Long) = stringPreferencesKey("active_budget_month_$profileId")
         fun activeBudgetCycleStart(profileId: Long) = longPreferencesKey("active_budget_cycle_start_$profileId")
         fun carryForward(profileId: Long, budgetMonth: String) = longPreferencesKey("budget_carry_forward_${profileId}_$budgetMonth")
@@ -35,6 +36,7 @@ class AppPreferences(private val context: Context) {
     val themeMode: Flow<ThemeMode> = safeData.map { it[Keys.THEME_MODE]?.let { value -> runCatching { ThemeMode.valueOf(value) }.getOrNull() } ?: ThemeMode.SYSTEM }
     val dynamicColorEnabled: Flow<Boolean> = safeData.map { it[Keys.DYNAMIC_COLOR] ?: true }
     val appLockEnabled: Flow<Boolean> = safeData.map { it[Keys.APP_LOCK] ?: false }
+    val reminderSound: Flow<String> = safeData.map { it[Keys.REMINDER_SOUND] ?: "DEFAULT" }
     val activeProfileId: Flow<Long?> = safeData.map { it[Keys.ACTIVE_PROFILE_ID] }
     fun activeBudgetMonth(profileId: Long): Flow<String?> = safeData.map { it[Keys.activeBudgetMonth(profileId)] }
     fun activeBudgetCycleStart(profileId: Long): Flow<Long?> = safeData.map { it[Keys.activeBudgetCycleStart(profileId)] }
@@ -42,6 +44,8 @@ class AppPreferences(private val context: Context) {
     suspend fun setThemeMode(mode: ThemeMode) { context.dataStore.edit { it[Keys.THEME_MODE] = mode.name } }
     suspend fun setDynamicColorEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled } }
     suspend fun setAppLockEnabled(enabled: Boolean) { context.dataStore.edit { it[Keys.APP_LOCK] = enabled } }
+    suspend fun getReminderSound(): String = reminderSound.first()
+    suspend fun setReminderSound(sound: String) { context.dataStore.edit { it[Keys.REMINDER_SOUND] = sound } }
     suspend fun setActiveProfileId(profileId: Long) { context.dataStore.edit { it[Keys.ACTIVE_PROFILE_ID] = profileId } }
     suspend fun getActiveBudgetMonth(profileId: Long): String? = activeBudgetMonth(profileId).first()
     suspend fun setActiveBudgetMonth(profileId: Long, budgetMonth: String) { context.dataStore.edit { it[Keys.activeBudgetMonth(profileId)] = budgetMonth } }
