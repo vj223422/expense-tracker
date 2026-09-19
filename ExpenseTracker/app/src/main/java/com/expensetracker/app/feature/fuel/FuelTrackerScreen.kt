@@ -19,6 +19,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
+import java.time.Instant
+import java.time.ZoneOffset
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.max
@@ -84,6 +86,7 @@ private fun FuelStatCard(title: String, value: String, modifier: Modifier = Modi
     Card(modifier) { Column(Modifier.padding(14.dp)) { Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(4.dp)); Text(value, style = MaterialTheme.typography.titleMedium) } }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddFuelDialog(
     onDismiss: () -> Unit,
