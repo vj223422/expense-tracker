@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,27 +80,137 @@ private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Un
 
 @Composable
 private fun ReminderSoundRow(sound: String, onChange: (String) -> Unit) {
+    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
-    val options = listOf("DEFAULT" to "Default notification", "BEEP" to "Single beep", "DOUBLE_BEEP" to "Double beep", "CHIME" to "Chime", "SOFT" to "Soft alert", "URGENT" to "Urgent alert", "SILENT" to "Silent")
+    var previewingSound by remember { mutableStateOf<String?>(null) }
+    val options = listOf(
+        "DEFAULT" to "Default notification",
+        "BEEP" to "Single beep",
+        "DOUBLE_BEEP" to "Double beep",
+        "CHIME" to "Chime",
+        "SOFT" to "Soft alert",
+        "URGENT" to "Urgent alert",
+        "SILENT" to "Silent"
+    )
+
     Column {
-        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(Modifier.size(44.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.VolumeUp, null, tint = MaterialTheme.colorScheme.primary) } }
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                Modifier.size(44.dp),
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.VolumeUp, null, tint = MaterialTheme.colorScheme.primary)
+                }
+            }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text("Reminder sound", style = MaterialTheme.typography.bodyLarge)
-                Text(options.firstOrNull { it.first == sound }?.second ?: "Default notification", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    options.firstOrNull { it.first == sound }?.second ?: "Default notification",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            TextButton(onClick = { expanded = !expanded }) { Text("Change") }
+            TextButton(onClick = { expanded = !expanded }) {
+                Text(if (expanded) "Done" else "Change")
+            }
         }
+
         if (expanded) {
+            Text(
+                "Tap ▶ to preview a sound",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 74.dp, end = 16.dp, bottom = 4.dp)
+            )
+
             options.forEach { (key, label) ->
-                Row(Modifier.fillMaxWidth().selectable(selected = sound == key, onClick = { onChange(key); expanded = false }, role = Role.RadioButton).padding(start = 58.dp, end = 16.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .selectable(
+                            selected = sound == key,
+                            onClick = {
+                                onChange(key)
+                                previewSound(context, key)
+                                previewingSound = key
+                                expanded = false
+                            },
+                            role = Role.RadioButton
+                        )
+                        .padding(start = 58.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     RadioButton(selected = sound == key, onClick = null)
                     Spacer(Modifier.width(8.dp))
-                    Text(label)
+                    Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    IconButton(
+                        onClick = {
+                            previewSound(context, key)
+                            previewingSound = key
+                        },
+                        enabled = key != "SILENT"
+                    ) {
+                        Icon(
+                            if (previewingSound == key) Icons.Default.VolumeUp else Icons.Default.PlayArrow,
+                            contentDescription = "Preview $label",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+private fun previewSound(context: Context, sound: String) {
+    if (sound == "SILENT") return
+
+    if (sound == "DEFAULT") {
+        val ringtone = RingtoneManager.getRingtone(
+            context,
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        )
+        ringtone?.play()
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+            { if (ringtone?.isPlaying == true) ringtone.stop() },
+            1500L
+        )
+        return
+    }
+
+    val tone = when (sound) {
+        "DOUBLE_BEEP", "CHIME" -> ToneGenerator.TONE_PROP_ACK
+        "SOFT" -> ToneGenerator.TONE_PROP_BEEP
+        "URGENT" -> ToneGenerator.TONE_PROP_NACK
+        else -> ToneGenerator.TONE_PROP_BEEP
+    }
+    val duration = when (sound) {
+        "DOUBLE_BEEP" -> 140
+        "CHIME" -> 220
+        "SOFT" -> 120
+        "URGENT" -> 300
+        else -> 180
+    }
+
+    val generator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
+    generator.startTone(tone, duration)
+
+    if (sound == "DOUBLE_BEEP") {
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+            { generator.startTone(tone, duration) }, 220L
+        )
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+            { generator.release() }, 500L
+        )
+    } else {
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+            { generator.release() }, (duration + 50L)
+        )
     }
 }
 
