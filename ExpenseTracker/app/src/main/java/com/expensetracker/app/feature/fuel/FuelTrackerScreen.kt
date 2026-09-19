@@ -15,6 +15,11 @@ import androidx.compose.material.icons.filled.CurrencyRupee
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -226,20 +231,7 @@ fun FuelTrackerScreen(
                                 }
 
                                 if (distance == null) {
-                                    Surface(
-                                        shape = MaterialTheme.shapes.large,
-                                        color = MaterialTheme.colorScheme.secondaryContainer,
-                                    ) {
-                                        Text(
-                                            "In progress",
-                                            modifier = Modifier.padding(
-                                                horizontal = 10.dp,
-                                                vertical = 6.dp,
-                                            ),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        )
-                                    }
+                                    InProgressDot()
                                 }
 
                                 IconButton(onClick = { viewModel.deleteFuel(log) }) {
@@ -357,6 +349,27 @@ fun FuelTrackerScreen(
             },
         )
     }
+}
+
+@Composable
+private fun InProgressDot() {
+    val transition = rememberInfiniteTransition(label = "fuel-in-progress")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "fuel-in-progress-alpha",
+    )
+
+    Surface(
+        modifier = Modifier.size(14.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.error.copy(alpha = alpha),
+        shadowElevation = 2.dp,
+    ) {}
 }
 
 @Composable
