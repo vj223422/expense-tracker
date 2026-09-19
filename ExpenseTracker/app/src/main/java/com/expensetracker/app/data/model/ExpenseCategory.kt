@@ -7,6 +7,7 @@ package com.expensetracker.app.data.model
 enum class ExpenseCategory(val displayName: String) {
     FOOD("Food & Dining"),
     TRANSPORT("Transport"),
+    PETROL("Petrol"),
     SHOPPING("Shopping"),
     BILLS("Bills & Utilities"),
     ENTERTAINMENT("Entertainment"),
