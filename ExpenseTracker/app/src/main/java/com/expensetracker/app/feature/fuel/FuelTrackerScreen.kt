@@ -59,17 +59,128 @@ fun FuelTrackerScreen(onNavigateBack: () -> Unit, viewModel: FuelTrackerViewMode
             }}}
             item { Text("Fuel history", style = MaterialTheme.typography.titleLarge) }
             if (state.logs.isEmpty()) item { Text("No fuel entries yet. Tap + to record your first petrol fill.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            else items(state.logs, key = { it.id }) { log -> Card { Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Surface(Modifier.size(44.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.LocalGasStation, null, tint = MaterialTheme.colorScheme.primary) } }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Start: ${formatDate(log.epochDay)} • %.1f km".format(log.odometerKm))
-                    Text("End: ${log.endEpochDay?.let(::formatDate) ?: "—"} • ${log.endOdometerKm?.let { "%.1f km".format(it) } ?: "—"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("%.2f L • %s/L • %s".format(log.liters, currency(log.amountMinor / 100.0 / log.liters), currency(log.amountMinor / 100.0)), style = MaterialTheme.typography.bodyMedium)
-                    if (log.note.isNotBlank()) Text(log.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else items(state.logs, key = { it.id }) { log ->
+                val endOdometer = log.endOdometerKm
+                val distance = endOdometer?.let { it - log.odometerKm }?.takeIf { it > 0.0 }
+                val mileageForTrip = distance?.takeIf { log.liters > 0.0 }?.let { it / log.liters }
+                val costPerKm = distance?.takeIf { it > 0.0 }?.let { (log.amountMinor / 100.0) / it }
+
+                Card {
+                    Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                Modifier.size(44.dp),
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.LocalGasStation,
+                                        null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    "Start: ${formatDate(log.epochDay)} • %.1f km".format(log.odometerKm),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    "End: ${log.endEpochDay?.let(::formatDate) ?: "—"} • ${endOdometer?.let { "%.1f km".format(it) } ?: "—"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    "%.2f L • %s/L • %s".format(
+                                        log.liters,
+                                        currency(log.amountMinor / 100.0 / log.liters),
+                                        currency(log.amountMinor / 100.0),
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            if (distance == null) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.large,
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                ) {
+                                    Text(
+                                        "In progress",
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { viewModel.deleteFuel(log) }) {
+                                Icon(Icons.Default.DeleteOutline, "Delete")
+                            }
+                        }
+
+                        if (log.note.isNotBlank()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                log.note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        HorizontalDivider(Modifier.padding(top = 12.dp, bottom = 10.dp))
+
+                        if (distance != null && mileageForTrip != null) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                FuelMetric(
+                                    label = "Distance",
+                                    value = "%.1f km".format(distance),
+                                    modifier = Modifier.weight(1f),
+                                )
+                                VerticalDivider(modifier = Modifier.height(44.dp))
+                                FuelMetric(
+                                    label = "Mileage",
+                                    value = "%.2f km/L".format(mileageForTrip),
+                                    valueColor = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                VerticalDivider(modifier = Modifier.height(44.dp))
+                                FuelMetric(
+                                    label = "Cost/km",
+                                    value = currency(costPerKm ?: 0.0),
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Route,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Column {
+                                    Text(
+                                        "Mileage (this trip)",
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                    Text(
+                                        "— —",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-                IconButton(onClick = { viewModel.deleteFuel(log) }) { Icon(Icons.Default.DeleteOutline, "Delete") }
-            }}}
+            }}
         }
     }
     if (showAdd) AddFuelDialog(
@@ -79,6 +190,31 @@ fun FuelTrackerScreen(onNavigateBack: () -> Unit, viewModel: FuelTrackerViewMode
             showAdd = false
         },
     )
+}
+
+@Composable
+private fun FuelMetric(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.titleSmall,
+            color = valueColor,
+        )
+    }
 }
 
 @Composable
