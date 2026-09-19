@@ -4,10 +4,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.LocalGasStation
 
 import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.LocalGasStation
 
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -38,4 +40,5 @@ val bottomNavItems = listOf(
     BottomNavItem(Destination.Dashboard, "Home", Icons.Filled.Home, Icons.Outlined.Home),
     BottomNavItem(Destination.Transactions, "Transactions", Icons.Filled.ReceiptLong, Icons.Outlined.ReceiptLong),
     BottomNavItem(Destination.Reminders, "Reminders", Icons.Filled.EventNote, Icons.Outlined.EventNote),
+    BottomNavItem(Destination.FuelTracker, "Fuel", Icons.Filled.LocalGasStation, Icons.Outlined.LocalGasStation),
 )
