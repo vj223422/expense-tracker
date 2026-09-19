@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import java.time.Instant
@@ -367,7 +368,7 @@ private fun InProgressDot() {
     Surface(
         modifier = Modifier.size(14.dp),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.error.copy(alpha = alpha),
+        color = Color(0xFFFF9800).copy(alpha = alpha),
         shadowElevation = 2.dp,
     ) {}
 }
