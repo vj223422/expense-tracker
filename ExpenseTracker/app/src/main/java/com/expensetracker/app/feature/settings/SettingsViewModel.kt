@@ -43,7 +43,7 @@ class SettingsViewModel(
         settingsState,
         profileDialog,
     ) { state, dialog ->
-        state.copy(dialog = dialog)
+        state.copy(profileDialog = dialog)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun onThemeModeChange(mode: ThemeMode) { viewModelScope.launch { appPreferences.setThemeMode(mode) } }
