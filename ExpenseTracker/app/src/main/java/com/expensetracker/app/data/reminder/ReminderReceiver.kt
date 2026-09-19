@@ -18,6 +18,7 @@ import androidx.room.Room
 import com.expensetracker.app.R
 import com.expensetracker.app.data.local.ExpenseDatabase
 import com.expensetracker.app.data.prefs.AppPreferences
+import com.expensetracker.app.data.sound.UISfxSoundPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -82,7 +83,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(id.toInt(), notification)
-        playCustomSound(sound)
+        playCustomSound(context, sound)
     }
 
     private fun nextOccurrence(triggerAt: Long, recurrence: String, intervalDays: Int): Long? {
@@ -118,8 +119,13 @@ class ReminderReceiver : BroadcastReceiver() {
         return channelId
     }
 
-    private fun playCustomSound(sound: String) {
+    private fun playCustomSound(context: Context, sound: String) {
         if (sound == "DEFAULT" || sound == "ALARM" || sound == "RINGTONE" || sound == "SILENT") return
+
+        if (sound.startsWith("UISFX_")) {
+            UISfxSoundPlayer.play(context, sound.removePrefix("UISFX_").lowercase())
+            return
+        }
         val tone = when (sound) {
             "DOUBLE_BEEP" -> ToneGenerator.TONE_PROP_ACK
             "CHIME" -> ToneGenerator.TONE_PROP_ACK
@@ -153,6 +159,14 @@ class ReminderReceiver : BroadcastReceiver() {
         "CHIME" -> "Reminders · Chime"
         "SOFT" -> "Reminders · Soft alert"
         "URGENT" -> "Reminders · Urgent alert"
+        "UISFX_NOTIFICATION" -> "Reminders · UISFX Notification"
+        "UISFX_SUCCESS" -> "Reminders · UISFX Success"
+        "UISFX_WARNING" -> "Reminders · UISFX Warning"
+        "UISFX_ERROR" -> "Reminders · UISFX Error"
+        "UISFX_COMPLETE" -> "Reminders · UISFX Complete"
+        "UISFX_REWARD" -> "Reminders · UISFX Reward"
+        "UISFX_CHECK" -> "Reminders · UISFX Check"
+        "UISFX_SELECT" -> "Reminders · UISFX Select"
         else -> "Reminders · Default"
     }
 
