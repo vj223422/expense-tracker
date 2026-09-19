@@ -22,6 +22,7 @@ class ReminderScheduler(private val context: Context) {
             putExtra(ReminderReceiver.EXTRA_END_DATE, reminder.endDateEpochMillis ?: -1L)
             putExtra(ReminderReceiver.EXTRA_RECURRENCE, reminder.recurrence)
             putExtra(ReminderReceiver.EXTRA_INTERVAL_DAYS, reminder.customIntervalDays)
+            putExtra(ReminderReceiver.EXTRA_SOUND, reminder.sound)
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
