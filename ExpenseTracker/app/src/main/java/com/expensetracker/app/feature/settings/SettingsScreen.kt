@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.core.designsystem.CreateProfileDialog
 import com.expensetracker.app.data.model.Profile
 import com.expensetracker.app.data.prefs.ThemeMode
+import com.expensetracker.app.data.sound.UISfxSoundPlayer
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -95,6 +96,14 @@ private fun ReminderSoundRow(sound: String, onChange: (String) -> Unit) {
         "CHIME" to "Chime",
         "SOFT" to "Soft alert",
         "URGENT" to "Urgent alert",
+        "UISFX_NOTIFICATION" to "UISFX · Notification",
+        "UISFX_SUCCESS" to "UISFX · Success",
+        "UISFX_WARNING" to "UISFX · Warning",
+        "UISFX_ERROR" to "UISFX · Error",
+        "UISFX_COMPLETE" to "UISFX · Complete",
+        "UISFX_REWARD" to "UISFX · Reward",
+        "UISFX_CHECK" to "UISFX · Check",
+        "UISFX_SELECT" to "UISFX · Select",
         "SILENT" to "Silent"
     )
 
@@ -174,6 +183,12 @@ private fun ReminderSoundRow(sound: String, onChange: (String) -> Unit) {
 
 private fun previewSound(context: Context, sound: String) {
     if (sound == "SILENT") return
+
+    if (sound.startsWith("UISFX_")) {
+        val cue = sound.removePrefix("UISFX_").lowercase()
+        UISfxSoundPlayer.play(context, cue)
+        return
+    }
 
     if (sound == "DEFAULT") {
         val ringtone = RingtoneManager.getRingtone(
