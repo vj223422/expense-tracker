@@ -80,7 +80,14 @@ class DashboardViewModel(
                     overallLimitMinor = baseBudget,
                     carryForwardMinor = carryForward,
                     categorySpends = summary.categorySpends.filter { it.spentMinor > 0 }.sortedByDescending { it.spentMinor },
-                    recentExpenses = monthExpenses.filter { !it.isIncome }.take(5),
+                    // Show both outgoing and incoming transactions together, newest first.
+                    // Use the exact transaction timestamp as the secondary sort key.
+                    recentExpenses = monthExpenses
+                        .sortedWith(
+                            compareByDescending<Expense> { it.date }
+                                .thenByDescending { it.createdAtEpochMillis }
+                        )
+                        .take(5),
                     isLoading = false,
                 )
             }
