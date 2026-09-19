@@ -9,7 +9,9 @@ import com.expensetracker.app.data.entity.ReminderEntity
 class ReminderScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
-    fun schedule(reminder: ReminderEntity) {
+    fun schedule(reminder: ReminderEntity) = schedule(reminder, reminder.sound)
+
+    fun schedule(reminder: ReminderEntity, sound: String) {
         if (!reminder.enabled || (reminder.endDateEpochMillis != null && reminder.triggerAtEpochMillis > reminder.endDateEpochMillis)) {
             cancel(reminder.id)
             return
@@ -22,7 +24,7 @@ class ReminderScheduler(private val context: Context) {
             putExtra(ReminderReceiver.EXTRA_END_DATE, reminder.endDateEpochMillis ?: -1L)
             putExtra(ReminderReceiver.EXTRA_RECURRENCE, reminder.recurrence)
             putExtra(ReminderReceiver.EXTRA_INTERVAL_DAYS, reminder.customIntervalDays)
-            putExtra(ReminderReceiver.EXTRA_SOUND, reminder.sound)
+            putExtra(ReminderReceiver.EXTRA_SOUND, sound)
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
