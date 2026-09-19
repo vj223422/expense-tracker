@@ -15,7 +15,7 @@ import com.expensetracker.app.data.local.dao.NoteDao
 import com.expensetracker.app.data.local.dao.ProfileDao
 import com.expensetracker.app.data.local.dao.ReminderDao
 
-@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class], version = 8, exportSchema = true)
+@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class], version = 9, exportSchema = true)
 abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun budgetLimitDao(): BudgetLimitDao
@@ -50,6 +50,11 @@ abstract class ExpenseDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `expenses` ADD COLUMN `budgetCycleStartEpochMillis` INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_profileId_budgetCycleStartEpochMillis` ON `expenses` (`profileId`, `budgetCycleStartEpochMillis`)")
+            }
+        }
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `reminders` ADD COLUMN `sound` TEXT NOT NULL DEFAULT 'DEFAULT'")
             }
         }
     }
