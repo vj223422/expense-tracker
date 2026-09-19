@@ -2,6 +2,7 @@ package com.expensetracker.app.di
 
 import androidx.room.Room
 import com.expensetracker.app.data.local.ExpenseDatabase
+import com.expensetracker.app.feature.fuel.FuelTrackerViewModel
 import com.expensetracker.app.data.notification.NotificationHelper
 import com.expensetracker.app.data.prefs.AppPreferences
 import com.expensetracker.app.data.reminder.ReminderScheduler
@@ -25,10 +26,11 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7, ExpenseDatabase.MIGRATION_7_8, ExpenseDatabase.MIGRATION_8_9)
+            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7, ExpenseDatabase.MIGRATION_7_8, ExpenseDatabase.MIGRATION_8_9, ExpenseDatabase.MIGRATION_9_10)
             .fallbackToDestructiveMigrationOnDowngrade().build()
     }
     single { get<ExpenseDatabase>().expenseDao() }
+    single { get<ExpenseDatabase>().fuelLogDao() }
     single { get<ExpenseDatabase>().budgetLimitDao() }
     single { get<ExpenseDatabase>().profileDao() }
     single { get<ExpenseDatabase>().reminderDao() }
@@ -50,5 +52,6 @@ val viewModelModule = module {
     viewModel { SettingsViewModel(get(), get(), get(), get()) }
     viewModel { ProfileSwitcherViewModel(get()) }
     viewModel { RemindersViewModel(get(), get(), get(), get()) }
+    viewModel { FuelTrackerViewModel(get(), get()) }
 }
 val appModules = listOf(databaseModule, dataModule, viewModelModule)
