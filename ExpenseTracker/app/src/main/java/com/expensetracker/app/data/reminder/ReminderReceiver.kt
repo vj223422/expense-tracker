@@ -4,6 +4,8 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.media.RingtoneManager
+import android.media.ToneGenerator
+import android.media.AudioManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -55,7 +57,7 @@ class ReminderReceiver : BroadcastReceiver() {
             try {
                 val existing = db.reminderDao().getById(id)
                 if (existing?.enabled == true && (existing.endDateEpochMillis == null || next <= existing.endDateEpochMillis)) {
-                    val updated = existing.copy(triggerAtEpochMillis = next)
+                    val updated = existing.copy(triggerAtEpochMillis = next, sound = sound)
                     db.reminderDao().update(updated)
                     ReminderScheduler(context.applicationContext).schedule(updated)
                 }
@@ -79,6 +81,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(id.toInt(), notification)
+        playCustomSound(sound)
     }
 
     private fun nextOccurrence(triggerAt: Long, recurrence: String, intervalDays: Int): Long? {
@@ -104,7 +107,7 @@ class ReminderReceiver : BroadcastReceiver() {
             }
             val channel = NotificationChannel(channelId, soundLabel(sound), NotificationManager.IMPORTANCE_HIGH).apply {
                 description = context.getString(R.string.notification_channel_reminders_description)
-                if (sound != "SILENT") setSound(audio, android.media.AudioAttributes.Builder()
+                if (sound == "DEFAULT" || sound == "ALARM" || sound == "RINGTONE") setSound(audio, android.media.AudioAttributes.Builder()
                     .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
                     .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build())
@@ -114,10 +117,41 @@ class ReminderReceiver : BroadcastReceiver() {
         return channelId
     }
 
+    private fun playCustomSound(sound: String) {
+        if (sound == "DEFAULT" || sound == "ALARM" || sound == "RINGTONE" || sound == "SILENT") return
+        val tone = when (sound) {
+            "DOUBLE_BEEP" -> ToneGenerator.TONE_PROP_ACK
+            "CHIME" -> ToneGenerator.TONE_PROP_ACK
+            "SOFT" -> ToneGenerator.TONE_PROP_BEEP
+            "URGENT" -> ToneGenerator.TONE_PROP_NACK
+            else -> ToneGenerator.TONE_PROP_BEEP
+        }
+        val duration = when (sound) {
+            "DOUBLE_BEEP" -> 140
+            "CHIME" -> 220
+            "SOFT" -> 120
+            "URGENT" -> 300
+            else -> 180
+        }
+        val generator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 85)
+        generator.startTone(tone, duration)
+        if (sound == "DOUBLE_BEEP") {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ generator.startTone(tone, duration) }, 220L)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ generator.release() }, 500L)
+        } else {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ generator.release() }, (duration + 50).toLong())
+        }
+    }
+
     private fun soundLabel(sound: String): String = when (sound) {
         "ALARM" -> "Reminders · Alarm"
         "RINGTONE" -> "Reminders · Ringtone"
         "SILENT" -> "Reminders · Silent"
+        "BEEP" -> "Reminders · Single beep"
+        "DOUBLE_BEEP" -> "Reminders · Double beep"
+        "CHIME" -> "Reminders · Chime"
+        "SOFT" -> "Reminders · Soft alert"
+        "URGENT" -> "Reminders · Urgent alert"
         else -> "Reminders · Default"
     }
 
