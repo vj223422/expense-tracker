@@ -59,7 +59,45 @@ private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Un
             ThemeModeRow("Light", "Always use light theme", Icons.Default.LightMode, uiState.themeMode == ThemeMode.LIGHT) { onTheme(ThemeMode.LIGHT) }
             ThemeModeRow("Dark", "Always use dark theme", Icons.Default.DarkMode, uiState.themeMode == ThemeMode.DARK) { onTheme(ThemeMode.DARK) }
         }
-        Card(onClick = onFuelTrackerClick, modifier = Modifier.fillMaxWidth()) { Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(48.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.LocalGasStation, null, tint = MaterialTheme.colorScheme.primary) } }; Spacer(Modifier.width(14.dp)); Column(Modifier.weight(1f)) { Text("Fuel & Mileage", style = MaterialTheme.typography.titleMedium); Text("Track petrol spend, liters, mileage and per-trip fuel cost", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Text("›", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }\n        SettingsSection("App Settings", "Customize your experience") {
+        Card(
+            onClick = onFuelTrackerClick,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.LocalGasStation,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Fuel & Mileage", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Track petrol spend, liters, mileage and per-trip fuel cost",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    "›",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }\n        SettingsSection("App Settings", "Customize your experience") {
             ToggleRow(Icons.Default.BarChart, "Show received in home summary", "Include income in home dashboard cards", showReceived, onShowReceived)
             ToggleRow(Icons.Default.NotificationsActive, "Reminder notifications", "Get notified about your reminders", reminders, onReminders)
             ReminderSoundRow(reminderSound, onReminderSoundChange)
