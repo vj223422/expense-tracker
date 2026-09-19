@@ -47,7 +47,7 @@ val viewModelModule = module {
     viewModel { TransactionsViewModel(get(), get()) }
     viewModel { (expenseId: Long?) -> AddExpenseViewModel(get(), get(), expenseId) }
     viewModel { BudgetsViewModel(get(), get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get()) }
     viewModel { ProfileSwitcherViewModel(get()) }
     viewModel { RemindersViewModel(get(), get(), get(), get()) }
 }
