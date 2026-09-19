@@ -1,6 +1,7 @@
 package com.expensetracker.app.feature.reminders
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
@@ -69,7 +72,7 @@ private val ReminderIconTint = Color(0xFF8FFFE5)
 @Composable
 fun ModernReminderEditorDialog(
     initial: ReminderEntity?,
-    onSave: (String, String, Long, Long?, String, Int) -> Unit,
+    onSave: (String, String, Long, Long?, String, Int, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val initialStart = initial?.triggerAtEpochMillis ?: System.currentTimeMillis()
@@ -80,6 +83,8 @@ fun ModernReminderEditorDialog(
     var selectedEndDate by remember(initial) { mutableStateOf<Long?>(initial?.endDateEpochMillis) }
     var recurrence by remember(initial) { mutableStateOf(initial?.recurrence ?: "ONCE") }
     var intervalDays by remember(initial) { mutableLongStateOf((initial?.customIntervalDays ?: 1).toLong()) }
+    var sound by remember(initial) { mutableStateOf(initial?.sound ?: "DEFAULT") }
+    var showSoundPicker by remember { mutableStateOf(false) }
     var showStartDate by remember { mutableStateOf(false) }
     var showStartTime by remember { mutableStateOf(false) }
     var showEndDate by remember { mutableStateOf(false) }
@@ -206,6 +211,23 @@ fun ModernReminderEditorDialog(
                     )
                 }
 
+                Card(
+                    modifier = Modifier.fillMaxWidth().height(88.dp),
+                    onClick = { showSoundPicker = true },
+                    shape = androidx.compose.material3.MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh),
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ReminderIconCircle(size = 48.dp, iconSize = 24.dp, color = ReminderBlueContainer) { Icon(Icons.Default.VolumeUp, null, tint = ReminderIconTint) }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Reminder sound", fontSize = 14.sp, lineHeight = 18.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(soundLabel(sound), fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Text("›", fontSize = 30.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
                 Spacer(Modifier.height(2.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
@@ -233,7 +255,7 @@ fun ModernReminderEditorDialog(
                                 dateError = "End date cannot be before the start date"
                             } else {
                                 dateError = null
-                                onSave(title.trim(), note.trim(), start, selectedEndDate, recurrence, intervalDays.toInt())
+                                onSave(title.trim(), note.trim(), start, selectedEndDate, recurrence, intervalDays.toInt(), sound)
                             }
                         },
                         modifier = Modifier.weight(1f).height(52.dp),
@@ -251,6 +273,25 @@ fun ModernReminderEditorDialog(
                 }
             }
         }
+    }
+
+    if (showSoundPicker) {
+        AlertDialog(
+            onDismissRequest = { showSoundPicker = false },
+            title = { Text("Choose reminder sound") },
+            text = {
+                Column {
+                    listOf("DEFAULT" to "Default notification", "ALARM" to "Alarm", "RINGTONE" to "Phone ringtone", "SILENT" to "Silent").forEach { (key, label) ->
+                        Row(Modifier.fillMaxWidth().clickable { sound = key; showSoundPicker = false }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = sound == key, onClick = { sound = key; showSoundPicker = false })
+                            Spacer(Modifier.width(8.dp))
+                            Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showSoundPicker = false }) { Text("Done") } },
+        )
     }
 
     if (showStartDate) {
@@ -408,4 +449,11 @@ private fun isToday(epochMillis: Long): Boolean {
     val selected = Calendar.getInstance().apply { timeInMillis = epochMillis }
     val today = Calendar.getInstance()
     return selected.get(Calendar.YEAR) == today.get(Calendar.YEAR) && selected.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
+}
+
+private fun soundLabel(sound: String): String = when (sound) {
+    "ALARM" -> "Alarm"
+    "RINGTONE" -> "Phone ringtone"
+    "SILENT" -> "Silent"
+    else -> "Default notification"
 }
