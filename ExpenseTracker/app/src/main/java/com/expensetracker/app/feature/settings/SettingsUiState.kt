@@ -11,6 +11,7 @@ data class SettingsUiState(
     val profiles: List<Profile> = emptyList(),
     val activeProfileId: Long? = null,
     val profileDialog: ProfileDialog? = null,
+    val reminderSound: String = "DEFAULT",
 ) {
     val canDeleteProfiles: Boolean get() = profiles.size > 1
 }
