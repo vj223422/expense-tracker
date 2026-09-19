@@ -30,9 +30,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showReceived by rememberSaveable { mutableStateOf(true) }
     var reminderNotifications by rememberSaveable { mutableStateOf(true) }
-    SettingsContent(uiState, viewModel::onThemeModeChange, viewModel::onAppLockToggle, viewModel::onSwitchProfile,
+    SettingsContent(uiState, viewModel::onThemeModeChange, viewModel::onAppLockToggle, viewModel::onReminderSoundChange, viewModel::onSwitchProfile,
         viewModel::onCreateProfileClick, viewModel::onRenameProfileClick, viewModel::onDeleteProfileClick,
-        showReceived, { showReceived = it }, reminderNotifications, { reminderNotifications = it })
+        showReceived, { showReceived = it }, reminderNotifications, { reminderNotifications = it }, uiState.reminderSound)
     when (val dialog = uiState.profileDialog) {
         is ProfileDialog.CreateProfile -> CreateProfileDialog(uiState.profiles.map { it.name }, viewModel::onCreateProfileConfirm, viewModel::onProfileDialogDismiss)
         is ProfileDialog.RenameProfile -> RenameProfileDialog(dialog.profile, viewModel::onRenameProfileConfirm, viewModel::onProfileDialogDismiss)
@@ -44,7 +44,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
 @Composable
 private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Unit, onLock: (Boolean) -> Unit,
     onProfile: (Long) -> Unit, onAdd: () -> Unit, onRename: (Profile) -> Unit, onDelete: (Profile) -> Unit,
-    showReceived: Boolean, onShowReceived: (Boolean) -> Unit, reminders: Boolean, onReminders: (Boolean) -> Unit) {
+    showReceived: Boolean, onShowReceived: (Boolean) -> Unit, reminders: Boolean, onReminders: (Boolean) -> Unit, reminderSound: String) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         ProfilesSection(uiState.profiles, uiState.activeProfileId, uiState.canDeleteProfiles, onProfile, onAdd, onRename, onDelete)
         SettingsSection("Theme", "Choose how the app looks") {
@@ -55,6 +55,7 @@ private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Un
         SettingsSection("App Settings", "Customize your experience") {
             ToggleRow(Icons.Default.BarChart, "Show received in home summary", "Include income in home dashboard cards", showReceived, onShowReceived)
             ToggleRow(Icons.Default.NotificationsActive, "Reminder notifications", "Get notified about your reminders", reminders, onReminders)
+            ReminderSoundRow(reminderSound, onReminderSoundChange)
             ToggleRow(Icons.Default.Fingerprint, "App lock", "Use fingerprint to open the app", uiState.appLockEnabled, onLock)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -70,6 +71,32 @@ private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Un
                         Text("A lightweight, fully offline expense tracker.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Version 1.0.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReminderSoundRow(sound: String, onChange: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf("DEFAULT" to "Default notification", "BEEP" to "Single beep", "DOUBLE_BEEP" to "Double beep", "CHIME" to "Chime", "SOFT" to "Soft alert", "URGENT" to "Urgent alert", "SILENT" to "Silent")
+    Column {
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.size(44.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.VolumeUp, null, tint = MaterialTheme.colorScheme.primary) } }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Reminder sound", style = MaterialTheme.typography.bodyLarge)
+                Text(options.firstOrNull { it.first == sound }?.second ?: "Default notification", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = { expanded = !expanded }) { Text("Change") }
+        }
+        if (expanded) {
+            options.forEach { (key, label) ->
+                Row(Modifier.fillMaxWidth().selectable(selected = sound == key, onClick = { onChange(key); expanded = false }, role = Role.RadioButton).padding(start = 58.dp, end = 16.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = sound == key, onClick = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(label)
                 }
             }
         }
