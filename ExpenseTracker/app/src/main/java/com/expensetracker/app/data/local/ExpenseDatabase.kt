@@ -6,18 +6,21 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.expensetracker.app.data.entity.BudgetLimitEntity
 import com.expensetracker.app.data.entity.ExpenseEntity
+import com.expensetracker.app.data.entity.FuelLogEntity
 import com.expensetracker.app.data.entity.NoteEntity
 import com.expensetracker.app.data.entity.ProfileEntity
 import com.expensetracker.app.data.entity.ReminderEntity
 import com.expensetracker.app.data.local.dao.BudgetLimitDao
 import com.expensetracker.app.data.local.dao.ExpenseDao
+import com.expensetracker.app.data.local.dao.FuelLogDao
 import com.expensetracker.app.data.local.dao.NoteDao
 import com.expensetracker.app.data.local.dao.ProfileDao
 import com.expensetracker.app.data.local.dao.ReminderDao
 
-@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class], version = 9, exportSchema = true)
+@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class, FuelLogEntity::class], version = 10, exportSchema = true)
 abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
+    abstract fun fuelLogDao(): FuelLogDao
     abstract fun budgetLimitDao(): BudgetLimitDao
     abstract fun profileDao(): ProfileDao
     abstract fun reminderDao(): ReminderDao
@@ -55,6 +58,13 @@ abstract class ExpenseDatabase : RoomDatabase() {
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `reminders` ADD COLUMN `sound` TEXT NOT NULL DEFAULT 'DEFAULT'")
+            }
+        }
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `fuel_logs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `profileId` INTEGER NOT NULL, `amountMinor` INTEGER NOT NULL, `liters` REAL NOT NULL, `odometerKm` REAL NOT NULL, `epochDay` INTEGER NOT NULL, `note` TEXT NOT NULL, FOREIGN KEY(`profileId`) REFERENCES `profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_logs_profileId` ON `fuel_logs` (`profileId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_logs_profileId_epochDay` ON `fuel_logs` (`profileId`, `epochDay`)")
             }
         }
     }
