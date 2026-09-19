@@ -13,6 +13,7 @@ data class ReminderEntity(
     val endDateEpochMillis: Long? = null,
     val recurrence: String,
     val customIntervalDays: Int = 1,
+    val sound: String = "DEFAULT",
     val enabled: Boolean = true,
     val createdAtEpochMillis: Long,
 )
