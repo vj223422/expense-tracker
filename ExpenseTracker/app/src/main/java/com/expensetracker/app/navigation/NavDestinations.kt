@@ -4,11 +4,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Settings
+
 import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.ReceiptLong
-import androidx.compose.material.icons.outlined.Settings
+
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Destination(val route: String) {
@@ -17,6 +17,7 @@ sealed class Destination(val route: String) {
     data object Reminders : Destination("reminders")
     data object Budgets : Destination("budgets")
     data object Settings : Destination("settings")
+    data object FuelTracker : Destination("fuel_tracker")
 
     data object AddExpense : Destination("add_expense?expenseId={expenseId}") {
         const val ARG_EXPENSE_ID = "expenseId"
@@ -37,5 +38,4 @@ val bottomNavItems = listOf(
     BottomNavItem(Destination.Dashboard, "Home", Icons.Filled.Home, Icons.Outlined.Home),
     BottomNavItem(Destination.Transactions, "Transactions", Icons.Filled.ReceiptLong, Icons.Outlined.ReceiptLong),
     BottomNavItem(Destination.Reminders, "Reminders", Icons.Filled.EventNote, Icons.Outlined.EventNote),
-    BottomNavItem(Destination.Settings, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings),
 )
