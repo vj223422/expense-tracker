@@ -37,7 +37,7 @@ val databaseModule = module {
 val dataModule = module {
     single { AppPreferences(androidContext()) }
     single { NotificationHelper(androidContext()) }
-    single { ReminderScheduler(androidContext()) }
+    single { ReminderScheduler(androidContext(), get()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get(), get(), get(), get()) }
     single<BudgetRepository> { BudgetRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get(), get()) }
