@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
 class AddExpenseViewModel(
     private val expenseRepository: ExpenseRepository,
     private val profileRepository: ProfileRepository,
+    private val fuelRepository: com.expensetracker.app.data.repository.FuelRepository,
     private val expenseId: Long?,
 ) : ViewModel(), AddExpenseActions {
 
@@ -75,7 +76,40 @@ class AddExpenseViewModel(
     }
 
     override fun onCategoryChange(category: ExpenseCategory) {
-        _uiState.update { it.copy(selectedCategory = category) }
+        _uiState.update { state ->
+            val amount = if (category == ExpenseCategory.PETROL) {
+                val liters = state.fuelLitersText.toDoubleOrNull() ?: 0.0
+                val price = state.fuelPricePerLiterText.toDoubleOrNull() ?: 0.0
+                if (liters > 0 && price > 0) (liters * price).toString() else state.amountText
+            } else state.amountText
+            state.copy(selectedCategory = category, amountText = amount, amountError = null)
+        }
+    }
+
+    override fun onFuelLitersChange(value: String) {
+        _uiState.update { state ->
+            val price = state.fuelPricePerLiterText.toDoubleOrNull() ?: 0.0
+            val liters = value.toDoubleOrNull() ?: 0.0
+            state.copy(
+                fuelLitersText = value,
+                amountText = if (state.selectedCategory == ExpenseCategory.PETROL && liters > 0 && price > 0) (liters * price).toString() else state.amountText,
+            )
+        }
+    }
+
+    override fun onFuelPricePerLiterChange(value: String) {
+        _uiState.update { state ->
+            val liters = state.fuelLitersText.toDoubleOrNull() ?: 0.0
+            val price = value.toDoubleOrNull() ?: 0.0
+            state.copy(
+                fuelPricePerLiterText = value,
+                amountText = if (state.selectedCategory == ExpenseCategory.PETROL && liters > 0 && price > 0) (liters * price).toString() else state.amountText,
+            )
+        }
+    }
+
+    override fun onFuelOdometerChange(value: String) {
+        _uiState.update { it.copy(fuelOdometerText = value) }
     }
 
     override fun onNoteChange(value: String) {
@@ -131,9 +165,20 @@ class AddExpenseViewModel(
     override fun onSaveClick() {
         val state = _uiState.value
         if (state.isSaving) return
-        val amountMinor = state.amountText.parseAmountToMinorUnits()
+        val amountMinor = if (state.selectedCategory == ExpenseCategory.PETROL) {
+            val liters = state.fuelLitersText.toDoubleOrNull() ?: 0.0
+            val price = state.fuelPricePerLiterText.toDoubleOrNull() ?: 0.0
+            if (liters > 0 && price > 0) (liters * price * 100.0).toLong() else null
+        } else {
+            state.amountText.parseAmountToMinorUnits()
+        }
         if (amountMinor == null || amountMinor <= 0L) {
-            _uiState.update { it.copy(amountError = "Enter a valid amount") }
+            _uiState.update { it.copy(amountError = if (state.selectedCategory == ExpenseCategory.PETROL) "Enter liters and price per liter" else "Enter a valid amount") }
+            return
+        }
+
+        if (state.selectedCategory == ExpenseCategory.PETROL && (state.fuelOdometerText.toDoubleOrNull() ?: -1.0) < 0.0) {
+            _uiState.update { it.copy(amountError = "Enter the starting odometer") }
             return
         }
 
@@ -145,6 +190,7 @@ class AddExpenseViewModel(
             } else {
                 state.note.trim()
             }
+            val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
             val result = if (existing != null) {
                 expenseRepository.updateExpense(
                     existing.copy(
@@ -154,8 +200,16 @@ class AddExpenseViewModel(
                         date = state.date,
                     ),
                 )
+            } else if (state.selectedCategory == ExpenseCategory.PETROL) {
+                fuelRepository.addFuel(
+                    profileId = profileId,
+                    date = state.date,
+                    liters = state.fuelLitersText.toDouble(),
+                    pricePerLiter = state.fuelPricePerLiterText.toDouble(),
+                    odometerKm = state.fuelOdometerText.toDouble(),
+                    note = noteToSave,
+                )
             } else {
-                val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
                 expenseRepository.addExpense(
                     profileId = profileId,
                     amountMinor = amountMinor,
