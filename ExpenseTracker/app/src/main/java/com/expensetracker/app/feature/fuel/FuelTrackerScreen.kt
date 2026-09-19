@@ -10,6 +10,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.CurrencyRupee
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -274,6 +276,15 @@ fun FuelTrackerScreen(
                                         label = "Distance",
                                         value = "%.1f km".format(distance),
                                         modifier = Modifier.weight(1f),
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Route,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                            )
+                                        },
+                                        iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        iconColor = MaterialTheme.colorScheme.primary,
                                     )
                                     VerticalDivider(modifier = Modifier.height(44.dp))
                                     FuelMetric(
@@ -281,12 +292,30 @@ fun FuelTrackerScreen(
                                         value = "%.2f km/L".format(mileageForTrip),
                                         valueColor = MaterialTheme.colorScheme.tertiary,
                                         modifier = Modifier.weight(1f),
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Speed,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.tertiary,
+                                            )
+                                        },
+                                        iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                        iconColor = MaterialTheme.colorScheme.tertiary,
                                     )
                                     VerticalDivider(modifier = Modifier.height(44.dp))
                                     FuelMetric(
                                         label = "Cost/km",
                                         value = currency(costPerKm ?: 0.0),
                                         modifier = Modifier.weight(1f),
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.CurrencyRupee,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.secondary,
+                                            )
+                                        },
+                                        iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        iconColor = MaterialTheme.colorScheme.secondary,
                                     )
                                 }
                             } else {
@@ -336,12 +365,24 @@ private fun FuelMetric(
     value: String,
     modifier: Modifier = Modifier,
     valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    icon: @Composable () -> Unit,
+    iconContainerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primaryContainer,
+    iconColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
+        Surface(
+            modifier = Modifier.size(38.dp),
+            shape = CircleShape,
+            color = iconContainerColor,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                icon()
+            }
+        }
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
