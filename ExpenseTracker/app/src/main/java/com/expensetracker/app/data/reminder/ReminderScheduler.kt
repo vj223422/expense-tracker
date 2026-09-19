@@ -5,11 +5,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import com.expensetracker.app.data.entity.ReminderEntity
+import com.expensetracker.app.data.prefs.AppPreferences
+import kotlinx.coroutines.runBlocking
 
-class ReminderScheduler(private val context: Context) {
+class ReminderScheduler(private val context: Context, private val appPreferences: AppPreferences) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
-    fun schedule(reminder: ReminderEntity) = schedule(reminder, reminder.sound)
+    fun schedule(reminder: ReminderEntity) = runBlocking { schedule(reminder, appPreferences.getReminderSound()) }
 
     fun schedule(reminder: ReminderEntity, sound: String) {
         if (!reminder.enabled || (reminder.endDateEpochMillis != null && reminder.triggerAtEpochMillis > reminder.endDateEpochMillis)) {
