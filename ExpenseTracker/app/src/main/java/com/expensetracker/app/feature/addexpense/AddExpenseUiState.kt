@@ -14,6 +14,9 @@ data class AddExpenseUiState(
     val selectedCategory: ExpenseCategory = ExpenseCategory.FOOD,
     val note: String = "",
     val date: LocalDate = LocalDate.now(),
+    val fuelLitersText: String = "",
+    val fuelPricePerLiterText: String = "",
+    val fuelOdometerText: String = "",
     // 4. Transient UI-only
     val isEditMode: Boolean = false,
     val isLoading: Boolean = false,
@@ -22,7 +25,13 @@ data class AddExpenseUiState(
 ) {
     // 2. Derived
     val canSave: Boolean
-        get() = !isSaving && !isLoading && (amountText.parseAmountToMinorUnits() ?: 0L) > 0L
+        get() = !isSaving && !isLoading && if (selectedCategory == ExpenseCategory.PETROL) {
+            (fuelLitersText.toDoubleOrNull() ?: 0.0) > 0.0 &&
+                (fuelPricePerLiterText.toDoubleOrNull() ?: 0.0) > 0.0 &&
+                (fuelOdometerText.toDoubleOrNull() ?: -1.0) >= 0.0
+        } else {
+            (amountText.parseAmountToMinorUnits() ?: 0L) > 0L
+        }
 }
 
 sealed interface AddExpenseEffect {
@@ -36,6 +45,9 @@ interface AddExpenseActions {
     fun onCategoryChange(category: ExpenseCategory)
     fun onNoteChange(value: String)
     fun onDateChange(date: LocalDate)
+    fun onFuelLitersChange(value: String)
+    fun onFuelPricePerLiterChange(value: String)
+    fun onFuelOdometerChange(value: String)
     fun onSaveClick()
     fun onDismiss()
 }
