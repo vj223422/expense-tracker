@@ -6,6 +6,8 @@ import com.expensetracker.app.data.model.Profile
 import com.expensetracker.app.data.prefs.AppPreferences
 import com.expensetracker.app.data.prefs.ThemeMode
 import com.expensetracker.app.data.repository.ProfileRepository
+import com.expensetracker.app.data.local.dao.ReminderDao
+import com.expensetracker.app.data.reminder.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,21 +18,30 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(
     private val appPreferences: AppPreferences,
     private val profileRepository: ProfileRepository,
+    private val reminderDao: ReminderDao,
+    private val reminderScheduler: ReminderScheduler,
 ) : ViewModel() {
     private val profileDialog = MutableStateFlow<ProfileDialog?>(null)
 
     val uiState: StateFlow<SettingsUiState> = combine(
         appPreferences.themeMode,
         appPreferences.appLockEnabled,
+        appPreferences.reminderSound,
         profileRepository.observeProfiles(),
         profileRepository.observeActiveProfileId(),
         profileDialog,
     ) { themeMode, appLockEnabled, profiles, activeProfileId, dialog ->
-        SettingsUiState(themeMode, appLockEnabled, profiles, activeProfileId, dialog)
+        SettingsUiState(themeMode, appLockEnabled, profiles, activeProfileId, dialog, reminderSound)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun onThemeModeChange(mode: ThemeMode) { viewModelScope.launch { appPreferences.setThemeMode(mode) } }
     fun onAppLockToggle(enabled: Boolean) { viewModelScope.launch { appPreferences.setAppLockEnabled(enabled) } }
+    fun onReminderSoundChange(sound: String) {
+        viewModelScope.launch {
+            appPreferences.setReminderSound(sound)
+            reminderDao.getEnabled().forEach { reminderScheduler.schedule(it, sound) }
+        }
+    }
     fun onSwitchProfile(profileId: Long) { viewModelScope.launch { profileRepository.switchProfile(profileId) } }
     fun onCreateProfileClick() { profileDialog.value = ProfileDialog.CreateProfile }
 
