@@ -33,13 +33,13 @@ import com.expensetracker.app.data.sound.UISfxSoundPlayer
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
+fun SettingsScreen(onFuelTrackerClick: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showReceived by rememberSaveable { mutableStateOf(true) }
     var reminderNotifications by rememberSaveable { mutableStateOf(true) }
     SettingsContent(uiState, viewModel::onThemeModeChange, viewModel::onAppLockToggle, viewModel::onReminderSoundChange, viewModel::onSwitchProfile,
         viewModel::onCreateProfileClick, viewModel::onRenameProfileClick, viewModel::onDeleteProfileClick,
-        showReceived, { showReceived = it }, reminderNotifications, { reminderNotifications = it }, uiState.reminderSound)
+        showReceived, { showReceived = it }, reminderNotifications, { reminderNotifications = it }, uiState.reminderSound, onFuelTrackerClick)
     when (val dialog = uiState.profileDialog) {
         is ProfileDialog.CreateProfile -> CreateProfileDialog(uiState.profiles.map { it.name }, viewModel::onCreateProfileConfirm, viewModel::onProfileDialogDismiss)
         is ProfileDialog.RenameProfile -> RenameProfileDialog(dialog.profile, viewModel::onRenameProfileConfirm, viewModel::onProfileDialogDismiss)
@@ -51,7 +51,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = koinViewModel()) {
 @Composable
 private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Unit, onLock: (Boolean) -> Unit, onReminderSoundChange: (String) -> Unit,
     onProfile: (Long) -> Unit, onAdd: () -> Unit, onRename: (Profile) -> Unit, onDelete: (Profile) -> Unit,
-    showReceived: Boolean, onShowReceived: (Boolean) -> Unit, reminders: Boolean, onReminders: (Boolean) -> Unit, reminderSound: String) {
+    showReceived: Boolean, onShowReceived: (Boolean) -> Unit, reminders: Boolean, onReminders: (Boolean) -> Unit, reminderSound: String, onFuelTrackerClick: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         ProfilesSection(uiState.profiles, uiState.activeProfileId, uiState.canDeleteProfiles, onProfile, onAdd, onRename, onDelete)
         SettingsSection("Theme", "Choose how the app looks") {
@@ -59,7 +59,7 @@ private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Un
             ThemeModeRow("Light", "Always use light theme", Icons.Default.LightMode, uiState.themeMode == ThemeMode.LIGHT) { onTheme(ThemeMode.LIGHT) }
             ThemeModeRow("Dark", "Always use dark theme", Icons.Default.DarkMode, uiState.themeMode == ThemeMode.DARK) { onTheme(ThemeMode.DARK) }
         }
-        SettingsSection("App Settings", "Customize your experience") {
+        Card(onClick = onFuelTrackerClick, modifier = Modifier.fillMaxWidth()) { Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(48.dp), shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.LocalGasStation, null, tint = MaterialTheme.colorScheme.primary) } }; Spacer(Modifier.width(14.dp)); Column(Modifier.weight(1f)) { Text("Fuel & Mileage", style = MaterialTheme.typography.titleMedium); Text("Track petrol spend, liters, mileage and per-trip fuel cost", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Text("›", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }\n        SettingsSection("App Settings", "Customize your experience") {
             ToggleRow(Icons.Default.BarChart, "Show received in home summary", "Include income in home dashboard cards", showReceived, onShowReceived)
             ToggleRow(Icons.Default.NotificationsActive, "Reminder notifications", "Get notified about your reminders", reminders, onReminders)
             ReminderSoundRow(reminderSound, onReminderSoundChange)
