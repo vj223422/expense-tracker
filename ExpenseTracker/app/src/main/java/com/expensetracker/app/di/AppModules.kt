@@ -26,7 +26,7 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7, ExpenseDatabase.MIGRATION_7_8, ExpenseDatabase.MIGRATION_8_9, ExpenseDatabase.MIGRATION_9_10)
+            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7, ExpenseDatabase.MIGRATION_7_8, ExpenseDatabase.MIGRATION_8_9, ExpenseDatabase.MIGRATION_9_10, ExpenseDatabase.MIGRATION_10_11)
             .fallbackToDestructiveMigrationOnDowngrade().build()
     }
     single { get<ExpenseDatabase>().expenseDao() }
@@ -41,17 +41,18 @@ val dataModule = module {
     single { NotificationHelper(androidContext()) }
     single { ReminderScheduler(androidContext(), get()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get(), get(), get(), get()) }
+    single { com.expensetracker.app.data.repository.FuelRepository(get(), get()) }
     single<BudgetRepository> { BudgetRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get(), get()) }
 }
 val viewModelModule = module {
     viewModel { DashboardViewModel(get(), get(), get(), get()) }
     viewModel { TransactionsViewModel(get(), get()) }
-    viewModel { (expenseId: Long?) -> AddExpenseViewModel(get(), get(), expenseId) }
+    viewModel { (expenseId: Long?) -> AddExpenseViewModel(get(), get(), get(), expenseId) }
     viewModel { BudgetsViewModel(get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get()) }
     viewModel { ProfileSwitcherViewModel(get()) }
     viewModel { RemindersViewModel(get(), get(), get(), get()) }
-    viewModel { FuelTrackerViewModel(get(), get()) }
+    viewModel { FuelTrackerViewModel(get(), get(), get()) }
 }
 val appModules = listOf(databaseModule, dataModule, viewModelModule)
