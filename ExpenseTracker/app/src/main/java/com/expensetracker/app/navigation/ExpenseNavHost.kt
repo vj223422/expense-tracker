@@ -60,6 +60,7 @@ import com.expensetracker.app.feature.dashboard.DashboardScreen
 import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
 import com.expensetracker.app.feature.reminders.RemindersScreen
 import com.expensetracker.app.feature.settings.SettingsScreen
+import com.expensetracker.app.feature.fuel.FuelTrackerScreen
 import com.expensetracker.app.feature.transactions.TransactionsScreen
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -138,7 +139,8 @@ fun ExpenseTrackerApp(
                 composable(Destination.Transactions.route) { TransactionsScreen(onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) }) }
                 composable(Destination.Reminders.route) { RemindersScreen() }
                 composable(Destination.Budgets.route) { BudgetsScreen() }
-                composable(Destination.Settings.route) { SettingsScreen() }
+                composable(Destination.Settings.route) { SettingsScreen(onFuelTrackerClick = { navController.navigate(Destination.FuelTracker.route) }) }
+                composable(Destination.FuelTracker.route) { FuelTrackerScreen(onNavigateBack = { navController.popBackStack() }) }
                 composable(
                     route = Destination.AddExpense.route,
                     arguments = listOf(navArgument(Destination.AddExpense.ARG_EXPENSE_ID) { type = NavType.LongType; defaultValue = Destination.AddExpense.NO_EXPENSE_ID }),
