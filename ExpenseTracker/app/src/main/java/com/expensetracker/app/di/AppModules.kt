@@ -26,7 +26,7 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7, ExpenseDatabase.MIGRATION_7_8, ExpenseDatabase.MIGRATION_8_9, ExpenseDatabase.MIGRATION_9_10, ExpenseDatabase.MIGRATION_10_11)
+            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7, ExpenseDatabase.MIGRATION_7_8, ExpenseDatabase.MIGRATION_8_9, ExpenseDatabase.MIGRATION_9_10, ExpenseDatabase.MIGRATION_10_11, ExpenseDatabase.MIGRATION_11_12)
             .fallbackToDestructiveMigrationOnDowngrade().build()
     }
     single { get<ExpenseDatabase>().expenseDao() }
@@ -40,8 +40,8 @@ val dataModule = module {
     single { AppPreferences(androidContext()) }
     single { NotificationHelper(androidContext()) }
     single { ReminderScheduler(androidContext(), get()) }
-    single<ExpenseRepository> { ExpenseRepositoryImpl(get(), get(), get(), get()) }
-    single { com.expensetracker.app.data.repository.FuelRepository(get(), get()) }
+    single<ExpenseRepository> { ExpenseRepositoryImpl(get(), get(), get(), get(), get()) }
+    single { com.expensetracker.app.data.repository.FuelRepository(get(), get(), get()) }
     single<BudgetRepository> { BudgetRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get(), get()) }
 }
