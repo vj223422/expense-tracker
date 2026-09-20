@@ -7,6 +7,7 @@ import com.expensetracker.app.data.entity.ExpenseEntity
 import com.expensetracker.app.data.entity.OVERALL_BUDGET_KEY
 import com.expensetracker.app.data.local.dao.BudgetLimitDao
 import com.expensetracker.app.data.local.dao.ExpenseDao
+import com.expensetracker.app.data.local.dao.FuelLogDao
 import com.expensetracker.app.data.model.Expense
 import com.expensetracker.app.data.model.ExpenseCategory
 import com.expensetracker.app.data.notification.AlertTier
@@ -22,7 +23,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.YearMonth
 
-class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budgetLimitDao: BudgetLimitDao, private val notificationHelper: NotificationHelper, private val appPreferences: AppPreferences, private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : ExpenseRepository {
+class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budgetLimitDao: BudgetLimitDao, private val notificationHelper: NotificationHelper, private val appPreferences: AppPreferences, private val fuelLogDao: FuelLogDao, private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : ExpenseRepository {
     override fun observeAllExpenses(profileId: Long): Flow<List<Expense>> = expenseDao.observeAll(profileId).map { it.map(ExpenseEntity::toDomain) }
     override fun observeExpensesForMonth(profileId: Long, yearMonth: YearMonth): Flow<List<Expense>> = expenseDao.observeBetween(profileId, yearMonth.startEpochDay, yearMonth.endEpochDay).map { it.map(ExpenseEntity::toDomain) }
     override fun observeExpensesForBudgetPeriod(profileId: Long, yearMonth: YearMonth): Flow<List<Expense>> = expenseDao.observeBudgetPeriod(profileId, yearMonth.toString()).map { it.map(ExpenseEntity::toDomain) }
@@ -52,7 +53,10 @@ class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budg
         val alerts = try { evaluateAndNotify(expense.profileId, budgetMonth, expense.category) } catch (_: SQLiteException) { emptyList() }
         AddExpenseResult.Success(alerts)
     }
-    override suspend fun deleteExpense(expense: Expense) = withContext(ioDispatcher) { expenseDao.delete(expense.toEntity()) }
+    override suspend fun deleteExpense(expense: Expense) = withContext(ioDispatcher) {
+        expenseDao.delete(expense.toEntity())
+        fuelLogDao.deleteByExpenseId(expense.id)
+    }
     override suspend fun restoreExpense(expense: Expense): AddExpenseResult = withContext(ioDispatcher) {
         try { expenseDao.insert(expense.toEntity()) } catch (_: SQLiteException) { return@withContext AddExpenseResult.Error("Couldn't restore expense — local storage error.") }
         if (expense.isIncome) return@withContext AddExpenseResult.Success(emptyList())
