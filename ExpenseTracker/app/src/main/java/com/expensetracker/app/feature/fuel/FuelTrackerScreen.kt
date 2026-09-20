@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -247,13 +248,20 @@ private fun FuelRangeSelector(selected: String, onSelected: (String) -> Unit) {
         Row(Modifier.padding(3.dp)) {
             options.forEach { option ->
                 Surface(
-                    Modifier.weight(1f).height(40.dp),
-                    onClick = { onSelected(option) },
+                    Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .clickable(onClick = { onSelected(option) }),
                     shape = RoundedCornerShape(18.dp),
                     color = if (option == selected) FuelBlue else Color.Transparent,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(option, color = if (option == selected) Color.White else FuelInk, fontWeight = if (option == selected) FontWeight.Bold else FontWeight.Medium)
+                        Text(
+                            option,
+                            color = if (option == selected) Color.White else FuelInk,
+                            fontWeight = if (option == selected) FontWeight.Bold else FontWeight.Medium,
+                        )
                     }
                 }
             }
