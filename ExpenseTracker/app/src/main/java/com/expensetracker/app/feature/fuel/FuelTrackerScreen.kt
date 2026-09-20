@@ -348,6 +348,26 @@ private fun FuelHistoryHeader(count: Int, onAdd: () -> Unit) {
 }
 
 @Composable
+private fun HistoryColumn(value: String, label: String, modifier: Modifier) {
+    Column(modifier) {
+        Text(
+            value,
+            color = FuelInk,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            label,
+            color = FuelMuted,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
 private fun FuelHistoryRow(log: FuelLogEntity, onDelete: () -> Unit) {
     val distance = log.endOdometerKm?.let { (it - log.odometerKm).coerceAtLeast(0.0) }
     val mileage = if (distance != null && log.liters > 0) distance / log.liters else null
