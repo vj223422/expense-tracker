@@ -84,6 +84,7 @@ fun ExpenseTrackerApp(
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
         val showChrome = currentRoute != Destination.AddExpense.route
+        val showAppTopBar = showChrome && currentRoute != Destination.FuelTracker.route
 
         LaunchedEffect(notificationNavigationRequest) {
             if (notificationNavigationRequest <= 0L) return@LaunchedEffect
@@ -95,7 +96,7 @@ fun ExpenseTrackerApp(
 
         Scaffold(
             modifier = Modifier,
-            topBar = { if (showChrome) AppTopBar(onSettingsClick = { navController.navigate(Destination.Settings.route) { launchSingleTop = true } }) },
+            topBar = { if (showAppTopBar) AppTopBar(onSettingsClick = { navController.navigate(Destination.Settings.route) { launchSingleTop = true } }) },
             bottomBar = {
                 if (showChrome) {
                     NavigationBar(
