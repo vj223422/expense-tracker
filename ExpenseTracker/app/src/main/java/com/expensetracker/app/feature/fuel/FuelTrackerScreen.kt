@@ -47,6 +47,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import java.text.NumberFormat
@@ -176,11 +178,14 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                     Text("Track · Analyse · Save", color = FuelMuted, style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Icon(
-                Icons.Default.TwoWheeler,
-                contentDescription = "TVS Raider",
-                tint = FuelInk,
-                modifier = Modifier.align(Alignment.Center).offset(y = 12.dp).size(112.dp),
+            AsyncImage(
+                model = "https://www.tvsmotor.com/tvs-raider/-/media/Brand-Pages-Webp/Raider/Raider-360/360-raider/SSE/Deadpool/1.webp",
+                contentDescription = "TVS Raider Deadpool Edition",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(y = 14.dp)
+                    .size(width = 150.dp, height = 110.dp),
             )
             Column(Modifier.align(Alignment.TopEnd).width(220.dp).padding(end = 22.dp, top = 23.dp)) {
                 Text("Current Cycle", color = FuelMuted, style = MaterialTheme.typography.bodyLarge)
