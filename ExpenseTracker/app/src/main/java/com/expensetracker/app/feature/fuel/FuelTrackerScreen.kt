@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.ShowChart
-import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -87,12 +86,24 @@ fun FuelTrackerScreen(
         log.endOdometerKm?.let { (it - log.odometerKm).coerceAtLeast(0.0) } ?: 0.0
     }
     val completed = state.logs.filter { it.endOdometerKm != null }
-    val trips = completed.mapNotNull { log ->
+    val rangeDays = when (selectedRange) {
+        "1M" -> 30L
+        "3M" -> 90L
+        "6M" -> 180L
+        "1Y" -> 365L
+        else -> null
+    }
+    val cutoffEpochDay = rangeDays?.let { java.time.LocalDate.now().toEpochDay() - it }
+    val filteredCompleted = completed
+        .filter { cutoffEpochDay == null || it.epochDay >= cutoffEpochDay }
+        .sortedBy { it.epochDay }
+    val trips = filteredCompleted.mapNotNull { log ->
         val end = log.endOdometerKm ?: return@mapNotNull null
         val distance = (end - log.odometerKm).takeIf { it > 0.0 } ?: return@mapNotNull null
         val cost = log.amountMinor / 100.0
+        if (log.liters <= 0.0) return@mapNotNull null
         FuelTripInsight(distance / log.liters, cost, cost / distance, distance)
-    }.takeLast(8)
+    }.takeLast(12)
 
     Scaffold(
         containerColor = FuelPage,
@@ -148,7 +159,7 @@ fun FuelTrackerScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item { FuelVehicleHero(activeDistance = 0.0, active = state.logs.firstOrNull()?.endOdometerKm == null) }
+            item { FuelVehicleHero(activeDistance = 0.0, active = state.logs.any { it.endOdometerKm == null }) }
             item { FuelKpiGrid(state.totalSpentMinor / 100.0, state.totalLiters, mileage, totalDistance, state.logs.size) }
             item { FuelRangeSelector(selectedRange) { selectedRange = it } }
             item { FuelCharts(trips) }
@@ -345,9 +356,7 @@ private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageV
             Column(Modifier.weight(1f)) {
                 Text(title, color = FuelMuted, style = MaterialTheme.typography.bodySmall)
                 Text(value, color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (subtitle.isNotBlank()) {
-                    Text(subtitle, color = if (subtitle.startsWith("↑")) FuelGreen else FuelMuted, style = MaterialTheme.typography.labelSmall)
-                }
+                Text(subtitle, color = FuelMuted, style = MaterialTheme.typography.labelSmall, maxLines = 2)
             }
         }
     }
@@ -383,13 +392,13 @@ private fun FuelRangeSelector(selected: String, onSelected: (String) -> Unit) {
 
 @Composable
 private fun FuelCharts(trips: List<FuelTripInsight>) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         FuelChartCard("Mileage Trend", Icons.Default.ShowChart, FuelGreen, if (trips.isNotEmpty()) "Avg. %.1f km/L".format(trips.map { it.mileage }.average()) else "No data", Modifier.weight(1f)) {
-            FuelLineChart(trips.map { it.mileage }, Modifier.fillMaxWidth().height(145.dp))
+            FuelLineChart(trips.map { it.mileage }, Modifier.fillMaxWidth().height(170.dp))
             ChartLabels()
         }
         FuelChartCard("Fuel Cost per Fill", Icons.Default.BarChart, FuelBlue, if (trips.isNotEmpty()) "Avg. ${currency(trips.map { it.cost }.average()).replace(".00", "")}" else "No data", Modifier.weight(1f)) {
-            FuelBarChart(trips.map { it.cost }, Modifier.fillMaxWidth().height(145.dp))
+            FuelBarChart(trips.map { it.cost }, Modifier.fillMaxWidth().height(170.dp))
             ChartLabels()
         }
     }
