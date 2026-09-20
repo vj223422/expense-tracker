@@ -26,6 +26,10 @@ interface ExpenseDao {
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM expenses WHERE profileId = :profileId AND isIncome = 1 AND budgetMonth = :budgetMonth") fun observeIncomeTotalForBudget(profileId: Long, budgetMonth: String): Flow<Long>
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM expenses WHERE profileId = :profileId AND isIncome = 1 AND budgetMonth = :budgetMonth") suspend fun getIncomeTotalForBudget(profileId: Long, budgetMonth: String): Long
 
+    /** Used only to link legacy fuel logs created before fuel/expense IDs were linked. */
+    @Query("SELECT * FROM expenses WHERE profileId = :profileId AND amountMinor = :amountMinor AND category = :category AND note = :note AND isIncome = 0 AND epochDay = :epochDay ORDER BY createdAtEpochMillis DESC, id DESC LIMIT 1")
+    suspend fun findMatchingFuelExpense(profileId: Long, amountMinor: Long, category: ExpenseCategory, note: String, epochDay: Long): ExpenseEntity?
+
     @Query("UPDATE expenses SET budgetMonth = :budgetMonth, budgetCycleStartEpochMillis = :cycleStartEpochMillis WHERE profileId = :profileId AND createdAtEpochMillis >= :fromEpochMillis")
     suspend fun assignExpensesToBudgetFrom(profileId: Long, fromEpochMillis: Long, budgetMonth: String, cycleStartEpochMillis: Long)
 }
