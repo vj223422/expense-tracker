@@ -85,6 +85,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
