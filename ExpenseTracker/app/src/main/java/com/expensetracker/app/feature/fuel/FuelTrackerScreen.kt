@@ -105,21 +105,39 @@ fun FuelTrackerScreen(
                     }
                 },
                 title = {
-                    Column {
-                        Text("Fuel & Mileage", color = FuelInk, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        Text("Track your fuel fills and get better insights", color = FuelMuted, style = MaterialTheme.typography.bodyMedium)
+                    Column(
+                        modifier = Modifier
+                            .widthIn(max = 210.dp)
+                            .padding(end = 4.dp),
+                    ) {
+                        Text(
+                            "Fuel & Mileage",
+                            color = FuelInk,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                        )
+                        Text(
+                            "Track your fuel fills and get better insights",
+                            color = FuelMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                        )
                     }
                 },
                 actions = {
                     Button(
                         onClick = { showAdd = true },
-                        modifier = Modifier.padding(end = 12.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .widthIn(min = 112.dp, max = 126.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp),
                         shape = RoundedCornerShape(13.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = FuelBlue),
                     ) {
-                        Icon(Icons.Default.Add, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Add Fuel", fontWeight = FontWeight.SemiBold)
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Add Fuel", fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                 },
             )
@@ -161,47 +179,141 @@ fun FuelTrackerScreen(
 @Composable
 private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
     Card(
-        Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(FuelHero),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0DCE0)),
     ) {
-        Box(Modifier.fillMaxWidth().height(178.dp)) {
-            Column(Modifier.padding(start = 28.dp, top = 22.dp)) {
-                Text("TVS Raider", color = FuelInk, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Deadpool Edition", color = FuelMuted, style = MaterialTheme.typography.bodyLarge)
-                Spacer(Modifier.height(4.dp))
-                Text("“More journeys, better stories”", color = FuelInk, style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(10.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(188.dp)
+                .padding(18.dp),
+        ) {
+            // Text and cycle information occupy the top half. The bike is isolated
+            // in the lower-right area so it can never cover either text block.
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .widthIn(max = 170.dp),
+            ) {
+                Text(
+                    "TVS Raider",
+                    color = FuelInk,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+                Text(
+                    "Deadpool Edition",
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .widthIn(min = 104.dp, max = 150.dp),
+            ) {
+                Text(
+                    "Current Cycle",
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                )
+                Text(
+                    if (active && activeDistance > 0) "%.0f km".format(activeDistance) else "0 km",
+                    color = FuelInk,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+                Text(
+                    "Since last fill",
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                )
+                Spacer(Modifier.height(6.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFFE7EDF4)),
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth((activeDistance / 450.0).coerceIn(0.0, 1.0).toFloat())
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(50))
+                            .background(FuelGreen),
+                    )
+                }
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    "%.0f / 450 km".format(activeDistance),
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .widthIn(max = 150.dp)
+                    .padding(bottom = 5.dp),
+            ) {
+                Text(
+                    "“More journeys, better stories”",
+                    color = FuelInk,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                )
+                Spacer(Modifier.height(5.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocalGasStation, null, tint = FuelMuted, modifier = Modifier.size(21.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text("Track · Analyse · Save", color = FuelMuted, style = MaterialTheme.typography.bodyMedium)
+                    Icon(
+                        Icons.Default.LocalGasStation,
+                        null,
+                        tint = FuelMuted,
+                        modifier = Modifier.size(19.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "Track · Analyse · Save",
+                        color = FuelMuted,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                    )
                 }
             }
+
             AsyncImage(
                 model = "https://www.tvsmotor.com/tvs-raider/-/media/Brand-Pages-Webp/Raider/Raider-360/360-raider/SSE/Deadpool/1.webp",
                 contentDescription = "TVS Raider Deadpool Edition",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = 14.dp)
-                    .size(width = 150.dp, height = 110.dp),
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 55.dp, bottom = 2.dp)
+                    .size(width = 145.dp, height = 92.dp),
             )
-            Column(Modifier.align(Alignment.TopEnd).width(220.dp).padding(end = 22.dp, top = 23.dp)) {
-                Text("Current Cycle", color = FuelMuted, style = MaterialTheme.typography.bodyLarge)
-                Text(if (active && activeDistance > 0) "%.0f km".format(activeDistance) else "0 km", color = FuelInk, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text("Since last fill", color = FuelMuted, style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(10.dp))
-                Box(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(50)).background(Color(0xFFE7EDF4))) {
-                    Box(Modifier.fillMaxWidth((activeDistance / 450.0).coerceIn(0.0, 1.0).toFloat()).fillMaxHeight().clip(RoundedCornerShape(50)).background(FuelGreen))
-                }
-                Spacer(Modifier.height(6.dp))
-                Text("%.0f / 450 km".format(activeDistance), color = FuelMuted, style = MaterialTheme.typography.bodyMedium)
-            }
-            Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
                 repeat(3) { i ->
-                    Box(Modifier.size(if (i == 0) 8.dp else 7.dp).clip(CircleShape).background(if (i == 0) Color(0xFFE53935) else Color(0xFF9DA9B9)))
+                    Box(
+                        Modifier
+                            .size(if (i == 0) 7.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(if (i == 0) Color(0xFFE53935) else Color(0xFF9DA9B9)),
+                    )
                 }
             }
         }
@@ -303,36 +415,74 @@ private fun FuelChartCard(title: String, icon: ImageVector, accent: Color, badge
 
 @Composable
 private fun ChartLabels() {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        listOf("Jun", "Jul", "Aug", "Sep").forEach { Text(it, color = FuelMuted, style = MaterialTheme.typography.labelSmall) }
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        listOf("Jun", "Jul", "Aug", "Sep").forEach {
+            Text(
+                it,
+                color = FuelMuted,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+            )
+        }
     }
 }
 
 @Composable
-private fun FuelHighlights(trips: List<FuelTripInsight>) {
-    val costKm = trips.map { it.costPerKm }.averageOrNull() ?: 0.0
-    val longest = trips.maxOfOrNull { it.distanceKm } ?: 0.0
-    val best = trips.maxOfOrNull { it.mileage } ?: 0.0
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        FuelHighlight("Cost per km", if (costKm > 0) currency(costKm) else "—", "↓ -8%\nvs previous 3 months", Icons.Default.Payments, FuelOrange, Modifier.weight(1f))
-        FuelHighlight("Longest Run", if (longest > 0) "%.0f km".format(longest) else "—", "Best distance in a cycle", Icons.Default.Route, FuelBlue, Modifier.weight(1f))
-        FuelHighlight("Best Mileage", if (best > 0) "%.1f km/L".format(best) else "—", "Your best so far", Icons.Default.Eco, FuelGreen, Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun FuelHighlight(title: String, value: String, subtitle: String, icon: ImageVector, accent: Color, modifier: Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(15.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(accent.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(25.dp))
+private fun FuelHighlight(
+    title: String,
+    value: String,
+    subtitle: String,
+    icon: ImageVector,
+    accent: Color,
+    modifier: Modifier,
+) {
+    Surface(
+        modifier = modifier.heightIn(min = 154.dp),
+        shape = RoundedCornerShape(15.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(11.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = .12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
             }
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(title, color = FuelMuted, style = MaterialTheme.typography.bodySmall)
-                Text(value, color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = if (subtitle.startsWith("↓")) FuelGreen else FuelMuted, style = MaterialTheme.typography.labelSmall)
-            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                title,
+                color = FuelMuted,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                value,
+                color = FuelInk,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                subtitle,
+                color = if (subtitle.startsWith("↓")) FuelGreen else FuelMuted,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 3,
+            )
         }
     }
 }
@@ -377,38 +527,135 @@ private fun FuelHistoryRow(log: FuelLogEntity, onDelete: () -> Unit) {
     val date = java.time.LocalDate.ofEpochDay(log.epochDay)
     val dateText = date.format(DateTimeFormatter.ofPattern("dd MMM", Locale.ENGLISH))
     val yearText = date.format(DateTimeFormatter.ofPattern("yyyy", Locale.ENGLISH))
-    Surface(shape = RoundedCornerShape(15.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
-        Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                HistoryColumn(dateText, yearText, Modifier.width(70.dp))
-                HistoryColumn(distance?.let { "%.0f km".format(it) } ?: "—", "Distance", Modifier.weight(1f))
-                HistoryColumn("%.1f L".format(log.liters), "Fuel", Modifier.weight(.8f))
-                HistoryColumn(currency(cost).replace(".00", ""), "Total cost", Modifier.weight(1f))
-                if (mileage != null) {
-                    Surface(shape = RoundedCornerShape(18.dp), color = FuelGreenSoft) {
-                        Column(Modifier.padding(horizontal = 9.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("%.1f km/L".format(mileage), color = FuelGreen, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                            Text("Mileage", color = FuelGreen, style = MaterialTheme.typography.labelSmall)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(15.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 13.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                HistoryColumn(
+                    dateText,
+                    yearText,
+                    Modifier.width(64.dp),
+                )
+                HistoryColumn(
+                    distance?.let { "%.0f km".format(it) } ?: "—",
+                    "Distance",
+                    Modifier.weight(1f),
+                )
+                HistoryColumn(
+                    "%.1f L".format(log.liters),
+                    "Fuel",
+                    Modifier.weight(0.9f),
+                )
+                HistoryColumn(
+                    currency(cost).replace(".00", ""),
+                    "Total cost",
+                    Modifier.weight(1.15f),
+                )
+
+                Column(
+                    modifier = Modifier.weight(1.1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (mileage != null) {
+                        Surface(
+                            shape = RoundedCornerShape(18.dp),
+                            color = FuelGreenSoft,
+                        ) {
+                            Text(
+                                "%.1f km/L".format(mileage),
+                                color = FuelGreen,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 7.dp),
+                            )
                         }
+                    } else {
+                        val transition = rememberInfiniteTransition(label = "fuelProgress")
+                        val alpha by transition.animateFloat(
+                            initialValue = 0.35f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(700),
+                                repeatMode = RepeatMode.Reverse,
+                            ),
+                            label = "fuelProgressAlpha",
+                        )
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(FuelOrange.copy(alpha = alpha)),
+                        )
                     }
-                } else {
-                    Text("In progress", color = FuelOrange, style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        if (mileage != null) "Mileage" else "In progress",
+                        color = if (mileage != null) FuelGreen else FuelOrange,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                    )
                 }
+
                 Box {
-                    IconButton(onClick = { menuOpen = true }, Modifier.size(32.dp)) { Icon(Icons.Default.MoreVert, null, tint = FuelMuted) }
+                    IconButton(
+                        onClick = { menuOpen = true },
+                        modifier = Modifier.size(30.dp),
+                    ) {
+                        Icon(Icons.Default.MoreVert, null, tint = FuelMuted)
+                    }
                     DropdownMenu(menuOpen, { menuOpen = false }) {
-                        DropdownMenuItem(text = { Text("Delete") }, onClick = { menuOpen = false; onDelete() }, leadingIcon = { Icon(Icons.Default.DeleteOutline, null) })
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                menuOpen = false
+                                onDelete()
+                            },
+                            leadingIcon = { Icon(Icons.Default.DeleteOutline, null) },
+                        )
                     }
                 }
             }
-            Spacer(Modifier.height(9.dp))
+
+            Spacer(Modifier.height(10.dp))
             HorizontalDivider(color = FuelBorder)
             Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.ReceiptLong, null, tint = FuelMuted, modifier = Modifier.size(17.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Default.ReceiptLong,
+                    null,
+                    tint = FuelMuted,
+                    modifier = Modifier.size(17.dp),
+                )
                 Spacer(Modifier.width(6.dp))
-                Text(if (log.note.isBlank()) "Fuel fill" else log.note, color = FuelMuted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                if (costPerKm != null) Text("₹%.1f/km".format(costPerKm), color = FuelMuted, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    if (log.note.isBlank()) "Fuel fill" else log.note,
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                if (costPerKm != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "₹%.1f/km".format(costPerKm),
+                        color = FuelMuted,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
