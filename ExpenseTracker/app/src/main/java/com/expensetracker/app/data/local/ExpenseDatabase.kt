@@ -17,7 +17,7 @@ import com.expensetracker.app.data.local.dao.NoteDao
 import com.expensetracker.app.data.local.dao.ProfileDao
 import com.expensetracker.app.data.local.dao.ReminderDao
 
-@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class, FuelLogEntity::class], version = 11, exportSchema = true)
+@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class, FuelLogEntity::class], version = 12, exportSchema = true)
 abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun fuelLogDao(): FuelLogDao
@@ -58,6 +58,26 @@ abstract class ExpenseDatabase : RoomDatabase() {
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `reminders` ADD COLUMN `sound` TEXT NOT NULL DEFAULT 'DEFAULT'")
+            }
+        }
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `fuel_logs` ADD COLUMN `expenseId` INTEGER")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_logs_expenseId` ON `fuel_logs` (`expenseId`)")
+                // Link existing fuel rows to their matching PETROL expense so legacy data
+                // also stays synchronized when either side is deleted.
+                db.execSQL(
+                    "UPDATE `fuel_logs` SET `expenseId` = (" +
+                        "SELECT e.id FROM expenses e " +
+                        "WHERE e.profileId = fuel_logs.profileId " +
+                        "AND e.amountMinor = fuel_logs.amountMinor " +
+                        "AND e.category = 'PETROL' " +
+                        "AND e.note = fuel_logs.note " +
+                        "AND e.isIncome = 0 " +
+                        "AND e.epochDay = fuel_logs.epochDay " +
+                        "ORDER BY e.createdAtEpochMillis DESC, e.id DESC LIMIT 1" +
+                        ") WHERE `expenseId` IS NULL"
+                )
             }
         }
         val MIGRATION_10_11 = object : Migration(10, 11) {
