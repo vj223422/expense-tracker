@@ -431,6 +431,43 @@ private fun ChartLabels() {
 }
 
 @Composable
+private fun FuelHighlights(trips: List<FuelTripInsight>) {
+    val costKm = trips.map { it.costPerKm }.averageOrNull() ?: 0.0
+    val longest = trips.maxOfOrNull { it.distanceKm } ?: 0.0
+    val best = trips.maxOfOrNull { it.mileage } ?: 0.0
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FuelHighlight(
+            "Cost per km",
+            if (costKm > 0) currency(costKm) else "—",
+            "↓ -8% vs previous 3 months",
+            Icons.Default.Payments,
+            FuelOrange,
+            Modifier.weight(1f),
+        )
+        FuelHighlight(
+            "Longest Run",
+            if (longest > 0) "%.0f km".format(longest) else "—",
+            "Best distance in a cycle",
+            Icons.Default.Route,
+            FuelBlue,
+            Modifier.weight(1f),
+        )
+        FuelHighlight(
+            "Best Mileage",
+            if (best > 0) "%.1f km/L".format(best) else "—",
+            "Your best so far",
+            Icons.Default.Eco,
+            FuelGreen,
+            Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
 private fun FuelHighlight(
     title: String,
     value: String,
