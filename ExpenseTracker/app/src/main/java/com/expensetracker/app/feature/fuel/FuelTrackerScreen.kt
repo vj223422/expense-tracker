@@ -570,7 +570,6 @@ private fun FuelHistoryRow(log: FuelLogEntity, onDelete: () -> Unit) {
     val cost = log.amountMinor / 100.0
     val costPerKm = if (distance != null && distance > 0) cost / distance else null
     val inProgress = log.endOdometerKm == null
-    var menuOpen by remember { mutableStateOf(false) }
     val date = java.time.LocalDate.ofEpochDay(log.epochDay)
     val dateText = date.format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH))
 
@@ -662,23 +661,15 @@ private fun FuelHistoryRow(log: FuelLogEntity, onDelete: () -> Unit) {
                         )
                     }
 
-                    Box {
-                        IconButton(
-                            onClick = { menuOpen = true },
-                            modifier = Modifier.size(32.dp),
-                        ) {
-                            Icon(Icons.Default.MoreVert, null, tint = FuelMuted)
-                        }
-                        DropdownMenu(menuOpen, { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Delete") },
-                                onClick = {
-                                    menuOpen = false
-                                    onDelete()
-                                },
-                                leadingIcon = { Icon(Icons.Default.DeleteOutline, null) },
-                            )
-                        }
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.DeleteOutline,
+                            contentDescription = "Delete fuel entry",
+                            tint = FuelMuted,
+                        )
                     }
                 }
             }
