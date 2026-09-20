@@ -3,9 +3,12 @@ package com.expensetracker.app.feature.fuel
 import com.expensetracker.app.data.entity.FuelLogEntity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clip
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -29,6 +32,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -50,21 +54,40 @@ fun FuelTrackerScreen(
     var tripDistance by rememberSaveable { mutableStateOf("") }
 
     val mileage = state.averageMileage ?: 0.0
-    val tripKm = tripDistance.toDoubleOrNull() ?: 0.0
+    val tripKm = tripDistance.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
     val tripLiters = if (mileage > 0) tripKm / mileage else 0.0
     val tripCost = tripLiters * state.averagePricePerLiter
+    val latest = state.logs.firstOrNull()
+    val activeTrip = latest?.endOdometerKm == null
+    val completedTrips = state.logs.count { it.endOdometerKm != null }
+    val totalDistance = state.logs.sumOf { log ->
+        log.endOdometerKm?.let { (it - log.odometerKm).coerceAtLeast(0.0) } ?: 0.0
+    }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Fuel & Mileage") },
+                title = {
+                    Column {
+                        Text("Fuel", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Mileage & fuel tracking",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Text("‹", style = MaterialTheme.typography.headlineLarge)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showAdd = true }) {
+                    FilledIconButton(
+                        onClick = { showAdd = true },
+                        modifier = Modifier.padding(end = 8.dp),
+                    ) {
                         Icon(Icons.Default.Add, contentDescription = "Add fuel")
                     }
                 },
@@ -74,277 +97,129 @@ fun FuelTrackerScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(padding),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 8.dp,
+                bottom = 28.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FuelStatCard(
-                        "Fuel spent",
-                        currency(state.totalSpentMinor / 100.0),
-                        Modifier.weight(1f),
-                    )
-                    FuelStatCard(
-                        "Fuel used",
-                        "%.2f L".format(state.totalLiters),
-                        Modifier.weight(1f),
-                    )
-                }
+                FuelHeroCard(
+                    totalSpent = state.totalSpentMinor / 100.0,
+                    totalLiters = state.totalLiters,
+                    mileage = mileage,
+                    completedTrips = completedTrips,
+                    activeTrip = activeTrip,
+                )
             }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FuelStatCard(
-                        "Avg. price",
-                        if (state.averagePricePerLiter > 0) {
-                            currency(state.averagePricePerLiter) + "/L"
-                        } else {
-                            "—"
-                        },
-                        Modifier.weight(1f),
-                    )
-                    FuelStatCard(
-                        "Mileage",
-                        state.averageMileage?.let { "%.2f km/L".format(it) } ?: "Add 2 fills",
-                        Modifier.weight(1f),
-                    )
-                }
+                FuelSectionTitle(
+                    "Your numbers",
+                    "A quick view of your fuel performance",
+                )
             }
 
             item {
-                Card {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Route,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                "Per-trip fuel estimate",
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                        }
-
-                        OutlinedTextField(
-                            value = tripDistance,
-                            onValueChange = { tripDistance = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Trip distance (km)") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Decimal,
-                            ),
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FuelDashboardStat(
+                            "Total spent",
+                            currency(state.totalSpentMinor / 100.0),
+                            Icons.Default.CurrencyRupee,
+                            Modifier.weight(1f),
                         )
-
-                        if (mileage > 0 && state.averagePricePerLiter > 0) {
-                            Text(
-                                "%.2f L estimated • %s fuel cost".format(
-                                    tripLiters,
-                                    currency(tripCost),
-                                ),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                "Based on %.2f km/L and %s/L average price".format(
-                                    mileage,
-                                    currency(state.averagePricePerLiter),
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            Text(
-                                "Add at least two fuel entries with odometer readings to calculate mileage and trip cost.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        FuelDashboardStat(
+                            "Fuel used",
+                            "%.1f L".format(state.totalLiters),
+                            Icons.Default.LocalGasStation,
+                            Modifier.weight(1f),
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FuelDashboardStat(
+                            "Avg. mileage",
+                            if (mileage > 0) "%.2f km/L".format(mileage) else "—",
+                            Icons.Default.Speed,
+                            Modifier.weight(1f),
+                        )
+                        FuelDashboardStat(
+                            "Distance",
+                            if (totalDistance > 0) "%.0f km".format(totalDistance) else "—",
+                            Icons.Default.Route,
+                            Modifier.weight(1f),
+                        )
                     }
                 }
             }
 
-            item { FuelInsightsCard(logs = state.logs) }
+            item {
+                FuelTripCalculator(
+                    tripDistance = tripDistance,
+                    onTripDistanceChange = { tripDistance = it },
+                    mileage = mileage,
+                    averagePrice = state.averagePricePerLiter,
+                    tripLiters = tripLiters,
+                    tripCost = tripCost,
+                )
+            }
 
             item {
-                Text("Fuel history", style = MaterialTheme.typography.titleLarge)
+                FuelSectionTitle(
+                    "Insights",
+                    if (completedTrips > 0) {
+                        "Based on " + completedTrips + " completed fuel " +
+                            if (completedTrips == 1) "cycle" else "cycles"
+                    } else {
+                        "Complete a fuel cycle to unlock trends"
+                    },
+                )
+            }
+
+            item {
+                FuelInsightsCard(logs = state.logs)
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Fuel history",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            state.logs.size.toString() + " " +
+                                if (state.logs.size == 1) "entry" else "entries" +
+                                " • newest first",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    FilledTonalButton(onClick = { showAdd = true }) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Add fill")
+                    }
+                }
             }
 
             if (state.logs.isEmpty()) {
                 item {
-                    Text(
-                        "No fuel entries yet. Tap + to record your first petrol fill.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    FuelEmptyState(onAdd = { showAdd = true })
                 }
             } else {
                 items(state.logs, key = { it.id }) { log ->
-                    val endOdometer = log.endOdometerKm
-                    val distance = endOdometer
-                        ?.let { it - log.odometerKm }
-                        ?.takeIf { it > 0.0 }
-                    val mileageForTrip = distance
-                        ?.takeIf { log.liters > 0.0 }
-                        ?.let { it / log.liters }
-                    val costPerKm = distance
-                        ?.takeIf { it > 0.0 }
-                        ?.let { (log.amountMinor / 100.0) / it }
-
-                    Card {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(
-                                    modifier = Modifier.size(44.dp),
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Default.LocalGasStation,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                }
-
-                                Spacer(Modifier.width(12.dp))
-
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        "Start: ${formatDate(log.epochDay)} • %.1f km".format(
-                                            log.odometerKm,
-                                        ),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        "End: ${log.endEpochDay?.let(::formatDate) ?: "—"} • ${endOdometer?.let { "%.1f km".format(it) } ?: "—"}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        "%.2f L • %s/L • %s".format(
-                                            log.liters,
-                                            currency(log.amountMinor / 100.0 / log.liters),
-                                            currency(log.amountMinor / 100.0),
-                                        ),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                }
-
-                                if (distance == null) {
-                                    InProgressDot()
-                                }
-
-                                IconButton(onClick = { viewModel.deleteFuel(log) }) {
-                                    Icon(
-                                        Icons.Default.DeleteOutline,
-                                        contentDescription = "Delete",
-                                    )
-                                }
-                            }
-
-                            if (log.note.isNotBlank()) {
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    log.note,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-
-                            HorizontalDivider(
-                                modifier = Modifier.padding(
-                                    top = 12.dp,
-                                    bottom = 10.dp,
-                                ),
-                            )
-
-                            if (distance != null && mileageForTrip != null) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    FuelMetric(
-                                        label = "Distance",
-                                        value = "%.1f km".format(distance),
-                                        modifier = Modifier.weight(1f),
-                                        icon = {
-                                            Icon(
-                                                Icons.Default.Route,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                        },
-                                        iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        iconColor = MaterialTheme.colorScheme.primary,
-                                    )
-                                    VerticalDivider(modifier = Modifier.height(44.dp))
-                                    FuelMetric(
-                                        label = "Mileage",
-                                        value = "%.2f km/L".format(mileageForTrip),
-                                        valueColor = MaterialTheme.colorScheme.tertiary,
-                                        modifier = Modifier.weight(1f),
-                                        icon = {
-                                            Icon(
-                                                Icons.Default.Speed,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.tertiary,
-                                            )
-                                        },
-                                        iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                        iconColor = MaterialTheme.colorScheme.tertiary,
-                                    )
-                                    VerticalDivider(modifier = Modifier.height(44.dp))
-                                    FuelMetric(
-                                        label = "Cost/km",
-                                        value = currency(costPerKm ?: 0.0),
-                                        modifier = Modifier.weight(1f),
-                                        icon = {
-                                            Icon(
-                                                Icons.Default.CurrencyRupee,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.secondary,
-                                            )
-                                        },
-                                        iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                        iconColor = MaterialTheme.colorScheme.secondary,
-                                    )
-                                }
-                            } else {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                ) {
-                                    Icon(
-                                        Icons.Default.Route,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Column {
-                                        Text(
-                                            "Mileage (this trip)",
-                                            style = MaterialTheme.typography.labelLarge,
-                                        )
-                                        Text(
-                                            "— —",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    FuelHistoryCard(
+                        log = log,
+                        onDelete = { viewModel.deleteFuel(log) },
+                    )
                 }
             }
         }
@@ -358,6 +233,372 @@ fun FuelTrackerScreen(
                 showAdd = false
             },
         )
+    }
+}
+
+@Composable
+private fun FuelHeroCard(
+    totalSpent: Double,
+    totalLiters: Double,
+    mileage: Double,
+    completedTrips: Int,
+    activeTrip: Boolean,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.LocalGasStation,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Fuel dashboard",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        if (activeTrip) "Current fuel cycle is active"
+                        else "Ready for your next fuel fill",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
+                    )
+                }
+                if (activeTrip) {
+                    FuelActivePill()
+                }
+            }
+
+            Spacer(Modifier.height(22.dp))
+
+            Text(
+                "Total fuel spend",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.68f),
+            )
+            Text(
+                currency(totalSpent),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Row {
+                FuelHeroStat(
+                    "Fuel",
+                    "%.1f L".format(totalLiters),
+                    Modifier.weight(1f),
+                )
+                FuelHeroStat(
+                    "Mileage",
+                    if (mileage > 0) "%.2f km/L".format(mileage) else "—",
+                    Modifier.weight(1f),
+                )
+                FuelHeroStat(
+                    "Completed",
+                    completedTrips.toString(),
+                    Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FuelActivePill() {
+    val transition = rememberInfiniteTransition(label = "fuel-active")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "fuel-active-alpha",
+    )
+
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFFF9800).copy(alpha = alpha)),
+            )
+            Spacer(Modifier.width(5.dp))
+            Text(
+                "ACTIVE",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FuelHeroStat(
+    label: String,
+    value: String,
+    modifier: Modifier,
+) {
+    Column(modifier) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.62f),
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            value,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun FuelSectionTitle(title: String, subtitle: String) {
+    Column {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun FuelDashboardStat(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+) {
+    ElevatedCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Column(Modifier.padding(15.dp)) {
+            Surface(
+                modifier = Modifier.size(34.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(19.dp),
+                        tint = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
+            Spacer(Modifier.height(11.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FuelTripCalculator(
+    tripDistance: String,
+    onTripDistanceChange: (String) -> Unit,
+    mileage: Double,
+    averagePrice: Double,
+    tripLiters: Double,
+    tripCost: Double,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(
+            Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier.size(40.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Route,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        "Trip cost calculator",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        "Estimate fuel for your next trip",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = tripDistance,
+                onValueChange = onTripDistanceChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Trip distance") },
+                suffix = { Text("km") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                shape = RoundedCornerShape(14.dp),
+            )
+
+            if (mileage > 0 && averagePrice > 0 && tripDistance.isNotBlank()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FuelCalculatorResult(
+                        "Fuel needed",
+                        "%.2f L".format(tripLiters),
+                        Modifier.weight(1f),
+                    )
+                    FuelCalculatorResult(
+                        "Estimated cost",
+                        currency(tripCost),
+                        Modifier.weight(1f),
+                    )
+                }
+            } else {
+                Text(
+                    if (mileage > 0) {
+                        "Enter a distance to estimate fuel and cost."
+                    } else {
+                        "Complete a fuel cycle to calculate estimates from your actual mileage."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FuelCalculatorResult(
+    label: String,
+    value: String,
+    modifier: Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FuelEmptyState(onAdd: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Surface(
+                modifier = Modifier.size(64.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.LocalGasStation,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "Start tracking your fuel",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(5.dp))
+            Text(
+                "Add your first petrol fill with the amount, price and odometer reading.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onAdd) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Add first fill")
+            }
+        }
     }
 }
 
