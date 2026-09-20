@@ -53,5 +53,5 @@ class FuelTrackerViewModel(
         viewModelScope.launch { fuelRepository.addFuel(id, date, liters, pricePerLiter, odometerKm, note) }
     }
 
-    fun deleteFuel(log: FuelLogEntity) = viewModelScope.launch { fuelLogDao.delete(log) }
+    fun deleteFuel(log: FuelLogEntity) = viewModelScope.launch { fuelRepository.deleteFuel(log) }
 }
