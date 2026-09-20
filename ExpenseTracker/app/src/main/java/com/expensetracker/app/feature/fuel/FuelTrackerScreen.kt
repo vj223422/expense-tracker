@@ -536,6 +536,7 @@ private fun InsightMiniStat(title: String, value: String, modifier: Modifier = M
 @Composable
 private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
     if (values.isEmpty()) return
+    val chartColor = MaterialTheme.colorScheme.primary
     Canvas(modifier) {
         val left = 18f; val right = size.width - 12f; val top = 14f; val bottom = size.height - 18f
         val min = values.minOrNull() ?: 0.0; val max = values.maxOrNull() ?: min; val range = (max - min).takeIf { it > 0.001 } ?: 1.0
@@ -544,21 +545,22 @@ private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
         values.forEachIndexed { i, v ->
             val x = left + step * i; val y = bottom - (((v - min) / range).toFloat() * (bottom - top))
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            drawCircle(MaterialTheme.colorScheme.primary, 6f, Offset(x, y))
+            drawCircle(chartColor, 6f, Offset(x, y))
         }
-        drawPath(path, MaterialTheme.colorScheme.primary, style = Stroke(5f))
+        drawPath(path, chartColor, style = Stroke(5f))
     }
 }
 
 @Composable
 private fun FuelBarChart(values: List<Double>, modifier: Modifier = Modifier) {
     if (values.isEmpty()) return
+    val chartColor = MaterialTheme.colorScheme.tertiary
     Canvas(modifier) {
         val left = 16f; val right = size.width - 12f; val top = 14f; val bottom = size.height - 18f
         val max = (values.maxOrNull() ?: 1.0).coerceAtLeast(1.0); val slot = (right - left) / values.size; val width = (slot - 10f).coerceAtLeast(8f)
         values.forEachIndexed { i, v ->
             val x = left + slot * i + (slot - width) / 2f; val h = ((v / max).toFloat() * (bottom - top)).coerceAtLeast(4f)
-            drawRoundRect(MaterialTheme.colorScheme.tertiary, Offset(x, bottom - h), Size(width, h), CornerRadius(10f, 10f))
+            drawRoundRect(chartColor, Offset(x, bottom - h), Size(width, h), CornerRadius(10f, 10f))
         }
     }
 }
