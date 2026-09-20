@@ -156,432 +156,104 @@ fun FuelTrackerScreen(
 }
 
 @Composable
-private fun FuelHeroCard(
-    totalSpent: Double,
-    totalLiters: Double,
-    mileage: Double,
-    completedTrips: Int,
-    activeTrip: Boolean,
-) {
+private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-        ),
-    ) {
-        Column(Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.LocalGasStation,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "Fuel dashboard",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        if (activeTrip) "Current fuel cycle is active"
-                        else "Ready for your next fuel fill",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
-                    )
-                }
-                if (activeTrip) {
-                    FuelActivePill()
-                }
-            }
-
-            Spacer(Modifier.height(22.dp))
-
-            Text(
-                "Total fuel spend",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.68f),
-            )
-            Text(
-                currency(totalSpent),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
-            )
-            Spacer(Modifier.height(12.dp))
-
-            Row {
-                FuelHeroStat(
-                    "Fuel",
-                    "%.1f L".format(totalLiters),
-                    Modifier.weight(1f),
-                )
-                FuelHeroStat(
-                    "Mileage",
-                    if (mileage > 0) "%.2f km/L".format(mileage) else "—",
-                    Modifier.weight(1f),
-                )
-                FuelHeroStat(
-                    "Completed",
-                    completedTrips.toString(),
-                    Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FuelActivePill() {
-    val transition = rememberInfiniteTransition(label = "fuel-active")
-    val alpha by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(700),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "fuel-active-alpha",
-    )
-
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
-    ) {
-        Row(
-            Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFF9800).copy(alpha = alpha)),
-            )
-            Spacer(Modifier.width(5.dp))
-            Text(
-                "ACTIVE",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun FuelHeroStat(
-    label: String,
-    value: String,
-    modifier: Modifier,
-) {
-    Column(modifier) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.62f),
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            value,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-@Composable
-private fun FuelSectionTitle(title: String, subtitle: String) {
-    Column {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun FuelDashboardStat(
-    label: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier,
-) {
-    ElevatedCard(
-        modifier = modifier,
+        Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(FuelHero),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0DCE0)),
     ) {
-        Column(Modifier.padding(15.dp)) {
-            Surface(
-                modifier = Modifier.size(34.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(19.dp),
-                        tint = MaterialTheme.colorScheme.secondary,
-                    )
+        Box(Modifier.fillMaxWidth().height(178.dp)) {
+            Column(Modifier.padding(start = 28.dp, top = 22.dp)) {
+                Text("TVS Raider", color = FuelInk, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Deadpool Edition", color = FuelMuted, style = MaterialTheme.typography.bodyLarge)
+                Spacer(Modifier.height(4.dp))
+                Text("“More journeys, better stories”", color = FuelInk, style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocalGasStation, null, tint = FuelMuted, modifier = Modifier.size(21.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text("Track · Analyse · Save", color = FuelMuted, style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Spacer(Modifier.height(11.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Icon(
+                Icons.Default.TwoWheeler,
+                contentDescription = "TVS Raider",
+                tint = FuelInk,
+                modifier = Modifier.align(Alignment.Center).offset(y = 12.dp).size(112.dp),
             )
-            Spacer(Modifier.height(3.dp))
-            Text(
-                value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
+            Column(Modifier.align(Alignment.TopEnd).width(220.dp).padding(end = 22.dp, top = 23.dp)) {
+                Text("Current Cycle", color = FuelMuted, style = MaterialTheme.typography.bodyLarge)
+                Text(if (active && activeDistance > 0) "%.0f km".format(activeDistance) else "0 km", color = FuelInk, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Since last fill", color = FuelMuted, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(10.dp))
+                Box(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(50)).background(Color(0xFFE7EDF4))) {
+                    Box(Modifier.fillMaxWidth((activeDistance / 450.0).coerceIn(0.0, 1.0).toFloat()).fillMaxHeight().clip(RoundedCornerShape(50)).background(FuelGreen))
+                }
+                Spacer(Modifier.height(6.dp))
+                Text("%.0f / 450 km".format(activeDistance), color = FuelMuted, style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                repeat(3) { i ->
+                    Box(Modifier.size(if (i == 0) 8.dp else 7.dp).clip(CircleShape).background(if (i == 0) Color(0xFFE53935) else Color(0xFF9DA9B9)))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun FuelTripCalculator(
-    tripDistance: String,
-    onTripDistanceChange: (String) -> Unit,
-    mileage: Double,
-    averagePrice: Double,
-    tripLiters: Double,
-    tripCost: Double,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-    ) {
-        Column(
-            Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+private fun FuelKpiGrid(totalSpent: Double, totalLiters: Double, mileage: Double, distance: Double, fills: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FuelKpi("Total Spent", currency(totalSpent), "$fills fills", Icons.Default.LocalGasStation, FuelGreenSoft, FuelGreen, Modifier.weight(1f))
+            FuelKpi("Total Fuel", "%.1f L".format(totalLiters), "$fills fills", Icons.Default.WaterDrop, FuelBlueSoft, FuelBlue, Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FuelKpi("Avg. Mileage", if (mileage > 0) "%.1f km/L".format(mileage) else "—", if (mileage > 0) "↑ 12%" else "No data", Icons.Default.Speed, FuelOrangeSoft, FuelOrange, Modifier.weight(1f))
+            FuelKpi("Total Distance", if (distance > 0) "%.0f km".format(distance) else "—", "", Icons.Default.Route, FuelPurpleSoft, FuelPurple, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageVector, iconBg: Color, iconColor: Color, modifier: Modifier) {
+    Surface(modifier, shape = RoundedCornerShape(15.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).clip(CircleShape).background(iconBg), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(25.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, color = FuelMuted, style = MaterialTheme.typography.bodySmall)
+                Text(value, color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                if (subtitle.isNotBlank()) {
+                    Text(subtitle, color = if (subtitle.startsWith("↑")) FuelGreen else FuelMuted, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FuelRangeSelector(selected: String, onSelected: (String) -> Unit) {
+    val options = listOf("1M", "3M", "6M", "1Y", "All")
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = Color(0xFFEDF2F8)) {
+        Row(Modifier.padding(3.dp)) {
+            options.forEach { option ->
                 Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    Modifier.weight(1f).height(40.dp),
+                    onClick = { onSelected(option) },
+                    shape = RoundedCornerShape(18.dp),
+                    color = if (option == selected) FuelBlue else Color.Transparent,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Route,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                        )
+                        Text(option, color = if (option == selected) Color.White else FuelInk, fontWeight = if (option == selected) FontWeight.Bold else FontWeight.Medium)
                     }
                 }
-                Spacer(Modifier.width(10.dp))
-                Column {
-                    Text(
-                        "Trip cost calculator",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        "Estimate fuel for your next trip",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            OutlinedTextField(
-                value = tripDistance,
-                onValueChange = onTripDistanceChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Trip distance") },
-                suffix = { Text("km") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                shape = RoundedCornerShape(14.dp),
-            )
-
-            if (mileage > 0 && averagePrice > 0 && tripDistance.isNotBlank()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FuelCalculatorResult(
-                        "Fuel needed",
-                        "%.2f L".format(tripLiters),
-                        Modifier.weight(1f),
-                    )
-                    FuelCalculatorResult(
-                        "Estimated cost",
-                        currency(tripCost),
-                        Modifier.weight(1f),
-                    )
-                }
-            } else {
-                Text(
-                    if (mileage > 0) {
-                        "Enter a distance to estimate fuel and cost."
-                    } else {
-                        "Complete a fuel cycle to calculate estimates from your actual mileage."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
     }
-}
-
-@Composable
-private fun FuelCalculatorResult(
-    label: String,
-    value: String,
-    modifier: Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(3.dp))
-            Text(
-                value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun FuelEmptyState(onAdd: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Surface(
-                modifier = Modifier.size(64.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.LocalGasStation,
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            Text(
-                "Start tracking your fuel",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(5.dp))
-            Text(
-                "Add your first petrol fill with the amount, price and odometer reading.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = onAdd) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("Add first fill")
-            }
-        }
-    }
-}
-
-@Composable
-private fun InProgressDot() {
-    val transition = rememberInfiniteTransition(label = "fuel-in-progress")
-    val alpha by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(700),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "fuel-in-progress-alpha",
-    )
-
-    Surface(
-        modifier = Modifier.size(14.dp),
-        shape = CircleShape,
-        color = Color(0xFFFF9800).copy(alpha = alpha),
-        shadowElevation = 2.dp,
-    ) {}
-}
-
-@Composable
-private fun FuelMetric(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
-    icon: @Composable () -> Unit,
-    iconContainerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primaryContainer,
-    iconColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Surface(
-            modifier = Modifier.size(38.dp),
-            shape = CircleShape,
-            color = iconContainerColor,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                icon()
-            }
-        }
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.titleSmall,
-            color = valueColor,
-        )
-    }
-}
-
-@Composable
-private fun FuelStatCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier) { Column(Modifier.padding(14.dp)) { Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.height(4.dp)); Text(value, style = MaterialTheme.typography.titleMedium) } }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
