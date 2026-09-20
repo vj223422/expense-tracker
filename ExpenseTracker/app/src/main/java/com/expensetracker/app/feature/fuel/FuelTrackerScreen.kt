@@ -490,7 +490,12 @@ private fun FuelInsightsCard(logs: List<FuelLogEntity>) {
         val end = log.endOdometerKm ?: return@mapNotNull null
         val distance = (end - log.odometerKm).takeIf { it > 0.0 } ?: return@mapNotNull null
         val cost = log.amountMinor / 100.0
-        FuelTripInsight(distance / log.liters, cost, cost / distance)
+        FuelTripInsight(
+            mileage = distance / log.liters,
+            cost = cost,
+            costPerKm = cost / distance,
+            distanceKm = distance,
+        )
     }
     val recent = trips.takeLast(6)
     Card {
@@ -509,7 +514,7 @@ private fun FuelInsightsCard(logs: List<FuelLogEntity>) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     InsightMiniStat("Avg mileage", "%.2f km/L".format(recent.map { it.mileage }.averageOrNull() ?: 0.0), Modifier.weight(1f))
                     InsightMiniStat("Cost / km", currency(recent.map { it.costPerKm }.averageOrNull() ?: 0.0), Modifier.weight(1f))
-                    InsightMiniStat("Distance", "%.0f km".format(recent.sumOf { it.cost / it.costPerKm }), Modifier.weight(1f))
+                    InsightMiniStat("Distance", "%.0f km".format(recent.sumOf { it.distanceKm }), Modifier.weight(1f))
                 }
                 Text("Mileage trend", style = MaterialTheme.typography.labelLarge)
                 FuelLineChart(recent.map { it.mileage }, Modifier.fillMaxWidth().height(150.dp))
@@ -520,7 +525,12 @@ private fun FuelInsightsCard(logs: List<FuelLogEntity>) {
     }
 }
 
-private data class FuelTripInsight(val mileage: Double, val cost: Double, val costPerKm: Double)
+private data class FuelTripInsight(
+    val mileage: Double,
+    val cost: Double,
+    val costPerKm: Double,
+    val distanceKm: Double,
+)
 private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else sum() / size
 
 @Composable
@@ -536,31 +546,73 @@ private fun InsightMiniStat(title: String, value: String, modifier: Modifier = M
 @Composable
 private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
     if (values.isEmpty()) return
+
     val chartColor = MaterialTheme.colorScheme.primary
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
     Canvas(modifier) {
-        val left = 18f; val right = size.width - 12f; val top = 14f; val bottom = size.height - 18f
-        val min = values.minOrNull() ?: 0.0; val max = values.maxOrNull() ?: min; val range = (max - min).takeIf { it > 0.001 } ?: 1.0
+        val left = 28f
+        val right = size.width - 18f
+        val top = 18f
+        val bottom = size.height - 24f
+        val min = values.minOrNull() ?: 0.0
+        val max = values.maxOrNull() ?: min
+        val range = (max - min).takeIf { it > 0.001 } ?: max.coerceAtLeast(1.0) * 0.15
+        val paddedMin = min - range * 0.15
+        val paddedMax = max + range * 0.15
+        val paddedRange = (paddedMax - paddedMin).coerceAtLeast(1.0)
+
+        // Light baseline/grid so a single completed trip is still visually meaningful.
+        for (i in 0..3) {
+            val y = top + (bottom - top) * i / 3f
+            drawLine(gridColor, Offset(left, y), Offset(right, y), strokeWidth = 1f)
+        }
+
         val step = if (values.size == 1) 0f else (right - left) / (values.size - 1)
         val path = Path()
-        values.forEachIndexed { i, v ->
-            val x = left + step * i; val y = bottom - (((v - min) / range).toFloat() * (bottom - top))
+        values.forEachIndexed { i, value ->
+            val x = if (values.size == 1) (left + right) / 2f else left + step * i
+            val y = bottom - (((value - paddedMin) / paddedRange).toFloat() * (bottom - top))
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            drawCircle(chartColor, 6f, Offset(x, y))
+            drawCircle(chartColor, 7f, Offset(x, y))
         }
-        drawPath(path, chartColor, style = Stroke(5f))
+
+        if (values.size > 1) {
+            drawPath(path, chartColor, style = Stroke(5f))
+        }
     }
 }
 
 @Composable
 private fun FuelBarChart(values: List<Double>, modifier: Modifier = Modifier) {
     if (values.isEmpty()) return
+
     val chartColor = MaterialTheme.colorScheme.tertiary
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
     Canvas(modifier) {
-        val left = 16f; val right = size.width - 12f; val top = 14f; val bottom = size.height - 18f
-        val max = (values.maxOrNull() ?: 1.0).coerceAtLeast(1.0); val slot = (right - left) / values.size; val width = (slot - 10f).coerceAtLeast(8f)
-        values.forEachIndexed { i, v ->
-            val x = left + slot * i + (slot - width) / 2f; val h = ((v / max).toFloat() * (bottom - top)).coerceAtLeast(4f)
-            drawRoundRect(chartColor, Offset(x, bottom - h), Size(width, h), CornerRadius(10f, 10f))
+        val left = 28f
+        val right = size.width - 18f
+        val top = 18f
+        val bottom = size.height - 24f
+        val maxValue = (values.maxOrNull() ?: 1.0).coerceAtLeast(1.0)
+        val chartMax = maxValue * 1.2
+        val slot = (right - left) / values.size
+        val width = if (values.size == 1) {
+            (slot * 0.45f).coerceAtLeast(36f)
+        } else {
+            (slot - 10f).coerceAtLeast(8f)
+        }
+
+        drawLine(gridColor, Offset(left, bottom), Offset(right, bottom), strokeWidth = 2f)
+
+        values.forEachIndexed { i, value ->
+            val x = left + slot * i + (slot - width) / 2f
+            val h = ((value / chartMax).toFloat() * (bottom - top)).coerceAtLeast(8f)
+            drawRoundRect(
+                chartColor,
+                Offset(x, bottom - h),
+                Size(width, h),
+                CornerRadius(10f, 10f),
+            )
         }
     }
 }
