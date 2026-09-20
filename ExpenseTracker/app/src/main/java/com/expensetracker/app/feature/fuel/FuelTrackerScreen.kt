@@ -256,6 +256,149 @@ private fun FuelRangeSelector(selected: String, onSelected: (String) -> Unit) {
     }
 }
 
+@Composable
+private fun FuelCharts(trips: List<FuelTripInsight>) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        FuelChartCard("Mileage Trend", Icons.Default.ShowChart, FuelGreen, if (trips.isNotEmpty()) "Avg. %.1f km/L".format(trips.map { it.mileage }.average()) else "No data", Modifier.weight(1f)) {
+            FuelLineChart(trips.map { it.mileage }, Modifier.fillMaxWidth().height(145.dp))
+            ChartLabels()
+        }
+        FuelChartCard("Fuel Cost per Fill", Icons.Default.BarChart, FuelBlue, if (trips.isNotEmpty()) "Avg. ${currency(trips.map { it.cost }.average()).replace(".00", "")}" else "No data", Modifier.weight(1f)) {
+            FuelBarChart(trips.map { it.cost }, Modifier.fillMaxWidth().height(145.dp))
+            ChartLabels()
+        }
+    }
+}
+
+@Composable
+private fun FuelChartCard(title: String, icon: ImageVector, accent: Color, badge: String, modifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Surface(modifier, shape = RoundedCornerShape(16.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(25.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(title, color = FuelInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(6.dp))
+            Surface(shape = RoundedCornerShape(9.dp), color = accent.copy(alpha = .12f), modifier = Modifier.align(Alignment.End)) {
+                Text(badge, color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp))
+            }
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ChartLabels() {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        listOf("Jun", "Jul", "Aug", "Sep").forEach { Text(it, color = FuelMuted, style = MaterialTheme.typography.labelSmall) }
+    }
+}
+
+@Composable
+private fun FuelHighlights(trips: List<FuelTripInsight>) {
+    val costKm = trips.map { it.costPerKm }.averageOrNull() ?: 0.0
+    val longest = trips.maxOfOrNull { it.distanceKm } ?: 0.0
+    val best = trips.maxOfOrNull { it.mileage } ?: 0.0
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        FuelHighlight("Cost per km", if (costKm > 0) currency(costKm) else "—", "↓ -8%\nvs previous 3 months", Icons.Default.Payments, FuelOrange, Modifier.weight(1f))
+        FuelHighlight("Longest Run", if (longest > 0) "%.0f km".format(longest) else "—", "Best distance in a cycle", Icons.Default.Route, FuelBlue, Modifier.weight(1f))
+        FuelHighlight("Best Mileage", if (best > 0) "%.1f km/L".format(best) else "—", "Your best so far", Icons.Default.Eco, FuelGreen, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun FuelHighlight(title: String, value: String, subtitle: String, icon: ImageVector, accent: Color, modifier: Modifier) {
+    Surface(modifier, shape = RoundedCornerShape(15.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).clip(CircleShape).background(accent.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(25.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(title, color = FuelMuted, style = MaterialTheme.typography.bodySmall)
+                Text(value, color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = if (subtitle.startsWith("↓")) FuelGreen else FuelMuted, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FuelHistoryHeader(count: Int, onAdd: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.History, null, tint = FuelMuted, modifier = Modifier.size(31.dp))
+        Spacer(Modifier.width(9.dp))
+        Text("Recent Fuel History", color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        TextButton(onClick = onAdd) { Text("View All", color = FuelBlue, fontWeight = FontWeight.Bold) }
+    }
+}
+
+@Composable
+private fun FuelHistoryRow(log: FuelLogEntity, onDelete: () -> Unit) {
+    val distance = log.endOdometerKm?.let { (it - log.odometerKm).coerceAtLeast(0.0) }
+    val mileage = if (distance != null && log.liters > 0) distance / log.liters else null
+    val cost = log.amountMinor / 100.0
+    val costPerKm = if (distance != null && distance > 0) cost / distance else null
+    var menuOpen by remember { mutableStateOf(false) }
+    val date = java.time.LocalDate.ofEpochDay(log.epochDay)
+    val dateText = date.format(DateTimeFormatter.ofPattern("dd MMM", Locale.ENGLISH))
+    val yearText = date.format(DateTimeFormatter.ofPattern("yyyy", Locale.ENGLISH))
+    Surface(shape = RoundedCornerShape(15.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                HistoryColumn(dateText, yearText, Modifier.width(70.dp))
+                HistoryColumn(distance?.let { "%.0f km".format(it) } ?: "—", "Distance", Modifier.weight(1f))
+                HistoryColumn("%.1f L".format(log.liters), "Fuel", Modifier.weight(.8f))
+                HistoryColumn(currency(cost).replace(".00", ""), "Total cost", Modifier.weight(1f))
+                if (mileage != null) {
+                    Surface(shape = RoundedCornerShape(18.dp), color = FuelGreenSoft) {
+                        Column(Modifier.padding(horizontal = 9.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("%.1f km/L".format(mileage), color = FuelGreen, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text("Mileage", color = FuelGreen, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                } else {
+                    Text("In progress", color = FuelOrange, style = MaterialTheme.typography.labelSmall)
+                }
+                Box {
+                    IconButton(onClick = { menuOpen = true }, Modifier.size(32.dp)) { Icon(Icons.Default.MoreVert, null, tint = FuelMuted) }
+                    DropdownMenu(menuOpen, { menuOpen = false }) {
+                        DropdownMenuItem(text = { Text("Delete") }, onClick = { menuOpen = false; onDelete() }, leadingIcon = { Icon(Icons.Default.DeleteOutline, null) })
+                    }
+                }
+            }
+            Spacer(Modifier.height(9.dp))
+            HorizontalDivider(color = FuelBorder)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.ReceiptLong, null, tint = FuelMuted, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (log.note.isBlank()) "Fuel fill" else log.note, color = FuelMuted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                if (costPerKm != null) Text("₹%.1f/km".format(costPerKm), color = FuelMuted, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FuelEmptyState(onAdd: () -> Unit) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
+        Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.LocalGasStation, null, tint = FuelBlue, modifier = Modifier.size(42.dp))
+            Spacer(Modifier.height(10.dp))
+            Text("Start tracking your fuel", color = FuelInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("Add your first fuel fill to unlock mileage and cost insights.", color = FuelMuted, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = onAdd, colors = ButtonDefaults.buttonColors(containerColor = FuelBlue)) {
+                Icon(Icons.Default.Add, null)
+                Spacer(Modifier.width(6.dp))
+                Text("Add Fuel")
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddFuelDialog(
