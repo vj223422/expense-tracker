@@ -1,5 +1,7 @@
 package com.expensetracker.app.feature.fuel
 
+import com.expensetracker.app.data.entity.FuelLogEntity
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +24,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -161,6 +168,8 @@ fun FuelTrackerScreen(
                     }
                 }
             }
+
+            item { FuelInsightsCard(logs = state.logs) }
 
             item {
                 Text("Fuel history", style = MaterialTheme.typography.titleLarge)
@@ -474,6 +483,85 @@ private fun AddFuelDialog(
     }
 }
 
+
+@Composable
+private fun FuelInsightsCard(logs: List<FuelLogEntity>) {
+    val trips = logs.mapNotNull { log ->
+        val end = log.endOdometerKm ?: return@mapNotNull null
+        val distance = (end - log.odometerKm).takeIf { it > 0.0 } ?: return@mapNotNull null
+        val cost = log.amountMinor / 100.0
+        FuelTripInsight(distance / log.liters, cost, cost / distance)
+    }
+    val recent = trips.takeLast(6)
+    Card {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Speed, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Fuel insights", style = MaterialTheme.typography.titleMedium)
+                    Text("Mileage and fuel-cost trends from completed trips", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (recent.isEmpty()) {
+                Text("Complete a fuel cycle to unlock mileage and spending trends.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InsightMiniStat("Avg mileage", "%.2f km/L".format(recent.map { it.mileage }.averageOrNull() ?: 0.0), Modifier.weight(1f))
+                    InsightMiniStat("Cost / km", currency(recent.map { it.costPerKm }.averageOrNull() ?: 0.0), Modifier.weight(1f))
+                    InsightMiniStat("Distance", "%.0f km".format(recent.sumOf { it.cost / it.costPerKm }), Modifier.weight(1f))
+                }
+                Text("Mileage trend", style = MaterialTheme.typography.labelLarge)
+                FuelLineChart(recent.map { it.mileage }, Modifier.fillMaxWidth().height(150.dp))
+                Text("Fuel cost per trip", style = MaterialTheme.typography.labelLarge)
+                FuelBarChart(recent.map { it.cost }, Modifier.fillMaxWidth().height(150.dp))
+            }
+        }
+    }
+}
+
+private data class FuelTripInsight(val mileage: Double, val cost: Double, val costPerKm: Double)
+private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else sum() / size
+
+@Composable
+private fun InsightMiniStat(title: String, value: String, modifier: Modifier = Modifier) {
+    Surface(modifier, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)) {
+        Column(Modifier.padding(10.dp)) {
+            Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleSmall)
+        }
+    }
+}
+
+@Composable
+private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
+    if (values.isEmpty()) return
+    Canvas(modifier) {
+        val left = 18f; val right = size.width - 12f; val top = 14f; val bottom = size.height - 18f
+        val min = values.minOrNull() ?: 0.0; val max = values.maxOrNull() ?: min; val range = (max - min).takeIf { it > 0.001 } ?: 1.0
+        val step = if (values.size == 1) 0f else (right - left) / (values.size - 1)
+        val path = Path()
+        values.forEachIndexed { i, v ->
+            val x = left + step * i; val y = bottom - (((v - min) / range).toFloat() * (bottom - top))
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            drawCircle(MaterialTheme.colorScheme.primary, 6f, Offset(x, y))
+        }
+        drawPath(path, MaterialTheme.colorScheme.primary, style = Stroke(5f))
+    }
+}
+
+@Composable
+private fun FuelBarChart(values: List<Double>, modifier: Modifier = Modifier) {
+    if (values.isEmpty()) return
+    Canvas(modifier) {
+        val left = 16f; val right = size.width - 12f; val top = 14f; val bottom = size.height - 18f
+        val max = (values.maxOrNull() ?: 1.0).coerceAtLeast(1.0); val slot = (right - left) / values.size; val width = (slot - 10f).coerceAtLeast(8f)
+        values.forEachIndexed { i, v ->
+            val x = left + slot * i + (slot - width) / 2f; val h = ((v / max).toFloat() * (bottom - top)).coerceAtLeast(4f)
+            drawRoundRect(MaterialTheme.colorScheme.tertiary, Offset(x, bottom - h), Size(width, h), CornerRadius(10f, 10f))
+        }
+    }
+}
 private fun formatDate(epochDay: Long): String = java.time.LocalDate.ofEpochDay(epochDay).toString()
 
 private fun currency(value: Double): String = NumberFormat.getCurrencyInstance(Locale("en", "IN")).format(max(0.0, value))
