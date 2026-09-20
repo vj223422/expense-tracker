@@ -569,140 +569,212 @@ private fun FuelHistoryRow(log: FuelLogEntity, onDelete: () -> Unit) {
     val mileage = if (distance != null && log.liters > 0) distance / log.liters else null
     val cost = log.amountMinor / 100.0
     val costPerKm = if (distance != null && distance > 0) cost / distance else null
+    val inProgress = log.endOdometerKm == null
     var menuOpen by remember { mutableStateOf(false) }
     val date = java.time.LocalDate.ofEpochDay(log.epochDay)
-    val dateText = date.format(DateTimeFormatter.ofPattern("dd MMM", Locale.ENGLISH))
-    val yearText = date.format(DateTimeFormatter.ofPattern("yyyy", Locale.ENGLISH))
+    val dateText = date.format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH))
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(15.dp),
+        shape = RoundedCornerShape(16.dp),
         color = Color.White,
         border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 13.dp)) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
             ) {
-                HistoryColumn(
-                    dateText,
-                    yearText,
-                    Modifier.width(64.dp),
-                )
-                HistoryColumn(
-                    distance?.let { "%.0f km".format(it) } ?: "—",
-                    "Distance",
-                    Modifier.weight(1f),
-                )
-                HistoryColumn(
-                    "%.1f L".format(log.liters),
-                    "Fuel",
-                    Modifier.weight(0.9f),
-                )
-                HistoryColumn(
-                    currency(cost).replace(".00", ""),
-                    "Total cost",
-                    Modifier.weight(1.15f),
-                )
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(FuelBlue.copy(alpha = .16f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.LocalGasStation,
+                        contentDescription = null,
+                        tint = FuelBlue,
+                        modifier = Modifier.size(25.dp),
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Start: %s · %.1f km".format(dateText, log.odometerKm),
+                        color = FuelInk,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        if (log.endEpochDay != null && log.endOdometerKm != null) {
+                            val endDate = java.time.LocalDate.ofEpochDay(log.endEpochDay)
+                            "End: %s · %.1f km".format(
+                                endDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)),
+                                log.endOdometerKm,
+                            )
+                        } else {
+                            "End: — · —"
+                        },
+                        color = FuelMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "%.2f L · %s/L · %s".format(
+                            log.liters,
+                            currency(if (log.liters > 0) cost / log.liters else 0.0).replace(".00", ""),
+                            currency(cost).replace(".00", ""),
+                        ),
+                        color = FuelInk,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                    )
+                }
 
                 Column(
-                    modifier = Modifier.weight(1.1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
-                    if (mileage != null) {
-                        Surface(
-                            shape = RoundedCornerShape(18.dp),
-                            color = FuelGreenSoft,
-                        ) {
-                            Text(
-                                "%.1f km/L".format(mileage),
-                                color = FuelGreen,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 7.dp),
-                            )
-                        }
-                    } else {
-                        val transition = rememberInfiniteTransition(label = "fuelProgress")
+                    if (inProgress) {
+                        val transition = rememberInfiniteTransition(label = "fuelInProgress")
                         val alpha by transition.animateFloat(
-                            initialValue = 0.35f,
+                            initialValue = 0.25f,
                             targetValue = 1f,
                             animationSpec = infiniteRepeatable(
-                                animation = tween(700),
+                                animation = tween(750),
                                 repeatMode = RepeatMode.Reverse,
                             ),
-                            label = "fuelProgressAlpha",
+                            label = "fuelInProgressAlpha",
                         )
                         Box(
                             modifier = Modifier
-                                .padding(top = 8.dp)
+                                .padding(top = 7.dp, end = 8.dp)
                                 .size(10.dp)
                                 .clip(CircleShape)
                                 .background(FuelOrange.copy(alpha = alpha)),
                         )
                     }
-                    Text(
-                        if (mileage != null) "Mileage" else "In progress",
-                        color = if (mileage != null) FuelGreen else FuelOrange,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                    )
-                }
 
-                Box {
-                    IconButton(
-                        onClick = { menuOpen = true },
-                        modifier = Modifier.size(30.dp),
-                    ) {
-                        Icon(Icons.Default.MoreVert, null, tint = FuelMuted)
-                    }
-                    DropdownMenu(menuOpen, { menuOpen = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Delete") },
-                            onClick = {
-                                menuOpen = false
-                                onDelete()
-                            },
-                            leadingIcon = { Icon(Icons.Default.DeleteOutline, null) },
-                        )
+                    Box {
+                        IconButton(
+                            onClick = { menuOpen = true },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(Icons.Default.MoreVert, null, tint = FuelMuted)
+                        }
+                        DropdownMenu(menuOpen, { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Delete") },
+                                onClick = {
+                                    menuOpen = false
+                                    onDelete()
+                                },
+                                leadingIcon = { Icon(Icons.Default.DeleteOutline, null) },
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             HorizontalDivider(color = FuelBorder)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(9.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Icons.Default.ReceiptLong,
-                    null,
-                    tint = FuelMuted,
-                    modifier = Modifier.size(17.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    if (log.note.isBlank()) "Fuel fill" else log.note,
-                    color = FuelMuted,
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
+                FuelHistoryMetric(
+                    icon = Icons.Default.Route,
+                    value = distance?.let { "%.1f km".format(it) } ?: "—",
+                    label = "Distance",
                     modifier = Modifier.weight(1f),
                 )
-                if (costPerKm != null) {
-                    Spacer(Modifier.width(8.dp))
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = FuelBorder,
+                )
+                FuelHistoryMetric(
+                    icon = Icons.Default.WaterDrop,
+                    value = mileage?.let { "%.2f km/L".format(it) } ?: "—",
+                    label = "Mileage",
+                    valueColor = if (mileage != null) FuelGreen else FuelMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = FuelBorder,
+                )
+                FuelHistoryMetric(
+                    icon = Icons.Default.Payments,
+                    value = costPerKm?.let { currency(it).replace(".00", "") } ?: "—",
+                    label = "Cost/km",
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            if (log.note.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.ReceiptLong,
+                        null,
+                        tint = FuelMuted,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
                     Text(
-                        "₹%.1f/km".format(costPerKm),
+                        log.note,
                         color = FuelMuted,
                         style = MaterialTheme.typography.labelMedium,
                         maxLines = 1,
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FuelHistoryMetric(
+    icon: ImageVector,
+    value: String,
+    label: String,
+    modifier: Modifier,
+    valueColor: Color = FuelInk,
+) {
+    Row(
+        modifier = modifier.padding(horizontal = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            icon,
+            null,
+            tint = if (valueColor == FuelGreen) FuelGreen else FuelMuted,
+            modifier = Modifier.size(23.dp),
+        )
+        Spacer(Modifier.width(5.dp))
+        Column {
+            Text(
+                value,
+                color = valueColor,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            Text(
+                label,
+                color = FuelMuted,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+            )
         }
     }
 }
