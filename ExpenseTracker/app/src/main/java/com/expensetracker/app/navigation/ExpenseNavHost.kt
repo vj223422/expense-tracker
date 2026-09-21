@@ -134,6 +134,7 @@ fun ExpenseTrackerApp(
                 composable(Destination.Dashboard.route) {
                     DashboardScreen(
                         onAddExpenseClick = { navController.navigate(Destination.AddExpense.routeForAdd()) },
+                        onAddIncomeClick = { navController.navigate(Destination.AddExpense.routeForIncome()) },
                         onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) },
                         onSeeAllTransactionsClick = { navController.navigate(Destination.Transactions.route) { launchSingleTop = true; restoreState = true } },
                     )
@@ -145,12 +146,20 @@ fun ExpenseTrackerApp(
                 composable(Destination.FuelTracker.route) { FuelTrackerScreen(onNavigateBack = { navController.popBackStack() }) }
                 composable(
                     route = Destination.AddExpense.route,
-                    arguments = listOf(navArgument(Destination.AddExpense.ARG_EXPENSE_ID) { type = NavType.LongType; defaultValue = Destination.AddExpense.NO_EXPENSE_ID }),
+                    arguments = listOf(
+                        navArgument(Destination.AddExpense.ARG_EXPENSE_ID) { type = NavType.LongType; defaultValue = Destination.AddExpense.NO_EXPENSE_ID },
+                        navArgument(Destination.AddExpense.ARG_INCOME) { type = NavType.BoolType; defaultValue = false },
+                    ),
                     enterTransition = { slideInVertically(tween(350)) { it / 4 } + fadeIn(tween(250)) },
                     exitTransition = { slideOutVertically(tween(300)) { it / 4 } + fadeOut(tween(200)) },
                 ) { entry ->
                     val expenseId = entry.arguments?.getLong(Destination.AddExpense.ARG_EXPENSE_ID)?.takeIf { it != Destination.AddExpense.NO_EXPENSE_ID }
-                    AddExpenseScreen(expenseId = expenseId, onNavigateBack = { navController.popBackStack() })
+                    val initialIncome = entry.arguments?.getBoolean(Destination.AddExpense.ARG_INCOME) ?: false
+                    AddExpenseScreen(
+                        expenseId = expenseId,
+                        initialIncome = initialIncome,
+                        onNavigateBack = { navController.popBackStack() },
+                    )
                 }
             }
         }
