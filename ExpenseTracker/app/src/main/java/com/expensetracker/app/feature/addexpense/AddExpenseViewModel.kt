@@ -28,9 +28,10 @@ class AddExpenseViewModel(
     private val profileRepository: ProfileRepository,
     private val fuelRepository: com.expensetracker.app.data.repository.FuelRepository,
     private val expenseId: Long?,
+    private val initialIncome: Boolean,
 ) : ViewModel(), AddExpenseActions {
 
-    private val _uiState = MutableStateFlow(AddExpenseUiState(isEditMode = expenseId != null, isLoading = expenseId != null))
+    private val _uiState = MutableStateFlow(AddExpenseUiState(isIncome = initialIncome, isEditMode = expenseId != null, isLoading = expenseId != null))
     val uiState: StateFlow<AddExpenseUiState> = _uiState.asStateFlow()
 
     private val _effects = Channel<AddExpenseEffect>(Channel.BUFFERED)
@@ -61,6 +62,7 @@ class AddExpenseViewModel(
                 _uiState.update {
                     it.copy(
                         amountText = expense.amountMinor.toAmountInputText(),
+                        isIncome = expense.isIncome,
                         selectedCategory = expense.category,
                         note = if (clearNoteForNotificationEdit) "" else expense.note,
                         date = expense.date,
@@ -68,6 +70,20 @@ class AddExpenseViewModel(
                     )
                 }
             }
+        }
+    }
+
+    override fun onIncomeChange(value: Boolean) {
+        if (_uiState.value.isEditMode) return
+        _uiState.update {
+            it.copy(
+                isIncome = value,
+                selectedCategory = if (value) ExpenseCategory.OTHER else ExpenseCategory.FOOD,
+                fuelLitersText = if (value) "" else it.fuelLitersText,
+                fuelPricePerLiterText = if (value) "" else it.fuelPricePerLiterText,
+                fuelOdometerText = if (value) "" else it.fuelOdometerText,
+                amountError = null,
+            )
         }
     }
 
@@ -165,7 +181,7 @@ class AddExpenseViewModel(
     override fun onSaveClick() {
         val state = _uiState.value
         if (state.isSaving) return
-        val amountMinor = if (state.selectedCategory == ExpenseCategory.PETROL && !state.isEditMode) {
+        val amountMinor = if (!state.isIncome && state.selectedCategory == ExpenseCategory.PETROL && !state.isEditMode) {
             val liters = state.fuelLitersText.toDoubleOrNull() ?: 0.0
             val price = state.fuelPricePerLiterText.toDoubleOrNull() ?: 0.0
             if (liters > 0 && price > 0) (liters * price * 100.0).toLong() else null
@@ -177,7 +193,7 @@ class AddExpenseViewModel(
             return
         }
 
-        if (state.selectedCategory == ExpenseCategory.PETROL && !state.isEditMode && (state.fuelOdometerText.toDoubleOrNull() ?: -1.0) < 0.0) {
+        if (!state.isIncome && state.selectedCategory == ExpenseCategory.PETROL && !state.isEditMode && (state.fuelOdometerText.toDoubleOrNull() ?: -1.0) < 0.0) {
             _uiState.update { it.copy(amountError = "Enter the starting odometer") }
             return
         }
@@ -200,7 +216,7 @@ class AddExpenseViewModel(
                         date = state.date,
                     ),
                 )
-            } else if (state.selectedCategory == ExpenseCategory.PETROL) {
+            } else if (!state.isIncome && state.selectedCategory == ExpenseCategory.PETROL) {
                 fuelRepository.addFuel(
                     profileId = profileId,
                     date = state.date,
@@ -213,14 +229,19 @@ class AddExpenseViewModel(
                 expenseRepository.addExpense(
                     profileId = profileId,
                     amountMinor = amountMinor,
-                    category = state.selectedCategory,
+                    category = if (state.isIncome) ExpenseCategory.OTHER else state.selectedCategory,
                     note = noteToSave,
                     date = state.date,
+                    isIncome = state.isIncome,
                 )
             }
             when (result) {
                 is AddExpenseResult.Success -> {
-                    val baseMessage = if (existing != null) "Expense updated" else "Expense added"
+                    val baseMessage = when {
+                        existing != null -> if (state.isIncome) "Received amount updated" else "Expense updated"
+                        state.isIncome -> "Received amount added"
+                        else -> "Expense added"
+                    }
                     val message = result.newAlerts.firstOrNull()?.let { "$baseMessage. ${it.toSnackbarMessage()}" } ?: baseMessage
                     _effects.send(AddExpenseEffect.ShowMessage(message))
                     _effects.send(AddExpenseEffect.NavigateBack)
