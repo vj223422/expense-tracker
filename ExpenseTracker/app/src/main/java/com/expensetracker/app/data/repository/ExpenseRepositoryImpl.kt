@@ -40,7 +40,12 @@ class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budg
         val expenseId = try {
             expenseDao.insert(ExpenseEntity(profileId = profileId, amountMinor = amountMinor, category = category, note = note, isIncome = isIncome, budgetMonth = budgetMonth, budgetCycleStartEpochMillis = cycleStart, epochDay = date.toEpochDay(), createdAtEpochMillis = now))
         } catch (_: SQLiteException) { return@withContext AddExpenseResult.Error("Couldn't save transaction — local storage error.") }
-        if (isIncome) return@withContext AddExpenseResult.Success(emptyList(), expenseId)
+        if (isIncome) {
+            // Income increases the effective budget. Reset the overall alert tier so the next
+            // expense is evaluated against the newly increased budget rather than the old tier.
+            appPreferences.setLastNotifiedTier("${profileId}_${budgetMonth}_$OVERALL_BUDGET_KEY", AlertTier.NONE.ordinal)
+            return@withContext AddExpenseResult.Success(emptyList(), expenseId)
+        }
         val alerts = try { evaluateAndNotify(profileId, budgetMonth, category) } catch (_: SQLiteException) { emptyList() }
         AddExpenseResult.Success(alerts, expenseId)
     }
