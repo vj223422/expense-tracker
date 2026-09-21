@@ -441,37 +441,51 @@ private fun ChartLabels() {
 
 @Composable
 private fun FuelHighlights(trips: List<FuelTripInsight>) {
-    val costKm = trips.map { it.costPerKm }.averageOrNull() ?: 0.0
-    val longest = trips.maxOfOrNull { it.distanceKm } ?: 0.0
-    val best = trips.maxOfOrNull { it.mileage } ?: 0.0
+    val costKm = trips.map { it.costPerKm }.averageOrNull()
+    val longest = trips.maxOfOrNull { it.distanceKm }
+    val best = trips.maxOfOrNull { it.mileage }
+    val cycleCount = trips.size
+    val cycleLabel = if (cycleCount == 1) "cycle" else "cycles"
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FuelHighlight(
-            "Cost per km",
-            if (costKm > 0) currency(costKm) else "—",
-            "↓ -8% vs previous 3 months",
-            Icons.Default.Payments,
-            FuelOrange,
-            Modifier.weight(1f),
+            title = "Cost per km",
+            value = costKm?.takeIf { it > 0 }?.let { currency(it).replace(".00", "") } ?: "—",
+            subtitle = if (costKm != null && costKm > 0) {
+                "Average • " + cycleCount + " completed " + cycleLabel
+            } else {
+                "No completed cycle data"
+            },
+            icon = Icons.Default.Payments,
+            accent = FuelOrange,
+            modifier = Modifier.weight(1f),
         )
         FuelHighlight(
-            "Longest Run",
-            if (longest > 0) "%.0f km".format(longest) else "—",
-            "Best distance in a cycle",
-            Icons.Default.Route,
-            FuelBlue,
-            Modifier.weight(1f),
+            title = "Longest Run",
+            value = longest?.takeIf { it > 0 }?.let { "%.0f km".format(it) } ?: "—",
+            subtitle = if (longest != null && longest > 0) {
+                "Longest completed cycle"
+            } else {
+                "No completed cycle data"
+            },
+            icon = Icons.Default.Route,
+            accent = FuelBlue,
+            modifier = Modifier.weight(1f),
         )
         FuelHighlight(
-            "Best Mileage",
-            if (best > 0) "%.1f km/L".format(best) else "—",
-            "Your best so far",
-            Icons.Default.Eco,
-            FuelGreen,
-            Modifier.weight(1f),
+            title = "Best Mileage",
+            value = best?.takeIf { it > 0 }?.let { "%.1f km/L".format(it) } ?: "—",
+            subtitle = if (best != null && best > 0) {
+                "Best completed cycle"
+            } else {
+                "No completed cycle data"
+            },
+            icon = Icons.Default.Eco,
+            accent = FuelGreen,
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -486,7 +500,7 @@ private fun FuelHighlight(
     modifier: Modifier,
 ) {
     Surface(
-        modifier = modifier.heightIn(min = 154.dp),
+        modifier = modifier.height(180.dp),
         shape = RoundedCornerShape(15.dp),
         color = Color.White,
         border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
@@ -512,7 +526,7 @@ private fun FuelHighlight(
                 color = FuelMuted,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
-                maxLines = 2,
+                maxLines = 1,
             )
             Spacer(Modifier.height(2.dp))
             Text(
@@ -520,14 +534,15 @@ private fun FuelHighlight(
                 color = FuelInk,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                maxLines = 2,
+                maxLines = 1,
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 subtitle,
-                color = if (subtitle.startsWith("↓")) FuelGreen else FuelMuted,
+                color = FuelMuted,
                 style = MaterialTheme.typography.labelSmall,
-                maxLines = 3,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 2,
             )
         }
     }
