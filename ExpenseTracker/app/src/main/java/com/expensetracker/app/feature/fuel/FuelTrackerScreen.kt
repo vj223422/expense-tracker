@@ -1069,7 +1069,7 @@ private fun AddFuelDialog(
                             )
                         }
                         Text(
-                            ".2f${litersValue} L × ₹.2f${priceValue}",
+                            "%.2f L × ₹%.2f".format(litersValue, priceValue),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall,
                         )
