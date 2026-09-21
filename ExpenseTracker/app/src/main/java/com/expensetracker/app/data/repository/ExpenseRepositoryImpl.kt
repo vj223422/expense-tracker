@@ -101,7 +101,11 @@ class ExpenseRepositoryImpl(private val expenseDao: ExpenseDao, private val budg
             maybeAlert(profileId, "${periodPrefix}_${changedCategory.name}", changedCategory, expenseDao.getCategoryTotalForBudget(profileId, changedCategory, budgetMonth), limit.limitMinor)?.let(alerts::add)
         }
         budgetLimitDao.getByKey(profileId, OVERALL_BUDGET_KEY)?.let { limit ->
-            maybeAlert(profileId, "${periodPrefix}_$OVERALL_BUDGET_KEY", null, expenseDao.getOverallTotalForBudget(profileId, budgetMonth), limit.limitMinor)?.let(alerts::add)
+            val spentMinor = expenseDao.getOverallTotalForBudget(profileId, budgetMonth)
+            val incomeMinor = expenseDao.getIncomeTotalForBudget(profileId, budgetMonth)
+            val carryForwardMinor = appPreferences.getCarryForward(profileId, budgetMonth)
+            val effectiveLimitMinor = limit.limitMinor + incomeMinor + carryForwardMinor
+            maybeAlert(profileId, "${periodPrefix}_$OVERALL_BUDGET_KEY", null, spentMinor, effectiveLimitMinor)?.let(alerts::add)
         }
         return alerts
     }
