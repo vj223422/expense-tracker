@@ -198,15 +198,16 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(178.dp)
-                .padding(horizontal = 18.dp, vertical = 16.dp),
+                .height(220.dp)
+                .padding(horizontal = 18.dp, vertical = 14.dp),
         ) {
-            // Left content has its own fixed area; the bike is kept on the right
-            // so the image can never cover the title, quote, or cycle metrics.
+            // The bike intentionally lives inside the left content column:
+            // title -> edition -> bike -> quote. It is never allowed to overlap
+            // the Current Cycle panel on the right.
             Column(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .width(190.dp),
+                    .width(205.dp),
             ) {
                 Text(
                     "TVS Raider",
@@ -230,20 +231,28 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                         maxLines = 1,
                     )
                 }
-                Spacer(Modifier.height(7.dp))
+                AsyncImage(
+                    model = "https://www.tvsmotor.com/tvs-raider/-/media/Brand-Pages-Webp/Raider/Raider-360/360-raider/SSE/Deadpool/1.webp",
+                    contentDescription = "TVS Raider Deadpool Edition",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .padding(top = 1.dp)
+                        .size(width = 178.dp, height = 82.dp),
+                )
                 Text(
-                    "“More journeys,\nbetter stories”",
+                    "“More journeys, better stories”",
                     color = FuelInk,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    maxLines = 2,
+                    maxLines = 1,
                 )
             }
 
             Column(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .width(128.dp),
+                    .width(128.dp)
+                    .padding(top = 8.dp),
             ) {
                 Text(
                     "Current Cycle",
@@ -292,7 +301,7 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(bottom = 2.dp),
+                    .padding(bottom = 1.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -337,16 +346,6 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-
-            AsyncImage(
-                model = "https://www.tvsmotor.com/tvs-raider/-/media/Brand-Pages-Webp/Raider/Raider-360/360-raider/SSE/Deadpool/1.webp",
-                contentDescription = "TVS Raider Deadpool Edition",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 0.dp, bottom = 0.dp)
-                    .size(width = 170.dp, height = 112.dp),
-            )
         }
     }
 }
