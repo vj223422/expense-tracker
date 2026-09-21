@@ -99,17 +99,20 @@ class DashboardViewModel(
 
     fun onRemainingClick() { _showBudgetEditor.value = true }
     fun onDismissBudgetEditor() { _showBudgetEditor.value = false }
-    fun onSaveBudget(limitMinor: Long) {
-        if (limitMinor <= 0L) return
+    fun onSaveBudget(effectiveBudgetMinor: Long) {
+        if (effectiveBudgetMinor <= 0L) return
         viewModelScope.launch {
             val profileId = profileRepository.observeActiveProfileId().filterNotNull().first()
-            when (val result = budgetRepository.setLimit(profileId, null, limitMinor)) {
+            val month = selectedMonth.value
+                ?: appPreferences.getActiveBudgetMonth(profileId)?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
+                ?: YearMonth.now()
+            val incomeMinor = expenseRepository.observeIncomeTotal(profileId, month).first()
+            val carryForwardMinor = appPreferences.getCarryForward(profileId, month.toString())
+            val baseBudgetMinor = (effectiveBudgetMinor - incomeMinor - carryForwardMinor).coerceAtLeast(0L)
+            when (val result = budgetRepository.setLimit(profileId, null, baseBudgetMinor)) {
                 is BudgetSaveResult.Success -> {
-                    val month = selectedMonth.value?.toString()
-                        ?: appPreferences.getActiveBudgetMonth(profileId)
-                        ?: YearMonth.now().toString()
-                    appPreferences.setCycleBaseBudget(profileId, month, limitMinor)
-                    appPreferences.markBudgetMonthConfigured(profileId, month)
+                    appPreferences.setCycleBaseBudget(profileId, month.toString(), baseBudgetMinor)
+                    appPreferences.markBudgetMonthConfigured(profileId, month.toString())
                     _showBudgetEditor.value = false
                 }
                 is BudgetSaveResult.Error -> _effects.send(DashboardEffect.ShowError(result.message))
