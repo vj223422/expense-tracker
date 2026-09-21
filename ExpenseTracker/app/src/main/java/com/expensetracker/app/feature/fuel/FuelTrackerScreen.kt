@@ -86,6 +86,15 @@ fun FuelTrackerScreen(
         log.endOdometerKm?.let { (it - log.odometerKm).coerceAtLeast(0.0) } ?: 0.0
     }
     val completed = state.logs.filter { it.endOdometerKm != null }
+    // Use the historical average distance of completed fuel cycles as the
+    // current-cycle target instead of a hardcoded distance.
+    val averageCycleDistance = completed
+        .mapNotNull { log ->
+            log.endOdometerKm
+                ?.let { (it - log.odometerKm).takeIf { distance -> distance > 0.0 } }
+        }
+        .averageOrNull()
+    val cycleTargetKm = averageCycleDistance?.let { kotlin.math.round(it / 10.0) * 10.0 }
     val rangeDays = when (selectedRange) {
         "1M" -> 30L
         "3M" -> 90L
@@ -159,7 +168,13 @@ fun FuelTrackerScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item { FuelVehicleHero(activeDistance = 0.0, active = state.logs.any { it.endOdometerKm == null }) }
+            item {
+                FuelVehicleHero(
+                    activeDistance = 0.0,
+                    active = state.logs.any { it.endOdometerKm == null },
+                    cycleTargetKm = cycleTargetKm,
+                )
+            }
             item { FuelKpiGrid(state.totalSpentMinor / 100.0, state.totalLiters, mileage, totalDistance, state.logs.size) }
             item { FuelRangeSelector(selectedRange) { selectedRange = it } }
             item { FuelCharts(trips) }
@@ -188,7 +203,7 @@ fun FuelTrackerScreen(
 }
 
 @Composable
-private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
+private fun FuelVehicleHero(activeDistance: Double, active: Boolean, cycleTargetKm: Double?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -283,7 +298,13 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                 ) {
                     Box(
                         Modifier
-                            .fillMaxWidth((activeDistance / 450.0).coerceIn(0.0, 1.0).toFloat())
+                            .fillMaxWidth(
+                                if (cycleTargetKm != null && cycleTargetKm > 0.0) {
+                                    (activeDistance / cycleTargetKm).coerceIn(0.0, 1.0).toFloat()
+                                } else {
+                                    0f
+                                }
+                            )
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(50))
                             .background(FuelGreen),
@@ -291,7 +312,11 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                 }
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "%.0f / 450 km".format(activeDistance),
+                    if (cycleTargetKm != null && cycleTargetKm > 0.0) {
+                        "%.0f / %.0f km".format(activeDistance, cycleTargetKm)
+                    } else {
+                        "%.0f / — km".format(activeDistance)
+                    },
                     color = FuelMuted,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
