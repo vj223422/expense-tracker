@@ -198,15 +198,15 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(188.dp)
-                .padding(18.dp),
+                .height(178.dp)
+                .padding(horizontal = 18.dp, vertical = 16.dp),
         ) {
-            // Text and cycle information occupy the top half. The bike is isolated
-            // in the lower-right area so it can never cover either text block.
+            // Left content has its own fixed area; the bike is kept on the right
+            // so the image can never cover the title, quote, or cycle metrics.
             Column(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .widthIn(max = 170.dp),
+                    .width(190.dp),
             ) {
                 Text(
                     "TVS Raider",
@@ -215,18 +215,35 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                 )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Deadpool",
+                        color = Color(0xFFE53935),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        "Edition",
+                        color = FuelMuted,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                    )
+                }
+                Spacer(Modifier.height(7.dp))
                 Text(
-                    "Deadpool Edition",
-                    color = FuelMuted,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
+                    "“More journeys,\nbetter stories”",
+                    color = FuelInk,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
                 )
             }
 
             Column(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .widthIn(min = 104.dp, max = 150.dp),
+                    .width(128.dp),
             ) {
                 Text(
                     "Current Cycle",
@@ -251,7 +268,7 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .height(8.dp)
+                        .height(7.dp)
                         .clip(RoundedCornerShape(50))
                         .background(Color(0xFFE7EDF4)),
                 ) {
@@ -272,34 +289,53 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                 )
             }
 
-            Column(
+            Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .widthIn(max = 150.dp)
-                    .padding(bottom = 5.dp),
+                    .padding(bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    "“More journeys, better stories”",
-                    color = FuelInk,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
+                Icon(
+                    Icons.Default.LocalGasStation,
+                    null,
+                    tint = FuelMuted,
+                    modifier = Modifier.size(18.dp),
                 )
-                Spacer(Modifier.height(5.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.LocalGasStation,
-                        null,
-                        tint = FuelMuted,
-                        modifier = Modifier.size(19.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "Track · Analyse · Save",
-                        color = FuelMuted,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                    )
-                }
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    "Track",
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.width(10.dp))
+                Icon(
+                    Icons.Default.BarChart,
+                    null,
+                    tint = FuelMuted,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    "Analyse",
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.width(10.dp))
+                Icon(
+                    Icons.Default.BookmarkBorder,
+                    null,
+                    tint = FuelMuted,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    "Save",
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
 
             AsyncImage(
@@ -307,26 +343,10 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                 contentDescription = "TVS Raider Deadpool Edition",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(start = 55.dp, bottom = 2.dp)
-                    .size(width = 145.dp, height = 92.dp),
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 0.dp, bottom = 0.dp)
+                    .size(width = 170.dp, height = 112.dp),
             )
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 0.dp),
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
-            ) {
-                repeat(3) { i ->
-                    Box(
-                        Modifier
-                            .size(if (i == 0) 7.dp else 6.dp)
-                            .clip(CircleShape)
-                            .background(if (i == 0) Color(0xFFE53935) else Color(0xFF9DA9B9)),
-                    )
-                }
-            }
         }
     }
 }
