@@ -48,7 +48,7 @@ val dataModule = module {
 val viewModelModule = module {
     viewModel { DashboardViewModel(get(), get(), get(), get()) }
     viewModel { TransactionsViewModel(get(), get()) }
-    viewModel { (expenseId: Long?) -> AddExpenseViewModel(get(), get(), get(), expenseId) }
+    viewModel { (expenseId: Long?, initialIncome: Boolean) -> AddExpenseViewModel(get(), get(), get(), expenseId, initialIncome) }
     viewModel { BudgetsViewModel(get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get()) }
     viewModel { ProfileSwitcherViewModel(get()) }
