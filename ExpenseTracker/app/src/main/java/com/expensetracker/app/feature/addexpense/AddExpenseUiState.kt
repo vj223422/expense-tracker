@@ -11,6 +11,7 @@ import java.time.LocalDate
 data class AddExpenseUiState(
     // 1. Editable input
     val amountText: String = "",
+    val isIncome: Boolean = false,
     val selectedCategory: ExpenseCategory = ExpenseCategory.FOOD,
     val note: String = "",
     val date: LocalDate = LocalDate.now(),
@@ -25,7 +26,9 @@ data class AddExpenseUiState(
 ) {
     // 2. Derived
     val canSave: Boolean
-        get() = !isSaving && !isLoading && if (selectedCategory == ExpenseCategory.PETROL && !isEditMode) {
+        get() = !isSaving && !isLoading && if (isIncome) {
+            (amountText.parseAmountToMinorUnits() ?: 0L) > 0L
+        } else if (selectedCategory == ExpenseCategory.PETROL && !isEditMode) {
             (fuelLitersText.toDoubleOrNull() ?: 0.0) > 0.0 &&
                 (fuelPricePerLiterText.toDoubleOrNull() ?: 0.0) > 0.0 &&
                 (fuelOdometerText.toDoubleOrNull() ?: -1.0) >= 0.0
@@ -42,6 +45,7 @@ sealed interface AddExpenseEffect {
 @Stable
 interface AddExpenseActions {
     fun onAmountChange(value: String)
+    fun onIncomeChange(value: Boolean)
     fun onCategoryChange(category: ExpenseCategory)
     fun onNoteChange(value: String)
     fun onDateChange(date: LocalDate)
