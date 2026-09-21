@@ -324,7 +324,7 @@ private fun FuelVehicleHero(activeDistance: Double, active: Boolean) {
                 )
                 Spacer(Modifier.width(10.dp))
                 Icon(
-                    Icons.Default.BookmarkBorder,
+                    Icons.Default.ReceiptLong,
                     null,
                     tint = FuelMuted,
                     modifier = Modifier.size(18.dp),
