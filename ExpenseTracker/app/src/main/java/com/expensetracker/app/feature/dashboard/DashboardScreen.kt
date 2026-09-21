@@ -82,7 +82,7 @@ import java.time.YearMonth
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(onAddExpenseClick: () -> Unit, onEditExpenseClick: (Long) -> Unit, onSeeAllTransactionsClick: () -> Unit, viewModel: DashboardViewModel = koinViewModel()) {
+fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit, onEditExpenseClick: (Long) -> Unit, onSeeAllTransactionsClick: () -> Unit, viewModel: DashboardViewModel = koinViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val showBudgetEditor by viewModel.showBudgetEditor.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -95,7 +95,7 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onEditExpenseClick: (Long) ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { MonthSelector(uiState.yearMonth, viewModel::onPreviousMonth, viewModel::onNextMonth) }
             item { SummaryCard(uiState, onRemainingClick = viewModel::onRemainingClick) }
-            item { AddExpenseButton(onAddExpenseClick) }
+            item { TransactionActionButtons(onAddExpenseClick, onAddIncomeClick) }
             val topCategories = uiState.categorySpends.take(5)
             if (topCategories.isNotEmpty()) { item { SectionTitle("Top categories", "See all", onSeeAllTransactionsClick) }; item { LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 2.dp)) { items(topCategories, key = { it.category.name }) { spend -> CategoryCard(spend.category, spend.spentMinor, uiState.totalSpentMinor) } } } }
             item { SectionTitle("Recent transactions", "See all", onSeeAllTransactionsClick) }
@@ -168,7 +168,54 @@ private fun BudgetEditorDialog(currentLimitMinor: Long?, onSave: (Long) -> Unit,
 private fun SummaryMetric(label: String, amountMinor: Long?, icon: ImageVector, iconColor: Color) { Row(verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(36.dp), shape = CircleShape, color = iconColor.copy(alpha = .10f)) { Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconColor, modifier = Modifier.size(19.dp)) } }; Spacer(Modifier.width(9.dp)); Column { Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(amountMinor?.formatAsCurrency() ?: "No limit", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) } } }
 
 @Composable
-private fun AddExpenseButton(onClick: () -> Unit) { Surface(modifier = Modifier.fillMaxWidth().height(50.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primaryContainer) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { Surface(Modifier.size(29.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primary) { Box(contentAlignment = Alignment.Center) { Text("+", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) } }; Spacer(Modifier.width(9.dp)); Text("Add Expense", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) } } }
+private fun TransactionActionButtons(
+    onAddExpense: () -> Unit,
+    onAddIncome: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        TransactionActionButton(
+            label = "Add Expense",
+            icon = Icons.Default.ArrowDownward,
+            onClick = onAddExpense,
+            modifier = Modifier.weight(1f),
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.primary,
+        )
+        TransactionActionButton(
+            label = "Received",
+            icon = Icons.Default.ArrowUpward,
+            onClick = onAddIncome,
+            modifier = Modifier.weight(1f),
+            containerColor = LocalExtendedColors.current.safe.copy(alpha = .12f),
+            contentColor = LocalExtendedColors.current.safe,
+        )
+    }
+}
+
+@Composable
+private fun TransactionActionButton(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    containerColor: Color,
+    contentColor: Color,
+) {
+    Surface(
+        modifier = modifier.height(50.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = containerColor,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(7.dp))
+            Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = contentColor)
+        }
+    }
+}
 
 @Composable
 private fun SectionTitle(title: String, action: String, onClick: () -> Unit) { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold); TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 4.dp)) { Text(action, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold) } } }
