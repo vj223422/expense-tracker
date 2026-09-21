@@ -103,7 +103,15 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
             else items(uiState.recentExpenses, key = { it.id }) { expense -> SwipeToDeleteExpenseItem(expense = expense, onDelete = viewModel::onDeleteExpense, onClick = { onEditExpenseClick(expense.id) }) }
         }
     }
-    if (showBudgetEditor) BudgetEditorDialog(currentLimitMinor = uiState.overallLimitMinor, onSave = viewModel::onSaveBudget, onClear = viewModel::onClearBudget, onDismiss = viewModel::onDismissBudgetEditor)
+    if (showBudgetEditor) BudgetEditorDialog(
+        currentEffectiveBudgetMinor = uiState.effectiveBudgetMinor,
+        baseBudgetMinor = uiState.overallLimitMinor,
+        incomeMinor = uiState.totalIncomeMinor,
+        carryForwardMinor = uiState.carryForwardMinor,
+        onSave = viewModel::onSaveBudget,
+        onClear = viewModel::onClearBudget,
+        onDismiss = viewModel::onDismissBudgetEditor,
+    )
 }
 
 @Composable
@@ -158,12 +166,55 @@ private fun SummaryCard(uiState: DashboardUiState, onRemainingClick: () -> Unit)
 }
 
 @Composable
-private fun BudgetEditorDialog(currentLimitMinor: Long?, onSave: (Long) -> Unit, onClear: () -> Unit, onDismiss: () -> Unit) {
-    var amountText by rememberSaveable(currentLimitMinor) { mutableStateOf(currentLimitMinor?.let { String.format(Locale.US, "%.2f", it / 100.0) } ?: "") }
-    val parsedMinor = amountText.parseAmountToMinorUnits(); val valid = parsedMinor != null && parsedMinor > 0
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Monthly budget") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("Set the overall monthly spending limit used for Remaining and budget alerts.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); OutlinedTextField(value = amountText, onValueChange = { amountText = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Budget amount") }, singleLine = true, isError = amountText.isNotBlank() && !valid, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)) } }, confirmButton = { TextButton(onClick = { parsedMinor?.let(onSave) }, enabled = valid) { Text("Save") } }, dismissButton = { Row { if (currentLimitMinor != null) TextButton(onClick = onClear) { Text("Clear") }; TextButton(onClick = onDismiss) { Text("Cancel") } } })
+private fun BudgetEditorDialog(
+    currentEffectiveBudgetMinor: Long?,
+    baseBudgetMinor: Long?,
+    incomeMinor: Long,
+    carryForwardMinor: Long,
+    onSave: (Long) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var amountText by rememberSaveable(currentEffectiveBudgetMinor) {
+        mutableStateOf(currentEffectiveBudgetMinor?.let { String.format(Locale.US, "%.2f", it / 100.0) } ?: "")
+    }
+    val parsedMinor = amountText.parseAmountToMinorUnits()
+    val valid = parsedMinor != null && parsedMinor > 0
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Monthly budget") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "This is the amount currently available for the cycle. Received amounts and carry-forward are included.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Available budget") },
+                    singleLine = true,
+                    isError = amountText.isNotBlank() && !valid,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Base budget: ${baseBudgetMinor?.formatAsCurrency() ?: "No limit"}", style = MaterialTheme.typography.labelMedium)
+                    if (incomeMinor > 0L) Text("Received: ${incomeMinor.formatAsCurrency()}", style = MaterialTheme.typography.labelMedium, color = LocalExtendedColors.current.safe)
+                    if (carryForwardMinor > 0L) Text("Carry forward: ${carryForwardMinor.formatAsCurrency()}", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { parsedMinor?.let(onSave) }, enabled = valid) { Text("Save") } },
+        dismissButton = {
+            Row {
+                if (baseBudgetMinor != null) TextButton(onClick = onClear) { Text("Clear") }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+    )
 }
-
 @Composable
 private fun SummaryMetric(label: String, amountMinor: Long?, icon: ImageVector, iconColor: Color) { Row(verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(36.dp), shape = CircleShape, color = iconColor.copy(alpha = .10f)) { Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconColor, modifier = Modifier.size(19.dp)) } }; Spacer(Modifier.width(9.dp)); Column { Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(amountMinor?.formatAsCurrency() ?: "No limit", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) } } }
 
