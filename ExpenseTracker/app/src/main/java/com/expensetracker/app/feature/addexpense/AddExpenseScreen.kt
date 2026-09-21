@@ -85,7 +85,8 @@ import org.koin.core.parameter.parametersOf
 fun AddExpenseScreen(
     onNavigateBack: () -> Unit,
     expenseId: Long? = null,
-    viewModel: AddExpenseViewModel = koinViewModel(parameters = { parametersOf(expenseId) }),
+    initialIncome: Boolean = false,
+    viewModel: AddExpenseViewModel = koinViewModel(parameters = { parametersOf(expenseId, initialIncome) }),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -112,6 +113,7 @@ fun AddExpenseScreen(
         topBar = {
             AddExpenseTopBar(
                 isEditMode = uiState.isEditMode,
+                isIncome = uiState.isIncome,
                 canSave = uiState.canSave,
                 isSaving = uiState.isSaving,
                 onClose = viewModel::onDismiss,
@@ -141,6 +143,7 @@ fun AddExpenseScreen(
 @Composable
 private fun AddExpenseTopBar(
     isEditMode: Boolean,
+    isIncome: Boolean,
     canSave: Boolean,
     isSaving: Boolean,
     onClose: () -> Unit,
@@ -157,7 +160,12 @@ private fun AddExpenseTopBar(
             Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
         }
         Text(
-            text = if (isEditMode) "Edit Expense" else "Add Expense",
+            text = when {
+                isEditMode && isIncome -> "Edit Received Amount"
+                isEditMode -> "Edit Expense"
+                isIncome -> "Add Received Amount"
+                else -> "Add Expense"
+            },
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier
                 .weight(1f)
@@ -224,13 +232,18 @@ private fun AddExpenseContent(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
+        TransactionTypeSelector(
+            isIncome = uiState.isIncome,
+            enabled = !uiState.isEditMode,
+            onIncomeChange = actions::onIncomeChange,
+        )
         AmountField(
             amountText = uiState.amountText,
             amountError = uiState.amountError,
             onAmountChange = actions::onAmountChange,
             readOnly = uiState.selectedCategory == ExpenseCategory.PETROL,
         )
-        if (uiState.selectedCategory == ExpenseCategory.PETROL) {
+        if (!uiState.isIncome && uiState.selectedCategory == ExpenseCategory.PETROL) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Petrol details", style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -264,10 +277,12 @@ private fun AddExpenseContent(
                 )
             }
         }
-        CategoryPicker(
-            selected = uiState.selectedCategory,
-            onCategoryChange = actions::onCategoryChange,
-        )
+        if (!uiState.isIncome) {
+            CategoryPicker(
+                selected = uiState.selectedCategory,
+                onCategoryChange = actions::onCategoryChange,
+            )
+        }
         OutlinedTextField(
             value = uiState.note,
             onValueChange = actions::onNoteChange,
@@ -280,6 +295,44 @@ private fun AddExpenseContent(
             onDateChange = actions::onDateChange,
         )
         Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun TransactionTypeSelector(
+    isIncome: Boolean,
+    enabled: Boolean,
+    onIncomeChange: (Boolean) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Transaction type",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FilterChip(
+                selected = !isIncome,
+                onClick = { if (enabled) onIncomeChange(false) },
+                enabled = enabled,
+                label = { Text("Expense") },
+                modifier = Modifier.weight(1f),
+            )
+            FilterChip(
+                selected = isIncome,
+                onClick = { if (enabled) onIncomeChange(true) },
+                enabled = enabled,
+                label = { Text("Received") },
+                modifier = Modifier.weight(1f),
+            )
+        }
+        if (isIncome) {
+            Text(
+                text = "This amount will be recorded as money received and shown with a + sign.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
