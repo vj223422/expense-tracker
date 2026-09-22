@@ -84,7 +84,7 @@ fun ExpenseTrackerApp(
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
         val showChrome = currentRoute != Destination.AddExpense.route
-        val showAppTopBar = showChrome && currentRoute != Destination.FuelTracker.route
+        var fuelAddRequested by rememberSaveable { mutableStateOf(false) }
 
         LaunchedEffect(notificationNavigationRequest) {
             if (notificationNavigationRequest <= 0L) return@LaunchedEffect
@@ -96,7 +96,38 @@ fun ExpenseTrackerApp(
 
         Scaffold(
             modifier = Modifier,
-            topBar = { if (showAppTopBar) AppTopBar(onSettingsClick = { navController.navigate(Destination.Settings.route) { launchSingleTop = true } }) },
+            topBar = {
+                if (showChrome) {
+                    if (currentRoute == Destination.FuelTracker.route) {
+                        AppTopBar(
+                            title = "Fuel & Mileage",
+                            subtitle = "Track your fuel fills and get better insights",
+                            onSettingsClick = { navController.navigate(Destination.Settings.route) { launchSingleTop = true } },
+                            extraActions = {
+                                Button(
+                                    onClick = { fuelAddRequested = true },
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .widthIn(min = 102.dp, max = 108.dp),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(13.dp),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                ) {
+                                    Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Add Fuel", fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                }
+                            },
+                        )
+                    } else {
+                        AppTopBar(
+                            onSettingsClick = { navController.navigate(Destination.Settings.route) { launchSingleTop = true } },
+                        )
+                    }
+                }
+            },
             bottomBar = {
                 if (showChrome) {
                     NavigationBar(
@@ -155,9 +186,8 @@ fun ExpenseTrackerApp(
                 }
                 composable(Destination.FuelTracker.route) {
                     FuelTrackerScreen(
-                        onSettingsClick = {
-                            navController.navigate(Destination.Settings.route) { launchSingleTop = true }
-                        },
+                        showAdd = fuelAddRequested,
+                        onShowAddChange = { fuelAddRequested = it },
                     )
                 }
                 composable(
@@ -184,7 +214,13 @@ fun ExpenseTrackerApp(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppTopBar(onSettingsClick: () -> Unit, profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel()) {
+private fun AppTopBar(
+    title: String = "My Expenses",
+    subtitle: String = "All your transactions in one place",
+    onSettingsClick: () -> Unit,
+    extraActions: @Composable RowScope.() -> Unit = {},
+    profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel(),
+) {
     val uiState by profileSwitcherViewModel.uiState.collectAsStateWithLifecycle()
     val profiles = uiState.profiles
     val activeProfileId = uiState.activeProfileId
@@ -195,18 +231,19 @@ private fun AppTopBar(onSettingsClick: () -> Unit, profileSwitcherViewModel: Pro
         title = {
             Column {
                 Text(
-                    "My Expenses",
+                    title,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    "All your transactions in one place",
+                    subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         actions = {
+            extraActions()
             Box {
                 TextButton(
                     onClick = { expanded = true },
