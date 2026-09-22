@@ -95,11 +95,11 @@ private val FuelPurpleSoft: Color
 
 @Composable
 fun FuelTrackerScreen(
-    onSettingsClick: () -> Unit = {},
+    showAdd: Boolean = false,
+    onShowAddChange: (Boolean) -> Unit = {},
     viewModel: FuelTrackerViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showAdd by remember { mutableStateOf(false) }
     var selectedRange by rememberSaveable { mutableStateOf("3M") }
 
     val mileage = state.averageMileage ?: 0.0
@@ -138,167 +138,39 @@ fun FuelTrackerScreen(
         FuelTripInsight(distance / log.liters, cost, cost / distance, distance)
     }.takeLast(12)
 
-    Scaffold(
-        containerColor = FuelPage,
-        topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = FuelPage),
-                title = {
-                    Column(
-                        modifier = Modifier
-                            .widthIn(max = 210.dp)
-                            .padding(end = 4.dp),
-                    ) {
-                        Text(
-                            "Fuel & Mileage",
-                            color = FuelInk,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                        )
-                        Text(
-                            "Track your fuel fills and get better insights",
-                            color = FuelMuted,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2,
-                        )
-                    }
-                },
-                actions = {
-                    Button(
-                        onClick = { showAdd = true },
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .widthIn(min = 102.dp, max = 108.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp),
-                        shape = RoundedCornerShape(13.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FuelBlue),
-                    ) {
-                        Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Add Fuel", fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    }
-                    FuelProfileMenu(onSettingsClick = onSettingsClick)
-                },
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item {
+            FuelVehicleHero(
+                lastCycleDistance = lastCycleDistance,
+                lastMileage = lastMileage,
+                averageFuelRange = averageFuelRange,
             )
-        },
-    ) { padding ->
-        LazyColumn(
-            Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            item {
-                FuelVehicleHero(
-                    lastCycleDistance = lastCycleDistance,
-                    lastMileage = lastMileage,
-                    averageFuelRange = averageFuelRange,
-                )
-            }
-            item { FuelKpiGrid(state.totalSpentMinor / 100.0, state.totalLiters, mileage, totalDistance, state.logs.size) }
-            item { FuelRangeSelector(selectedRange) { selectedRange = it } }
-            item { FuelCharts(trips) }
-            item { FuelHighlights(trips) }
-            item { FuelHistoryHeader(state.logs.size) { showAdd = true } }
+        }
+        item { FuelKpiGrid(state.totalSpentMinor / 100.0, state.totalLiters, mileage, totalDistance, state.logs.size) }
+        item { FuelRangeSelector(selectedRange) { selectedRange = it } }
+        item { FuelCharts(trips) }
+        item { FuelHighlights(trips) }
+        item { FuelHistoryHeader(state.logs.size) { onShowAddChange(true) } }
 
-            if (state.logs.isEmpty()) {
-                item { FuelEmptyState { showAdd = true } }
-            } else {
-                items(state.logs, key = { it.id }) { log ->
-                    FuelHistoryRow(log) { viewModel.deleteFuel(log) }
-                }
+        if (state.logs.isEmpty()) {
+            item { FuelEmptyState { onShowAddChange(true) } }
+        } else {
+            items(state.logs, key = { it.id }) { log ->
+                FuelHistoryRow(log) { viewModel.deleteFuel(log) }
             }
         }
     }
 
     if (showAdd) {
         AddFuelDialog(
-            onDismiss = { showAdd = false },
+            onDismiss = { onShowAddChange(false) },
             onSave = { date, liters, price, odometer, note ->
                 viewModel.addFuel(date, liters, price, odometer, note)
-                showAdd = false
-            },
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FuelProfileMenu(
-    onSettingsClick: () -> Unit,
-    profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel(),
-) {
-    val uiState by profileSwitcherViewModel.uiState.collectAsStateWithLifecycle()
-    var expanded by remember { mutableStateOf(false) }
-    var showCreateProfile by remember { mutableStateOf(false) }
-
-    Box {
-        IconButton(
-            onClick = { expanded = true },
-            modifier = Modifier.size(44.dp),
-        ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = "Profile",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            uiState.profiles.forEach { profile ->
-                DropdownMenuItem(
-                    text = { Text(profile.name) },
-                    onClick = {
-                        profileSwitcherViewModel.onSwitchProfile(profile.id)
-                        expanded = false
-                    },
-                    leadingIcon = {
-                        if (profile.id == uiState.activeProfileId) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                        }
-                    },
-                )
-            }
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text("Create profile") },
-                onClick = {
-                    expanded = false
-                    showCreateProfile = true
-                },
-                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
-            )
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text("Settings") },
-                onClick = {
-                    expanded = false
-                    onSettingsClick()
-                },
-                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-            )
-        }
-    }
-
-    if (showCreateProfile) {
-        CreateProfileDialog(
-            existingNames = uiState.profiles.map { it.name },
-            onDismiss = { showCreateProfile = false },
-            onConfirm = {
-                profileSwitcherViewModel.onCreateProfile(it)
-                showCreateProfile = false
+                onShowAddChange(false)
             },
         )
     }
