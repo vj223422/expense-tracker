@@ -624,7 +624,7 @@ private fun FuelRangeSelector(selected: String, onSelected: (String) -> Unit) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             option,
-                            color = if (option == selected) Color.White else FuelInk,
+                            color = if (option == selected) MaterialTheme.colorScheme.onPrimary else FuelInk,
                             fontWeight = if (option == selected) FontWeight.Bold else FontWeight.Medium,
                         )
                     }
