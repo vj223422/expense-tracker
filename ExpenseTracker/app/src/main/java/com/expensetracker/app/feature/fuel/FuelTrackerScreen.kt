@@ -447,12 +447,12 @@ private fun FuelVehicleHero(
 private fun FuelKpiGrid(totalSpent: Double, totalLiters: Double, mileage: Double, distance: Double, fills: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FuelKpi("Total Spent", currency(totalSpent), "$fills fills", Icons.Default.LocalGasStation, FuelGreenSoft, FuelGreen, Modifier.weight(1f))
-            FuelKpi("Total Fuel", "%.1f L".format(totalLiters), "$fills fills", Icons.Default.WaterDrop, FuelBlueSoft, FuelBlue, Modifier.weight(1f))
+            FuelKpi("Total Spent", currency(totalSpent), "Includes current cycle", Icons.Default.LocalGasStation, FuelGreenSoft, FuelGreen, Modifier.weight(1f))
+            FuelKpi("Total Fuel", "%.1f L".format(totalLiters), "Includes current cycle", Icons.Default.WaterDrop, FuelBlueSoft, FuelBlue, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FuelKpi("Avg. Mileage", if (mileage > 0) "%.1f km/L".format(mileage) else "—", if (mileage > 0) "↑ 12%" else "No data", Icons.Default.Speed, FuelOrangeSoft, FuelOrange, Modifier.weight(1f))
-            FuelKpi("Total Distance", if (distance > 0) "%.0f km".format(distance) else "—", "", Icons.Default.Route, FuelPurpleSoft, FuelPurple, Modifier.weight(1f))
+            FuelKpi("Avg. Mileage", if (mileage > 0) "%.1f km/L".format(mileage) else "—", "Completed cycles only", Icons.Default.Speed, FuelOrangeSoft, FuelOrange, Modifier.weight(1f))
+            FuelKpi("Total Distance", if (distance > 0) "%.0f km".format(distance) else "—", "Completed cycles only", Icons.Default.Route, FuelPurpleSoft, FuelPurple, Modifier.weight(1f))
         }
     }
 }
