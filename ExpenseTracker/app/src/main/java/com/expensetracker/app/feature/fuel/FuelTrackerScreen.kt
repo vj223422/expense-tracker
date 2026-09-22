@@ -459,7 +459,12 @@ private fun FuelKpiGrid(totalSpent: Double, totalLiters: Double, mileage: Double
 
 @Composable
 private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageVector, iconBg: Color, iconColor: Color, modifier: Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(15.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
+    Surface(
+        modifier = modifier.height(174.dp),
+        shape = RoundedCornerShape(15.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
+    ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(48.dp).clip(CircleShape).background(iconBg), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = iconColor, modifier = Modifier.size(25.dp))
