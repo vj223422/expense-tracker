@@ -218,11 +218,15 @@ private fun FuelVehicleHero(
     val pagerState = rememberPagerState(pageCount = { 3 })
 
     LaunchedEffect(Unit) {
-        // Give the card a moment to settle, then demonstrate the swipe once.
-        // User interaction before this point is respected.
+        // Let the first card settle, then auto-swipe through both insight cards.
+        // The two swipes reveal Last Mileage and then Last Trip.
         kotlinx.coroutines.delay(900)
         if (pagerState.currentPage == 0) {
             pagerState.animateScrollToPage(1)
+        }
+        kotlinx.coroutines.delay(900)
+        if (pagerState.currentPage == 1) {
+            pagerState.animateScrollToPage(2)
         }
     }
 
