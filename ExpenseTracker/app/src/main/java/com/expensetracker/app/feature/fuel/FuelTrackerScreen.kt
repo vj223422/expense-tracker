@@ -98,10 +98,12 @@ fun FuelTrackerScreen(
     val lastMileage = lastCycleDistance
         ?.takeIf { lastCompleted.liters > 0.0 }
         ?.let { it / lastCompleted.liters }
-    val lastTripDate = lastCompleted?.epochDay?.let {
-        java.time.LocalDate.ofEpochDay(it)
-            .format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH))
-    }
+    val averageFuelRange = completed
+        .mapNotNull { log ->
+            log.endOdometerKm
+                ?.let { (it - log.odometerKm).takeIf { distance -> distance > 0.0 } }
+        }
+        .averageOrNull()
     val rangeDays = when (selectedRange) {
         "1M" -> 30L
         "3M" -> 90L
@@ -179,7 +181,7 @@ fun FuelTrackerScreen(
                 FuelVehicleHero(
                     lastCycleDistance = lastCycleDistance,
                     lastMileage = lastMileage,
-                    lastTripDate = lastTripDate,
+                    averageFuelRange = averageFuelRange,
                 )
             }
             item { FuelKpiGrid(state.totalSpentMinor / 100.0, state.totalLiters, mileage, totalDistance, state.logs.size) }
@@ -213,13 +215,13 @@ fun FuelTrackerScreen(
 private fun FuelVehicleHero(
     lastCycleDistance: Double?,
     lastMileage: Double?,
-    lastTripDate: String?,
+    averageFuelRange: Double?,
 ) {
     val pagerState = rememberPagerState(pageCount = { 3 })
 
     LaunchedEffect(Unit) {
         // Let the first card settle, then auto-swipe through both insight cards.
-        // The two swipes reveal Last Mileage and then Last Trip.
+        // The two swipes reveal Last Mileage and then Average Fuel Range.
         kotlinx.coroutines.delay(900)
         if (pagerState.currentPage == 0) {
             pagerState.animateScrollToPage(1)
@@ -396,20 +398,20 @@ private fun FuelVehicleHero(
 
                             else -> {
                                 Text(
-                                    "Last Trip",
+                                    "Fuel Range",
                                     color = FuelMuted,
                                     style = MaterialTheme.typography.labelLarge,
                                     maxLines = 1,
                                 )
                                 Text(
-                                    lastCycleDistance?.let { "%.0f km".format(it) } ?: "—",
+                                    averageFuelRange?.let { "%.0f km".format(it) } ?: "—",
                                     color = FuelInk,
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                 )
                                 Text(
-                                    lastTripDate?.let { "Completed $it" } ?: "No completed trip yet",
+                                    if (averageFuelRange != null) "Based on average history" else "Add completed fills to calculate",
                                     color = FuelMuted,
                                     style = MaterialTheme.typography.labelSmall,
                                     maxLines = 2,
