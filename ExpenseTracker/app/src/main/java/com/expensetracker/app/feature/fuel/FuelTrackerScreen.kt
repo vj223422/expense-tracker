@@ -1358,12 +1358,13 @@ private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else ave
 
 @Composable
 private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
+    val green = FuelGreen
+    val grid = MaterialTheme.colorScheme.outlineVariant
     Canvas(modifier) {
         val left = 10f
         val right = size.width - 4f
         val top = 8f
         val bottom = size.height - 8f
-        val grid = Color(0xFFE4EAF2)
         for (i in 0..3) {
             val y = top + (bottom - top) * i / 3f
             drawLine(grid, Offset(left, y), Offset(right, y), 1f)
@@ -1382,23 +1383,24 @@ private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
             val y = bottom - (((value - low) / span).toFloat() * (bottom - top))
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
-        if (values.size > 1) drawPath(path, FuelGreen, style = Stroke(4f))
+        if (values.size > 1) drawPath(path, green, style = Stroke(4f))
         values.forEachIndexed { i, value ->
             val x = if (values.size == 1) (left + right) / 2f else left + step * i
             val y = bottom - (((value - low) / span).toFloat() * (bottom - top))
-            drawCircle(FuelGreen, 6f, Offset(x, y))
+            drawCircle(green, 6f, Offset(x, y))
         }
     }
 }
 
 @Composable
 private fun FuelBarChart(values: List<Double>, modifier: Modifier = Modifier) {
+    val blue = FuelBlue
+    val grid = MaterialTheme.colorScheme.outlineVariant
     Canvas(modifier) {
         val left = 10f
         val right = size.width - 4f
         val top = 8f
         val bottom = size.height - 8f
-        val grid = Color(0xFFE4EAF2)
         for (i in 0..3) {
             val y = top + (bottom - top) * i / 3f
             drawLine(grid, Offset(left, y), Offset(right, y), 1f)
@@ -1411,7 +1413,7 @@ private fun FuelBarChart(values: List<Double>, modifier: Modifier = Modifier) {
         values.forEachIndexed { i, value ->
             val x = left + slot * i + (slot - width) / 2f
             val h = ((value / chartMax).toFloat() * (bottom - top)).coerceAtLeast(5f)
-            drawRoundRect(FuelBlue, Offset(x, bottom - h), Size(width, h), CornerRadius(7f, 7f))
+            drawRoundRect(blue, Offset(x, bottom - h), Size(width, h), CornerRadius(7f, 7f))
         }
     }
 }
