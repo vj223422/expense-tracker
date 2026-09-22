@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -447,12 +448,12 @@ private fun FuelVehicleHero(
 private fun FuelKpiGrid(totalSpent: Double, totalLiters: Double, mileage: Double, distance: Double, fills: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FuelKpi("Total Spent", currency(totalSpent), "Includes current cycle", Icons.Default.LocalGasStation, FuelGreenSoft, FuelGreen, Modifier.weight(1f))
-            FuelKpi("Total Fuel", "%.1f L".format(totalLiters), "Includes current cycle", Icons.Default.WaterDrop, FuelBlueSoft, FuelBlue, Modifier.weight(1f))
+            FuelKpi("Total Spent", currency(totalSpent), "To date", Icons.Default.LocalGasStation, FuelGreenSoft, FuelGreen, Modifier.weight(1f))
+            FuelKpi("Total Fuel", "%.1f L".format(totalLiters), "To date", Icons.Default.WaterDrop, FuelBlueSoft, FuelBlue, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FuelKpi("Avg. Mileage", if (mileage > 0) "%.1f km/L".format(mileage) else "—", "Completed cycles only", Icons.Default.Speed, FuelOrangeSoft, FuelOrange, Modifier.weight(1f))
-            FuelKpi("Total Distance", if (distance > 0) "%.0f km".format(distance) else "—", "Completed cycles only", Icons.Default.Route, FuelPurpleSoft, FuelPurple, Modifier.weight(1f))
+            FuelKpi("Avg. Mileage", if (mileage > 0) "%.1f km/L".format(mileage) else "—", "Completed only", Icons.Default.Speed, FuelOrangeSoft, FuelOrange, Modifier.weight(1f))
+            FuelKpi("Total Distance", if (distance > 0) "%.0f km".format(distance) else "—", "Completed only", Icons.Default.Route, FuelPurpleSoft, FuelPurple, Modifier.weight(1f))
         }
     }
 }
@@ -473,7 +474,12 @@ private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageV
             Column(Modifier.weight(1f)) {
                 Text(title, color = FuelMuted, style = MaterialTheme.typography.bodySmall)
                 Text(value, color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = FuelMuted, style = MaterialTheme.typography.labelSmall, maxLines = 2)
+                Text(
+                    subtitle,
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                    maxLines = 1,
+                )
             }
         }
     }
