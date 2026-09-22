@@ -37,7 +37,12 @@ import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import com.expensetracker.app.core.designsystem.CreateProfileDialog
+import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -65,23 +70,34 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.max
 
-private val FuelBlue = Color(0xFF0878F9)
+private val FuelBlue: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
 private val FuelGreen = Color(0xFF0FAE68)
 private val FuelOrange = Color(0xFFF58B18)
 private val FuelPurple = Color(0xFF7B6BE8)
-private val FuelInk = Color(0xFF111A35)
-private val FuelMuted = Color(0xFF536582)
-private val FuelBorder = Color(0xFFE4EAF3)
-private val FuelPage = Color(0xFFF8FAFD)
-private val FuelHero = Color(0xFFFFF2F4)
-private val FuelGreenSoft = Color(0xFFE1F7EB)
-private val FuelBlueSoft = Color(0xFFE5F0FF)
-private val FuelOrangeSoft = Color(0xFFFFEEDC)
-private val FuelPurpleSoft = Color(0xFFEDEAFF)
+private val FuelInk: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+private val FuelMuted: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val FuelBorder: Color
+    @Composable get() = MaterialTheme.colorScheme.outlineVariant
+private val FuelPage: Color
+    @Composable get() = MaterialTheme.colorScheme.background
+private val FuelHero: Color
+    @Composable get() = MaterialTheme.colorScheme.errorContainer
+private val FuelGreenSoft: Color
+    @Composable get() = MaterialTheme.colorScheme.tertiaryContainer
+private val FuelBlueSoft: Color
+    @Composable get() = MaterialTheme.colorScheme.primaryContainer
+private val FuelOrangeSoft: Color
+    @Composable get() = MaterialTheme.colorScheme.secondaryContainer
+private val FuelPurpleSoft: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
 
 @Composable
 fun FuelTrackerScreen(
     onNavigateBack: () -> Unit,
+    onSettingsClick: () -> Unit = {},
     viewModel: FuelTrackerViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -160,7 +176,7 @@ fun FuelTrackerScreen(
                         onClick = { showAdd = true },
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .widthIn(min = 112.dp, max = 126.dp),
+                            .widthIn(min = 102.dp, max = 108.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp),
                         shape = RoundedCornerShape(13.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = FuelBlue),
@@ -169,6 +185,7 @@ fun FuelTrackerScreen(
                         Spacer(Modifier.width(4.dp))
                         Text("Add Fuel", fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
+                    FuelProfileMenu(onSettingsClick = onSettingsClick)
                 },
             )
         },
@@ -207,6 +224,88 @@ fun FuelTrackerScreen(
             onSave = { date, liters, price, odometer, note ->
                 viewModel.addFuel(date, liters, price, odometer, note)
                 showAdd = false
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FuelProfileMenu(
+    onSettingsClick: () -> Unit,
+    profileSwitcherViewModel: ProfileSwitcherViewModel = koinViewModel(),
+) {
+    val uiState by profileSwitcherViewModel.uiState.collectAsStateWithLifecycle()
+    var expanded by remember { mutableStateOf(false) }
+    var showCreateProfile by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(44.dp),
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = "Profile",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            uiState.profiles.forEach { profile ->
+                DropdownMenuItem(
+                    text = { Text(profile.name) },
+                    onClick = {
+                        profileSwitcherViewModel.onSwitchProfile(profile.id)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        if (profile.id == uiState.activeProfileId) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                        }
+                    },
+                )
+            }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Create profile") },
+                onClick = {
+                    expanded = false
+                    showCreateProfile = true
+                },
+                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Settings") },
+                onClick = {
+                    expanded = false
+                    onSettingsClick()
+                },
+                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+            )
+        }
+    }
+
+    if (showCreateProfile) {
+        CreateProfileDialog(
+            existingNames = uiState.profiles.map { it.name },
+            onDismiss = { showCreateProfile = false },
+            onConfirm = {
+                profileSwitcherViewModel.onCreateProfile(it)
+                showCreateProfile = false
             },
         )
     }
