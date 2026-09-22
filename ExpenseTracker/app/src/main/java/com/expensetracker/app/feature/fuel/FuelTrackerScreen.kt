@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Eco
@@ -84,7 +83,7 @@ private val FuelBorder: Color
 private val FuelPage: Color
     @Composable get() = MaterialTheme.colorScheme.background
 private val FuelHero: Color
-    @Composable get() = MaterialTheme.colorScheme.errorContainer
+    @Composable get() = MaterialTheme.colorScheme.surfaceContainerHigh
 private val FuelGreenSoft: Color
     @Composable get() = MaterialTheme.colorScheme.tertiaryContainer
 private val FuelBlueSoft: Color
@@ -96,7 +95,6 @@ private val FuelPurpleSoft: Color
 
 @Composable
 fun FuelTrackerScreen(
-    onNavigateBack: () -> Unit,
     onSettingsClick: () -> Unit = {},
     viewModel: FuelTrackerViewModel = koinViewModel(),
 ) {
@@ -145,11 +143,6 @@ fun FuelTrackerScreen(
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FuelPage),
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = FuelInk)
-                    }
-                },
                 title = {
                     Column(
                         modifier = Modifier
@@ -562,7 +555,7 @@ private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageV
     Surface(
         modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(15.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
     ) {
         Row(
@@ -616,7 +609,7 @@ private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageV
 @Composable
 private fun FuelRangeSelector(selected: String, onSelected: (String) -> Unit) {
     val options = listOf("1M", "3M", "6M", "1Y", "All")
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = Color(0xFFEDF2F8)) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         Row(Modifier.padding(3.dp)) {
             options.forEach { option ->
                 Surface(
@@ -753,7 +746,7 @@ private fun FuelHighlight(
     Surface(
         modifier = modifier.height(180.dp),
         shape = RoundedCornerShape(15.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
     ) {
         Column(
