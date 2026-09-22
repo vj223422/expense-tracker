@@ -143,7 +143,14 @@ fun ExpenseTrackerApp(
                 composable(Destination.Reminders.route) { RemindersScreen() }
                 composable(Destination.Budgets.route) { BudgetsScreen() }
                 composable(Destination.Settings.route) { SettingsScreen(onFuelTrackerClick = { navController.navigate(Destination.FuelTracker.route) }) }
-                composable(Destination.FuelTracker.route) { FuelTrackerScreen(onNavigateBack = { navController.popBackStack() }) }
+                composable(Destination.FuelTracker.route) {
+                    FuelTrackerScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onSettingsClick = {
+                            navController.navigate(Destination.Settings.route) { launchSingleTop = true }
+                        },
+                    )
+                }
                 composable(
                     route = Destination.AddExpense.route,
                     arguments = listOf(
