@@ -448,7 +448,7 @@ private fun FuelVehicleHero(
 private fun FuelKpiGrid(totalSpent: Double, totalLiters: Double, mileage: Double, distance: Double, fills: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FuelKpi("Total Spent", currency(totalSpent), "To date", Icons.Default.LocalGasStation, FuelGreenSoft, FuelGreen, Modifier.weight(1f))
+            FuelKpi("Total Spent", currency(totalSpent).replace(".00", ""), "To date", Icons.Default.LocalGasStation, FuelGreenSoft, FuelGreen, Modifier.weight(1f))
             FuelKpi("Total Fuel", "%.1f L".format(totalLiters), "To date", Icons.Default.WaterDrop, FuelBlueSoft, FuelBlue, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -461,19 +461,48 @@ private fun FuelKpiGrid(totalSpent: Double, totalLiters: Double, mileage: Double
 @Composable
 private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageVector, iconBg: Color, iconColor: Color, modifier: Modifier) {
     Surface(
-        modifier = modifier.height(174.dp),
+        modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(15.dp),
         color = Color.White,
         border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(iconBg), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = iconColor, modifier = Modifier.size(25.dp))
+        Row(
+            Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(iconBg),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    icon,
+                    null,
+                    tint = iconColor,
+                    modifier = Modifier.size(23.dp),
+                )
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, color = FuelMuted, style = MaterialTheme.typography.bodySmall)
-                Text(value, color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    title,
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                    maxLines = 1,
+                )
+                Text(
+                    value,
+                    color = FuelInk,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 26.sp,
+                        lineHeight = 30.sp,
+                    ),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false,
+                )
                 Text(
                     subtitle,
                     color = FuelMuted,
@@ -1198,95 +1227,3 @@ private fun AddFuelDialog(
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    picker.selectedDateMillis?.let {
-                        date = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
-                    }
-                    showDatePicker = false
-                }) {
-                    Text("Done")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
-                }
-            },
-        ) {
-            DatePicker(state = picker)
-        }
-    }
-}
-
-private data class FuelTripInsight(
-    val mileage: Double,
-    val cost: Double,
-    val costPerKm: Double,
-    val distanceKm: Double,
-)
-
-private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else average()
-
-@Composable
-private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-        val left = 10f
-        val right = size.width - 4f
-        val top = 8f
-        val bottom = size.height - 8f
-        val grid = Color(0xFFE4EAF2)
-        for (i in 0..3) {
-            val y = top + (bottom - top) * i / 3f
-            drawLine(grid, Offset(left, y), Offset(right, y), 1f)
-        }
-        if (values.isEmpty()) return@Canvas
-        val min = values.minOrNull() ?: 0.0
-        val max = values.maxOrNull() ?: min
-        val range = (max - min).takeIf { it > 0.001 } ?: max.coerceAtLeast(1.0) * .18
-        val low = min - range * .18
-        val high = max + range * .18
-        val span = (high - low).coerceAtLeast(1.0)
-        val step = if (values.size == 1) 0f else (right - left) / (values.size - 1)
-        val path = Path()
-        values.forEachIndexed { i, value ->
-            val x = if (values.size == 1) (left + right) / 2f else left + step * i
-            val y = bottom - (((value - low) / span).toFloat() * (bottom - top))
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-        }
-        if (values.size > 1) drawPath(path, FuelGreen, style = Stroke(4f))
-        values.forEachIndexed { i, value ->
-            val x = if (values.size == 1) (left + right) / 2f else left + step * i
-            val y = bottom - (((value - low) / span).toFloat() * (bottom - top))
-            drawCircle(FuelGreen, 6f, Offset(x, y))
-        }
-    }
-}
-
-@Composable
-private fun FuelBarChart(values: List<Double>, modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-        val left = 10f
-        val right = size.width - 4f
-        val top = 8f
-        val bottom = size.height - 8f
-        val grid = Color(0xFFE4EAF2)
-        for (i in 0..3) {
-            val y = top + (bottom - top) * i / 3f
-            drawLine(grid, Offset(left, y), Offset(right, y), 1f)
-        }
-        if (values.isEmpty()) return@Canvas
-        val maxValue = (values.maxOrNull() ?: 1.0).coerceAtLeast(1.0)
-        val chartMax = maxValue * 1.18
-        val slot = (right - left) / values.size
-        val width = if (values.size == 1) (slot * .42f).coerceAtLeast(26f) else (slot * .52f).coerceAtLeast(12f)
-        values.forEachIndexed { i, value ->
-            val x = left + slot * i + (slot - width) / 2f
-            val h = ((value / chartMax).toFloat() * (bottom - top)).coerceAtLeast(5f)
-            drawRoundRect(FuelBlue, Offset(x, bottom - h), Size(width, h), CornerRadius(7f, 7f))
-        }
-    }
-}
-
-private fun currency(value: Double): String =
-    NumberFormat.getCurrencyInstance(Locale("en", "IN")).format(max(0.0, value))
