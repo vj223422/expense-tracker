@@ -1227,3 +1227,95 @@ private fun AddFuelDialog(
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    picker.selectedDateMillis?.let {
+                        date = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("Done")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            },
+        ) {
+            DatePicker(state = picker)
+        }
+    }
+}
+
+private data class FuelTripInsight(
+    val mileage: Double,
+    val cost: Double,
+    val costPerKm: Double,
+    val distanceKm: Double,
+)
+
+private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else average()
+
+@Composable
+private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val left = 10f
+        val right = size.width - 4f
+        val top = 8f
+        val bottom = size.height - 8f
+        val grid = Color(0xFFE4EAF2)
+        for (i in 0..3) {
+            val y = top + (bottom - top) * i / 3f
+            drawLine(grid, Offset(left, y), Offset(right, y), 1f)
+        }
+        if (values.isEmpty()) return@Canvas
+        val min = values.minOrNull() ?: 0.0
+        val max = values.maxOrNull() ?: min
+        val range = (max - min).takeIf { it > 0.001 } ?: max.coerceAtLeast(1.0) * .18
+        val low = min - range * .18
+        val high = max + range * .18
+        val span = (high - low).coerceAtLeast(1.0)
+        val step = if (values.size == 1) 0f else (right - left) / (values.size - 1)
+        val path = Path()
+        values.forEachIndexed { i, value ->
+            val x = if (values.size == 1) (left + right) / 2f else left + step * i
+            val y = bottom - (((value - low) / span).toFloat() * (bottom - top))
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        if (values.size > 1) drawPath(path, FuelGreen, style = Stroke(4f))
+        values.forEachIndexed { i, value ->
+            val x = if (values.size == 1) (left + right) / 2f else left + step * i
+            val y = bottom - (((value - low) / span).toFloat() * (bottom - top))
+            drawCircle(FuelGreen, 6f, Offset(x, y))
+        }
+    }
+}
+
+@Composable
+private fun FuelBarChart(values: List<Double>, modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val left = 10f
+        val right = size.width - 4f
+        val top = 8f
+        val bottom = size.height - 8f
+        val grid = Color(0xFFE4EAF2)
+        for (i in 0..3) {
+            val y = top + (bottom - top) * i / 3f
+            drawLine(grid, Offset(left, y), Offset(right, y), 1f)
+        }
+        if (values.isEmpty()) return@Canvas
+        val maxValue = (values.maxOrNull() ?: 1.0).coerceAtLeast(1.0)
+        val chartMax = maxValue * 1.18
+        val slot = (right - left) / values.size
+        val width = if (values.size == 1) (slot * .42f).coerceAtLeast(26f) else (slot * .52f).coerceAtLeast(12f)
+        values.forEachIndexed { i, value ->
+            val x = left + slot * i + (slot - width) / 2f
+            val h = ((value / chartMax).toFloat() * (bottom - top)).coerceAtLeast(5f)
+            drawRoundRect(FuelBlue, Offset(x, bottom - h), Size(width, h), CornerRadius(7f, 7f))
+        }
+    }
+}
+
+private fun currency(value: Double): String =
+    NumberFormat.getCurrencyInstance(Locale("en", "IN")).format(max(0.0, value))
