@@ -319,8 +319,8 @@ private fun WaterReminderCard(
 }
 
 @Composable
-private fun WaterInsight(label: String, amount: Int, goal: Int) {
-    Card(Modifier.weight(1f), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))) {
+private fun WaterInsight(label: String, amount: Int, goal: Int, modifier: Modifier = Modifier) {
+    Card(modifier, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))) {
         Column(Modifier.padding(10.dp)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(amount.toString() + " ml", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
