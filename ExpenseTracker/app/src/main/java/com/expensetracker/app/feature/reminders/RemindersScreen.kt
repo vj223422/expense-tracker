@@ -219,7 +219,7 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
         }
         item {
             Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Active reminders", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("Active reminders", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("${reminders.count { it.enabled }} reminders", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -279,7 +279,7 @@ private fun ModernReminderCard(reminder: ReminderEntity, vm: RemindersViewModel,
 @Composable
 private fun ReminderDetailRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(icon, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.size(12.dp))
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(width = 82.dp, height = 24.dp))
         Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
@@ -349,28 +349,28 @@ private fun WaterReminderCard(
             ) {
                 Box(
                     Modifier
-                        .size(52.dp)
+                        .size(44.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF183B59)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(30.dp))
+                    Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(24.dp))
                 }
-                Spacer(Modifier.size(13.dp))
+                Spacer(Modifier.size(9.dp))
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Text(
                         "Hydration",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = textColor,
                         maxLines = 1,
                     )
                     Text(
                         if (settings == null) "Set up your daily hydration" else "${settings.intakePerReminderMl} ml per reminder",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = muted,
                         maxLines = 1,
                     )
@@ -398,14 +398,14 @@ private fun WaterReminderCard(
                         CircularProgressIndicator(
                             progress = { 1f },
                             modifier = Modifier.fillMaxSize(),
-                            strokeWidth = 11.dp,
+                            strokeWidth = 8.dp,
                             color = Color(0xFF24455F),
                             strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
                         CircularProgressIndicator(
                             progress = { progress },
                             modifier = Modifier.fillMaxSize(),
-                            strokeWidth = 11.dp,
+                            strokeWidth = 8.dp,
                             color = cyan,
                             strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
@@ -415,12 +415,12 @@ private fun WaterReminderCard(
                         ) {
                             Text(
                                 "${(progress * 100).toInt()}%",
-                                fontSize = 25.sp,
-                                lineHeight = 29.sp,
+                                fontSize = 22.sp,
+                                lineHeight = 26.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = textColor,
                             )
-                            Text("today", fontSize = 15.sp, color = muted)
+                            Text("today", fontSize = 12.sp, color = muted)
                             Spacer(Modifier.size(5.dp))
                             Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(18.dp))
                         }
@@ -432,24 +432,24 @@ private fun WaterReminderCard(
                     ) {
                         Text(
                             "${todayTotal} ml",
-                            fontSize = 28.sp,
-                            lineHeight = 32.sp,
+                            fontSize = 24.sp,
+                            lineHeight = 28.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = textColor,
                             maxLines = 2,
                         )
                         Text(
                             "of ${goal} ml goal",
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
                             color = muted,
                             maxLines = 2,
                         )
                         ScheduleDivider(horizontal = true)
                         Text(
                             "${remaining} ml",
-                            fontSize = 18.sp,
-                            lineHeight = 22.sp,
+                            fontSize = 16.sp,
+                            lineHeight = 20.sp,
                             color = cyan,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -464,7 +464,7 @@ private fun WaterReminderCard(
                                 Icons.Default.Notifications,
                                 null,
                                 tint = Color(0xFF73B9FF),
-                                modifier = Modifier.size(22.dp),
+                                modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.size(7.dp))
                             Text(
@@ -494,12 +494,12 @@ private fun WaterReminderCard(
                                 Icons.Default.CalendarMonth,
                                 null,
                                 tint = Color(0xFF79B7FF),
-                                modifier = Modifier.size(21.dp),
+                                modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.size(9.dp))
                             Text(
                                 "Today's plan",
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textColor,
                                 modifier = Modifier.weight(1f),
@@ -515,17 +515,17 @@ private fun WaterReminderCard(
                             ) {
                                 Text(
                                     "View schedule",
-                                    fontSize = 11.sp,
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = textColor,
                                     maxLines = 1,
                                 )
                                 Spacer(Modifier.size(2.dp))
-                                Icon(Icons.Default.ChevronRight, null, tint = textColor, modifier = Modifier.size(17.dp))
+                                Icon(Icons.Default.ChevronRight, null, tint = textColor, modifier = Modifier.size(14.dp))
                             }
                         }
 
-                        Spacer(Modifier.size(13.dp))
+                        Spacer(Modifier.size(9.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -576,14 +576,14 @@ private fun WaterReminderCard(
                     ) {
                         Text(
                             "Today's water logs",
-                            fontSize = 16.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             modifier = Modifier.weight(1f),
                         )
                         Text(
                             "${todayTotal} ml total",
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             color = muted,
                         )
                     }
@@ -597,7 +597,7 @@ private fun WaterReminderCard(
                     if (todayLogs.isEmpty()) {
                         Text(
                             "No water logged today",
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             color = muted,
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
@@ -626,14 +626,14 @@ private fun WaterReminderCard(
                                             Icons.Default.LocalDrink,
                                             null,
                                             tint = cyan,
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(15.dp),
                                         )
                                     }
                                     Spacer(Modifier.size(9.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             "${log.amountMl} ml",
-                                            fontSize = 14.sp,
+                                            fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = textColor,
                                             maxLines = 1,
@@ -653,13 +653,13 @@ private fun WaterReminderCard(
                                     )
                                     IconButton(
                                         onClick = { onDelete(log) },
-                                        modifier = Modifier.size(36.dp),
+                                        modifier = Modifier.size(32.dp),
                                     ) {
                                         Icon(
                                             Icons.Default.Delete,
                                             contentDescription = "Delete water log",
                                             tint = Color(0xFFFF7187),
-                                            modifier = Modifier.size(19.dp),
+                                            modifier = Modifier.size(14.dp),
                                         )
                                     }
                                 }
@@ -717,7 +717,7 @@ private fun WaterReminderCard(
                         Spacer(Modifier.size(7.dp))
                         Text(
                             "Log ${settings.intakePerReminderMl} ml",
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                         )
@@ -742,7 +742,7 @@ private fun WaterReminderCard(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         "Set a daily goal and hydration window. We'll automatically calculate the number of reminders and space them evenly.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = muted,
                     )
                     Button(
@@ -798,7 +798,7 @@ private fun WaterScheduleCell(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                Icon(icon, null, tint = iconTint, modifier = Modifier.size(17.dp))
+                Icon(icon, null, tint = iconTint, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.size(4.dp))
                 Text(
                     label,
@@ -870,7 +870,7 @@ private fun WaterInsight(
                     Icons.Default.ChevronRight,
                     null,
                     tint = Color(0xFF8DA8BF),
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(14.dp),
                 )
             }
             Box(
@@ -907,8 +907,8 @@ private fun WaterInsight(
             }
             Text(
                 "${percent}%",
-                fontSize = 12.sp,
-                lineHeight = 14.sp,
+                fontSize = 11.sp,
+                lineHeight = 13.sp,
                 color = Color(0xFFDCE8F4),
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -1189,7 +1189,7 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
                             Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                         }
                         Spacer(Modifier.size(14.dp))
-                        Text(if (noteSearch.isBlank()) "No notes yet" else "No notes found", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(if (noteSearch.isBlank()) "No notes yet" else "No notes found", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.size(5.dp))
                         Text(
                             if (noteSearch.isBlank()) "Tap Create a note to add your first note." else "Try a different search term.",
