@@ -684,30 +684,45 @@ private fun WaterScheduleCell(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(22.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = iconTint, modifier = Modifier.size(17.dp))
-            Spacer(Modifier.size(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Icon(icon, null, tint = iconTint, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.size(4.dp))
+                Text(
+                    label,
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    color = Color(0xFFA6B8CA),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            contentAlignment = Alignment.Center,
+        ) {
             Text(
-                label,
-                fontSize = 10.sp,
-                lineHeight = 12.sp,
-                color = Color(0xFFA6B8CA),
+                value,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
+                color = Color(0xFFEAF3FF),
+                maxLines = 2,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
-        Text(
-            value,
-            fontSize = 14.sp,
-            lineHeight = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFFEAF3FF),
-            maxLines = 2,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
     }
 }
 
@@ -722,7 +737,7 @@ private fun WaterInsight(
 ) {
     val percent = ((amount * 100) / goal.coerceAtLeast(1)).coerceIn(0, 100)
     Card(
-        modifier = modifier,
+        modifier = modifier.height(208.dp),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF112D45)),
         border = BorderStroke(1.dp, Color(0xFF1C405C)),
@@ -754,14 +769,21 @@ private fun WaterInsight(
                     modifier = Modifier.size(16.dp),
                 )
             }
-            Text(
-                "${amount} ml",
-                fontSize = 21.sp,
-                lineHeight = 25.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFFEAF3FF),
-                maxLines = 2,
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(
+                    "${amount} ml",
+                    fontSize = 21.sp,
+                    lineHeight = 25.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFFEAF3FF),
+                    maxLines = 2,
+                )
+            }
             Box(
                 Modifier
                     .fillMaxWidth()
