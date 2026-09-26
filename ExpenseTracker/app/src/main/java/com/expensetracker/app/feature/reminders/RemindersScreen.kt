@@ -300,9 +300,9 @@ private fun WaterReminderCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    WaterInsight("Daily", todayTotal, goal)
-                    WaterInsight("7 days", weekTotal / 7, goal)
-                    WaterInsight("Monthly", monthTotal / today.lengthOfMonth(), goal)
+                    WaterInsight("Daily", todayTotal, goal, Modifier.weight(1f))
+                    WaterInsight("7 days", weekTotal / 7, goal, Modifier.weight(1f))
+                    WaterInsight("Monthly", monthTotal / today.lengthOfMonth(), goal, Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onAdd, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
