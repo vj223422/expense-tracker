@@ -403,14 +403,6 @@ private fun WaterReminderCard(
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            WaterScheduleItem("START", formatWaterTime(settings.startTimeMinutes), Modifier.weight(1f))
-                            WaterScheduleItem("EVERY", formatWaterInterval(frequencyMinutes), Modifier.weight(1f))
-                            WaterScheduleItem("END", formatWaterTime(settings.endTimeMinutes), Modifier.weight(1f))
-                        }
-                    }
-                }
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     WaterInsight("Today", todayTotal, goal, Modifier.weight(1f))
                     WaterInsight("7 days", weekTotal / 7, goal, Modifier.weight(1f))
                     WaterInsight("Month", monthTotal / today.lengthOfMonth(), goal, Modifier.weight(1f))
