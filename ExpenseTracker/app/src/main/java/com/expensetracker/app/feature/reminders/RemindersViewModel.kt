@@ -106,33 +106,45 @@ class RemindersViewModel(
     }
 
 
-    fun saveWaterSettings(goalMl: Int, intervalHours: Int, amountMl: Int) {
+    fun saveWaterSettings(goalMl: Int, startTimeMinutes: Int, endTimeMinutes: Int, amountMl: Int) {
         val profileId = activeProfileId.value ?: return
-        if (goalMl <= 0 || intervalHours <= 0 || amountMl <= 0) return
+        if (goalMl <= 0 || amountMl <= 0) return
+
+        val reminderCount = goalMl / amountMl
+        if (reminderCount < 1 || goalMl % amountMl != 0) {
+            _message.value = "Daily goal must be divisible by the intake amount"
+            return
+        }
+
+        val start = startTimeMinutes.coerceIn(0, 1439)
+        val end = endTimeMinutes.coerceIn(0, 1439)
+        val durationMinutes = end - start
+        if (reminderCount > 1 && durationMinutes <= 0) {
+            _message.value = "End time must be after start time"
+            return
+        }
+
+        val frequencyMinutes = if (reminderCount > 1) {
+            kotlin.math.round(durationMinutes.toDouble() / (reminderCount - 1)).toInt()
+        } else 0
+        val legacyIntervalHours = if (frequencyMinutes > 0) {
+            kotlin.math.max(1, kotlin.math.round(frequencyMinutes / 60.0).toInt())
+        } else 1
+
         viewModelScope.launch {
             val existing = waterDao.getSettings(profileId)
-            val settings = WaterSettingsEntity(
-                profileId = profileId,
+            val updated = (existing ?: WaterSettingsEntity(profileId = profileId)).copy(
                 enabled = true,
                 dailyGoalMl = goalMl,
-                intervalHours = intervalHours,
+                intervalHours = legacyIntervalHours,
                 intakePerReminderMl = amountMl,
                 nextReminderAtEpochMillis = null,
+                startTimeMinutes = start,
+                endTimeMinutes = end,
+                reminderCount = reminderCount,
             )
-            waterDao.upsertSettings(existing?.copy(
-                enabled = true,
-                dailyGoalMl = goalMl,
-                intervalHours = intervalHours,
-                intakePerReminderMl = amountMl,
-                nextReminderAtEpochMillis = null,
-            ) ?: settings)
-            waterScheduler.schedule((existing?.copy(
-                enabled = true,
-                dailyGoalMl = goalMl,
-                intervalHours = intervalHours,
-                intakePerReminderMl = amountMl,
-                nextReminderAtEpochMillis = null,
-            ) ?: settings))
+            waterDao.upsertSettings(updated)
+            waterScheduler.schedule(updated)
             _message.value = "Water reminder enabled"
         }
     }

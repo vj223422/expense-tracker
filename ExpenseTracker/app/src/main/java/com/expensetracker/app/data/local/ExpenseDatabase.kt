@@ -20,7 +20,7 @@ import com.expensetracker.app.data.local.dao.ProfileDao
 import com.expensetracker.app.data.local.dao.ReminderDao
 import com.expensetracker.app.data.local.dao.WaterDao
 
-@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class, FuelLogEntity::class, WaterSettingsEntity::class, WaterIntakeEntity::class], version = 13, exportSchema = true)
+@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class, FuelLogEntity::class, WaterSettingsEntity::class, WaterIntakeEntity::class], version = 14, exportSchema = true)
 abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun fuelLogDao(): FuelLogDao
@@ -104,11 +104,20 @@ abstract class ExpenseDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_water_intake_profileId_drankAtEpochMillis ON water_intake (profileId, drankAtEpochMillis)")
             }
         }
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE water_settings ADD COLUMN startTimeMinutes INTEGER NOT NULL DEFAULT 480")
+                db.execSQL("ALTER TABLE water_settings ADD COLUMN endTimeMinutes INTEGER NOT NULL DEFAULT 1200")
+                db.execSQL("ALTER TABLE water_settings ADD COLUMN reminderCount INTEGER NOT NULL DEFAULT 8")
+                db.execSQL("UPDATE water_settings SET reminderCount = CASE WHEN intakePerReminderMl > 0 THEN MAX(1, CAST(dailyGoalMl / intakePerReminderMl AS INTEGER)) ELSE 1 END")
+            }
+        }
 
         fun allMigrations(): Array<Migration> = arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
             MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
+            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+            MIGRATION_13_14
         )
 
     }
