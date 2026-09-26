@@ -3,6 +3,8 @@ package com.expensetracker.app.data.reminder
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -34,6 +36,7 @@ class WaterReminderReceiver : BroadcastReceiver() {
                 val settings = db.waterDao().getSettings(profileId) ?: return@launch
                 if (!settings.enabled) return@launch
                 val allowed = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                ensureChannel(context)
                 if (allowed) {
                     val action = Intent(context, WaterReminderActionReceiver::class.java).apply {
                         putExtra(WaterReminderActionReceiver.EXTRA_PROFILE_ID, profileId)
@@ -61,6 +64,17 @@ class WaterReminderReceiver : BroadcastReceiver() {
                 db.close()
                 pending.finish()
             }
+        }
+    }
+
+
+    private fun ensureChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CHANNEL_ID, "Water reminders", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Hydration reminders with a water-drop alert"
+                enableVibration(true)
+            }
+            context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
