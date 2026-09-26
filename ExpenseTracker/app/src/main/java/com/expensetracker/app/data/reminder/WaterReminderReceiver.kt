@@ -11,6 +11,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.media.AudioAttributes
+import android.net.Uri
 import android.media.ToneGenerator
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -18,6 +20,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.room.Room
 import com.expensetracker.app.data.local.ExpenseDatabase
+import com.expensetracker.app.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,7 +56,6 @@ class WaterReminderReceiver : BroadcastReceiver() {
                         .addAction(android.R.drawable.ic_menu_add, "Mark as done", actionPi)
                         .build()
                     NotificationManagerCompat.from(context).notify(notificationId(profileId), notification)
-                    playDropSound()
                 }
                 val next = Instant.ofEpochMilli(System.currentTimeMillis()).atZone(ZoneId.systemDefault())
                     .plusHours(settings.intervalHours.coerceAtLeast(1).toLong()).toInstant().toEpochMilli()
@@ -73,6 +75,8 @@ class WaterReminderReceiver : BroadcastReceiver() {
             val channel = NotificationChannel(CHANNEL_ID, "Water reminders", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "Hydration reminders with a water-drop alert"
                 enableVibration(true)
+                val soundUri = Uri.parse("android.resource://" + context.packageName + "/" + R.raw.water_drop)
+                setSound(soundUri, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
             }
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
