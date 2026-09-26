@@ -97,11 +97,11 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                         onDragStart = { totalDrag = 0f },
                         onHorizontalDrag = { change, dragAmount ->
                             totalDrag += dragAmount
-                            if (totalDrag < -100f && tab == 0) {
-                                tab = 1
+                            if (totalDrag < -100f && tab < 2) {
+                                tab += 1
                                 change.consume()
-                            } else if (totalDrag > 100f && tab == 1) {
-                                tab = 0
+                            } else if (totalDrag > 100f && tab > 0) {
+                                tab -= 1
                                 change.consume()
                             }
                         },
@@ -113,6 +113,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Reminders") }, icon = { Icon(Icons.Default.Notifications, null) })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Notes") }, icon = { Icon(Icons.Default.Notes, null) })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Water") }, icon = { Text("💧") })
             }
             if (tab == 0) {
                 OutlinedTextField(
@@ -129,18 +130,26 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     },
                     shape = RoundedCornerShape(16.dp),
                 )
-                WaterReminderCard(
-                    settings = waterSettings,
-                    intake = waterIntake,
-                    onToggle = { enabled ->
-                        if (enabled && waterSettings == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
-                    },
-                    onEdit = { showWaterSetup = true },
-                    onAdd = { viewModel.addWaterIntake(waterSettings?.intakePerReminderMl ?: 300) },
-                )
                 ReminderContent(filteredReminders, viewModel, onAdd = { editingReminder = null; showReminderEditor = true }, onEdit = { editingReminder = it; showReminderEditor = true })
-            } else {
+            } else if (tab == 1) {
                 NotesContent(notes, viewModel, onAdd = { editingNote = null; showNoteEditor = true }, onEdit = { editingNote = it; showNoteEditor = true })
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 10.dp),
+                ) {
+                    item {
+                        WaterReminderCard(
+                            settings = waterSettings,
+                            intake = waterIntake,
+                            onToggle = { enabled ->
+                                if (enabled && waterSettings == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
+                            },
+                            onEdit = { showWaterSetup = true },
+                            onAdd = { viewModel.addWaterIntake(waterSettings?.intakePerReminderMl ?: 300) },
+                        )
+                    }
+                }
             }
         }
     }
