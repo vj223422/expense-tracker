@@ -367,7 +367,7 @@ private fun WaterReminderCard(
                         maxLines = 1,
                     )
                     Text(
-                        if (settings == null) "Set up your daily hydration" else "\${settings.intakePerReminderMl} ml per reminder",
+                        if (settings == null) "Set up your daily hydration" else "${settings.intakePerReminderMl} ml per reminder",
                         style = MaterialTheme.typography.bodyLarge,
                         color = muted,
                         maxLines = 1,
@@ -412,7 +412,7 @@ private fun WaterReminderCard(
                             verticalArrangement = Arrangement.Center,
                         ) {
                             Text(
-                                "\${(progress * 100).toInt()}%",
+                                "${(progress * 100).toInt()}%",
                                 fontSize = 31.sp,
                                 lineHeight = 35.sp,
                                 fontWeight = FontWeight.ExtraBold,
@@ -429,7 +429,7 @@ private fun WaterReminderCard(
                         verticalArrangement = Arrangement.spacedBy(7.dp),
                     ) {
                         Text(
-                            "\${todayTotal} ml",
+                            "${todayTotal} ml",
                             fontSize = 34.sp,
                             lineHeight = 38.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -437,7 +437,7 @@ private fun WaterReminderCard(
                             maxLines = 2,
                         )
                         Text(
-                            "of \${goal} ml goal",
+                            "of ${goal} ml goal",
                             fontSize = 15.sp,
                             lineHeight = 20.sp,
                             color = muted,
@@ -445,7 +445,7 @@ private fun WaterReminderCard(
                         )
                         ScheduleDivider(horizontal = true)
                         Text(
-                            "\${remaining} ml",
+                            "${remaining} ml",
                             fontSize = 21.sp,
                             lineHeight = 25.sp,
                             color = cyan,
@@ -466,7 +466,7 @@ private fun WaterReminderCard(
                             )
                             Spacer(Modifier.size(7.dp))
                             Text(
-                                "\${completedReminders} / \${reminderCount} completed",
+                                "${completedReminders} / ${reminderCount} completed",
                                 fontSize = 13.sp,
                                 lineHeight = 17.sp,
                                 color = textColor,
@@ -557,7 +557,7 @@ private fun WaterReminderCard(
                                 Icons.Default.Notifications,
                                 Color(0xFF79B7FF),
                                 "TOTAL",
-                                "\${reminderCount}",
+                                "${reminderCount}",
                                 Modifier.weight(1f),
                             )
                         }
@@ -612,7 +612,7 @@ private fun WaterReminderCard(
                         Icon(Icons.Default.LocalDrink, null, modifier = Modifier.size(27.dp))
                         Spacer(Modifier.size(7.dp))
                         Text(
-                            "Log \${settings.intakePerReminderMl} ml",
+                            "Log ${settings.intakePerReminderMl} ml",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -755,7 +755,7 @@ private fun WaterInsight(
                 )
             }
             Text(
-                "\${amount} ml",
+                "${amount} ml",
                 fontSize = 21.sp,
                 lineHeight = 25.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -780,7 +780,7 @@ private fun WaterInsight(
                 }
             }
             Text(
-                "\${percent}%",
+                "${percent}%",
                 fontSize = 12.sp,
                 lineHeight = 14.sp,
                 color = Color(0xFFDCE8F4),
