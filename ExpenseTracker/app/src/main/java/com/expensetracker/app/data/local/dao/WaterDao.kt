@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
+import androidx.room.Delete
 import com.expensetracker.app.data.entity.WaterIntakeEntity
 import com.expensetracker.app.data.entity.WaterSettingsEntity
 import kotlinx.coroutines.flow.Flow
@@ -22,4 +23,7 @@ interface WaterDao {
     suspend fun insertIntake(intake: WaterIntakeEntity): Long
     @Query("SELECT * FROM water_intake WHERE profileId = :profileId ORDER BY drankAtEpochMillis DESC")
     fun observeIntake(profileId: Long): Flow<List<WaterIntakeEntity>>
+
+    @Delete
+    suspend fun deleteIntake(intake: WaterIntakeEntity)
 }
