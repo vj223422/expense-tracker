@@ -109,6 +109,7 @@ abstract class ExpenseDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE water_settings ADD COLUMN startTimeMinutes INTEGER NOT NULL DEFAULT 480")
                 db.execSQL("ALTER TABLE water_settings ADD COLUMN endTimeMinutes INTEGER NOT NULL DEFAULT 1200")
                 db.execSQL("ALTER TABLE water_settings ADD COLUMN reminderCount INTEGER NOT NULL DEFAULT 8")
+                db.execSQL("UPDATE water_settings SET reminderCount = CASE WHEN intakePerReminderMl > 0 THEN MAX(1, CAST(dailyGoalMl / intakePerReminderMl AS INTEGER)) ELSE 1 END")
             }
         }
 
