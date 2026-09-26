@@ -10,10 +10,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioManager
 import android.media.AudioAttributes
 import android.net.Uri
-import android.media.ToneGenerator
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -80,15 +78,6 @@ class WaterReminderReceiver : BroadcastReceiver() {
             }
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-    }
-
-    private fun playDropSound() {
-        val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-        tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 120)
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            tone.startTone(ToneGenerator.TONE_PROP_BEEP, 180)
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tone.release() }, 220)
-        }, 100)
     }
 
     companion object {
