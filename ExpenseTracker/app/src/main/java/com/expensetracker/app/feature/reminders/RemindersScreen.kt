@@ -827,6 +827,225 @@ private fun WaterScheduleCell(
     }
 }
 
+private enum class WaterGraphPeriod(val label: String) {
+    DAILY("Daily"),
+    SEVEN_DAYS("7 Days"),
+    MONTHLY("Monthly"),
+}
+
+private data class WaterGraphPoint(
+    val label: String,
+    val value: Int,
+    val showLabel: Boolean,
+)
+
+private fun buildWaterGraphPoints(
+    intake: List<WaterIntakeEntity>,
+    today: LocalDate,
+    period: WaterGraphPeriod,
+): List<WaterGraphPoint> {
+    val zone = ZoneId.systemDefault()
+
+    fun totalForDate(date: LocalDate): Int =
+        intake.filter {
+            Instant.ofEpochMilli(it.drankAtEpochMillis)
+                .atZone(zone)
+                .toLocalDate() == date
+        }.sumOf { it.amountMl }
+
+    return when (period) {
+        WaterGraphPeriod.DAILY -> (0..23).map { hour ->
+            val value = intake.filter {
+                val dateTime = Instant.ofEpochMilli(it.drankAtEpochMillis).atZone(zone)
+                dateTime.toLocalDate() == today && dateTime.hour == hour
+            }.sumOf { it.amountMl }
+            WaterGraphPoint(
+                label = when (hour) {
+                    0 -> "12a"
+                    6 -> "6a"
+                    12 -> "12p"
+                    18 -> "6p"
+                    23 -> "12a"
+                    else -> ""
+                },
+                value = value,
+                showLabel = hour == 0 || hour == 6 || hour == 12 || hour == 18 || hour == 23,
+            )
+        }
+
+        WaterGraphPeriod.SEVEN_DAYS -> (6 downTo 0).map { offset ->
+            val date = today.minusDays(offset.toLong())
+            WaterGraphPoint(
+                label = date.dayOfWeek.name.take(3).lowercase().replaceFirstChar { it.uppercase() },
+                value = totalForDate(date),
+                showLabel = true,
+            )
+        }
+
+        WaterGraphPeriod.MONTHLY -> {
+            val days = today.lengthOfMonth()
+            (1..days).map { day ->
+                val date = today.withDayOfMonth(day)
+                val show = day == 1 || day == 5 || day == 10 || day == 15 || day == 20 || day == 25 || day == days
+                WaterGraphPoint(
+                    label = if (show) day.toString() else "",
+                    value = totalForDate(date),
+                    showLabel = show,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WaterHistoryGraph(
+    period: WaterGraphPeriod,
+    points: List<WaterGraphPoint>,
+    total: Int,
+    goal: Int,
+    onPeriodSelected: (WaterGraphPeriod) -> Unit,
+    panelColor: Color,
+    cyan: Color,
+    muted: Color,
+    textColor: Color,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val maxValue = when (period) {
+        WaterGraphPeriod.DAILY -> maxOf(points.maxOfOrNull { it.value } ?: 0, (goal / 8).coerceAtLeast(1))
+        else -> maxOf(points.maxOfOrNull { it.value } ?: 0, goal)
+    }.coerceAtLeast(1)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = panelColor),
+        border = BorderStroke(1.dp, Color(0xFF1C405C)),
+    ) {
+        Column(
+            Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Hydration history", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = textColor)
+                    Text(
+                        when (period) {
+                            WaterGraphPeriod.DAILY -> "Hourly intake today"
+                            WaterGraphPeriod.SEVEN_DAYS -> "Daily intake for the last 7 days"
+                            WaterGraphPeriod.MONTHLY -> "Daily intake this month"
+                        },
+                        fontSize = 10.sp,
+                        color = muted,
+                    )
+                }
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF183B59))
+                            .clickable { menuExpanded = true }
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(period.label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = textColor)
+                        Spacer(Modifier.size(4.dp))
+                        Icon(Icons.Default.ChevronRight, "Choose graph period", tint = textColor, modifier = Modifier.size(14.dp))
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
+                        WaterGraphPeriod.values().forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.label) },
+                                onClick = {
+                                    onPeriodSelected(option)
+                                    menuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                Text("${total} ml", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = textColor)
+                Spacer(Modifier.size(7.dp))
+                Text(
+                    when (period) {
+                        WaterGraphPeriod.DAILY -> "today"
+                        WaterGraphPeriod.SEVEN_DAYS -> "last 7 days"
+                        WaterGraphPeriod.MONTHLY -> "this month"
+                    },
+                    fontSize = 10.sp,
+                    color = muted,
+                    modifier = Modifier.padding(bottom = 3.dp),
+                )
+                Spacer(Modifier.weight(1f))
+                Text("Goal ${goal} ml/day", fontSize = 10.sp, color = muted)
+            }
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(172.dp),
+            ) {
+                val horizontalPadding = 4.dp.toPx()
+                val verticalPadding = 8.dp.toPx()
+                val chartWidth = size.width - horizontalPadding * 2
+                val chartHeight = size.height - verticalPadding * 2
+                val barSlot = chartWidth / points.size.coerceAtLeast(1)
+                val barWidth = (barSlot * 0.58f).coerceAtLeast(3.dp.toPx())
+
+                repeat(4) { index ->
+                    val fraction = index / 3f
+                    val y = verticalPadding + chartHeight * fraction
+                    drawLine(
+                        color = Color(0xFF28465E),
+                        start = Offset(horizontalPadding, y),
+                        end = Offset(size.width - horizontalPadding, y),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+
+                points.forEachIndexed { index, point ->
+                    val barHeight = chartHeight * (point.value.toFloat() / maxValue)
+                    val left = horizontalPadding + index * barSlot + (barSlot - barWidth) / 2f
+                    val top = verticalPadding + chartHeight - barHeight
+                    drawRoundRect(
+                        color = if (point.value > 0) cyan else Color(0xFF24455F),
+                        topLeft = Offset(left, top),
+                        size = androidx.compose.ui.geometry.Size(
+                            barWidth,
+                            barHeight.coerceAtLeast(2.dp.toPx()),
+                        ),
+                        cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx()),
+                    )
+                }
+            }
+
+            Row(Modifier.fillMaxWidth()) {
+                points.forEach { point ->
+                    Text(
+                        if (point.showLabel) point.label else "",
+                        fontSize = 9.sp,
+                        color = muted,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
+            }
+
+            Text(
+                "Bars show the amount of water logged in each time bucket.",
+                fontSize = 9.sp,
+                color = muted.copy(alpha = 0.78f),
+            )
+        }
+    }
+}
+
 @Composable
 private fun WaterSetupDialog(
     initial: WaterSettingsEntity?,
