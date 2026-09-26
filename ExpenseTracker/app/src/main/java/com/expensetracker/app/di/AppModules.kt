@@ -6,6 +6,7 @@ import com.expensetracker.app.feature.fuel.FuelTrackerViewModel
 import com.expensetracker.app.data.notification.NotificationHelper
 import com.expensetracker.app.data.prefs.AppPreferences
 import com.expensetracker.app.data.reminder.ReminderScheduler
+import com.expensetracker.app.data.reminder.WaterReminderScheduler
 import com.expensetracker.app.data.repository.BudgetRepository
 import com.expensetracker.app.data.repository.BudgetRepositoryImpl
 import com.expensetracker.app.data.repository.ExpenseRepository
@@ -26,7 +27,7 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7, ExpenseDatabase.MIGRATION_7_8, ExpenseDatabase.MIGRATION_8_9, ExpenseDatabase.MIGRATION_9_10, ExpenseDatabase.MIGRATION_10_11, ExpenseDatabase.MIGRATION_11_12)
+            .addMigrations(ExpenseDatabase.MIGRATION_1_2, ExpenseDatabase.MIGRATION_2_3, ExpenseDatabase.MIGRATION_3_4, ExpenseDatabase.MIGRATION_4_5, ExpenseDatabase.MIGRATION_5_6, ExpenseDatabase.MIGRATION_6_7, ExpenseDatabase.MIGRATION_7_8, ExpenseDatabase.MIGRATION_8_9, ExpenseDatabase.MIGRATION_9_10, ExpenseDatabase.MIGRATION_10_11, ExpenseDatabase.MIGRATION_11_12, ExpenseDatabase.MIGRATION_12_13)
             .fallbackToDestructiveMigrationOnDowngrade().build()
     }
     single { get<ExpenseDatabase>().expenseDao() }
@@ -35,11 +36,13 @@ val databaseModule = module {
     single { get<ExpenseDatabase>().profileDao() }
     single { get<ExpenseDatabase>().reminderDao() }
     single { get<ExpenseDatabase>().noteDao() }
+    single { get<ExpenseDatabase>().waterDao() }
 }
 val dataModule = module {
     single { AppPreferences(androidContext()) }
     single { NotificationHelper(androidContext()) }
     single { ReminderScheduler(androidContext(), get()) }
+    single { WaterReminderScheduler(androidContext()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get(), get(), get(), get(), get()) }
     single { com.expensetracker.app.data.repository.FuelRepository(get(), get(), get()) }
     single<BudgetRepository> { BudgetRepositoryImpl(get()) }
@@ -52,7 +55,7 @@ val viewModelModule = module {
     viewModel { BudgetsViewModel(get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get()) }
     viewModel { ProfileSwitcherViewModel(get()) }
-    viewModel { RemindersViewModel(get(), get(), get(), get()) }
+    viewModel { RemindersViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { FuelTrackerViewModel(get(), get(), get()) }
 }
 val appModules = listOf(databaseModule, dataModule, viewModelModule)
