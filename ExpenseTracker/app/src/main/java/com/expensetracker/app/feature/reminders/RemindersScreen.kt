@@ -69,6 +69,8 @@ import java.time.LocalDate
 fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
     val reminders by viewModel.reminders.collectAsStateWithLifecycle()
     val notes by viewModel.notes.collectAsStateWithLifecycle()
+    val waterSettings by viewModel.waterSettings.collectAsStateWithLifecycle()
+    val waterIntake by viewModel.waterIntake.collectAsStateWithLifecycle()
     var tab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var showReminderEditor by remember { mutableStateOf(false) }
@@ -128,13 +130,13 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     shape = RoundedCornerShape(16.dp),
                 )
                 WaterReminderCard(
-                    settings = viewModel.waterSettings.collectAsStateWithLifecycle().value,
-                    intake = viewModel.waterIntake.collectAsStateWithLifecycle().value,
+                    settings = waterSettings,
+                    intake = waterIntake,
                     onToggle = { enabled ->
-                        if (enabled && viewModel.waterSettings.value == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
+                        if (enabled && waterSettings == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
                     },
                     onEdit = { showWaterSetup = true },
-                    onAdd = { viewModel.addWaterIntake(viewModel.waterSettings.value?.intakePerReminderMl ?: 300) },
+                    onAdd = { viewModel.addWaterIntake(waterSettings?.intakePerReminderMl ?: 300) },
                 )
                 ReminderContent(filteredReminders, viewModel, onAdd = { editingReminder = null; showReminderEditor = true }, onEdit = { editingReminder = it; showReminderEditor = true })
             } else {
@@ -151,7 +153,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
     }
     if (showWaterSetup) {
         WaterSetupDialog(
-            initial = viewModel.waterSettings.value,
+            initial = waterSettings,
             onSave = { goal, interval, amount -> viewModel.saveWaterSettings(goal, interval, amount); showWaterSetup = false },
             onDismiss = { showWaterSetup = false },
         )
