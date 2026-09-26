@@ -173,6 +173,12 @@ class RemindersViewModel(
         }
     }
 
+    fun deleteWaterIntake(intake: WaterIntakeEntity) {
+        viewModelScope.launch {
+            waterDao.deleteIntake(intake)
+        }
+    }
+
     fun saveNote(id: Long?, title: String, content: String) {
         val profileId = activeProfileId.value ?: return
         if (title.isBlank() && content.isBlank()) return
