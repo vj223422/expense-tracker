@@ -19,6 +19,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notes
@@ -27,6 +34,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.data.entity.NoteEntity
 import com.expensetracker.app.data.entity.ReminderEntity
@@ -302,130 +311,192 @@ private fun WaterReminderCard(
     } else 0
     val frequencyMinutes = settings?.let {
         if (it.reminderCount > 1) {
-            kotlin.math.round((it.endTimeMinutes - it.startTimeMinutes).toDouble() / (it.reminderCount - 1)).toInt()
+            kotlin.math.round(
+                (it.endTimeMinutes - it.startTimeMinutes).toDouble() / (it.reminderCount - 1)
+            ).toInt()
         } else 0
     } ?: 0
 
+    val cardColor = Color(0xFF0D2237)
+    val panelColor = Color(0xFF102B42)
+    val cyan = Color(0xFF08C9F4)
+    val brightBlue = Color(0xFF0B91FF)
+    val muted = Color(0xFF9FB3C7)
+    val textColor = Color(0xFFEAF3FF)
+
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        border = BorderStroke(1.dp, Color(0xFF183B56)),
     ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Column(
+            Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+                    Modifier
+                        .size(70.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF183B59)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("💧", style = MaterialTheme.typography.titleLarge)
+                    Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(42.dp))
                 }
-                Spacer(Modifier.size(12.dp))
+                Spacer(Modifier.size(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Hydration", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Hydration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = textColor)
                     Text(
-                        if (settings == null) "Create your daily water plan" else "${settings.intakePerReminderMl} ml per reminder",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        if (settings == null) "Set up your daily hydration" else "${settings.intakePerReminderMl} ml per reminder",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = muted,
                     )
                 }
                 Switch(checked = settings?.enabled == true, onCheckedChange = onToggle)
             }
 
             if (settings != null) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(124.dp), contentAlignment = Alignment.Center) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                ) {
+                    Box(Modifier.size(178.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(
                             progress = { 1f },
                             modifier = Modifier.fillMaxSize(),
-                            strokeWidth = 10.dp,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            strokeWidth = 13.dp,
+                            color = Color(0xFF24455F),
+                            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
                         CircularProgressIndicator(
                             progress = { progress },
                             modifier = Modifier.fillMaxSize(),
-                            strokeWidth = 10.dp,
-                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 13.dp,
+                            color = cyan,
+                            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                            Text("today", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = textColor)
+                            Text("today", style = MaterialTheme.typography.titleMedium, color = muted)
+                            Spacer(Modifier.size(8.dp))
+                            Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(25.dp))
                         }
                     }
-                    Spacer(Modifier.size(18.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("${todayTotal} ml", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                        Text("of ${goal} ml goal", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            if (remaining > 0) "${remaining} ml remaining" else "Daily goal completed 🎉",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold,
+
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("${todayTotal} ml", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.ExtraBold, color = textColor)
+                        Text("of ${goal} ml goal", style = MaterialTheme.typography.titleMedium, color = muted)
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 5.dp)
+                                .size(height = 1.dp, width = 1.dp)
+                                .background(Color(0xFF25435B)),
                         )
-                        if (reminderCount > 0) {
-                            Text(
-                                "${completedReminders} of ${reminderCount} reminders completed",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        Text(
+                            if (remaining > 0) "${remaining} ml remaining" else "Goal completed!",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cyan,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 5.dp)
+                                .size(height = 1.dp, width = 1.dp)
+                                .background(Color(0xFF25435B)),
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Notifications, null, tint = Color(0xFF73B9FF), modifier = Modifier.size(28.dp))
+                            Spacer(Modifier.size(10.dp))
+                            Column {
+                                Text("${completedReminders} of ${reminderCount} reminders", style = MaterialTheme.typography.titleMedium, color = textColor, fontWeight = FontWeight.SemiBold)
+                                Text("completed", style = MaterialTheme.typography.bodyMedium, color = muted)
+                            }
                         }
                     }
                 }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-                    ),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = panelColor),
+                    border = BorderStroke(1.dp, Color(0xFF1C405C)),
                 ) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "Today's plan",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                "$reminderCount reminders",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold,
-                            )
+                            Icon(Icons.Default.CalendarMonth, null, tint = Color(0xFF79B7FF), modifier = Modifier.size(30.dp))
+                            Spacer(Modifier.size(14.dp))
+                            Text("Today's plan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = textColor, modifier = Modifier.weight(1f))
+                            Row(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF1A3A55))
+                                    .clickable(onClick = onEdit)
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text("View schedule", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = textColor)
+                                Spacer(Modifier.size(5.dp))
+                                Icon(Icons.Default.ChevronRight, null, tint = textColor, modifier = Modifier.size(20.dp))
+                            }
                         }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            WaterScheduleItem("START", formatWaterTime(settings.startTimeMinutes), Modifier.weight(1f))
-                            WaterScheduleItem("EVERY", formatWaterInterval(frequencyMinutes), Modifier.weight(1f))
-                            WaterScheduleItem("END", formatWaterTime(settings.endTimeMinutes), Modifier.weight(1f))
-                            WaterScheduleItem("TOTAL", "$reminderCount", Modifier.weight(1f))
+
+                        Spacer(Modifier.size(16.dp))
+
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            WaterScheduleCell(Icons.Default.PlayArrow, Color(0xFF00E6B2), "START", formatWaterTime(settings.startTimeMinutes), Modifier.weight(1f))
+                            ScheduleDivider()
+                            WaterScheduleCell(Icons.Default.AccessTime, Color(0xFF79B7FF), "EVERY", formatWaterInterval(frequencyMinutes), Modifier.weight(1f))
+                            ScheduleDivider()
+                            WaterScheduleCell(Icons.Default.Stop, Color(0xFFFF647E), "END", formatWaterTime(settings.endTimeMinutes), Modifier.weight(1f))
+                            ScheduleDivider()
+                            WaterScheduleCell(Icons.Default.Notifications, Color(0xFF79B7FF), "TOTAL", "${reminderCount} reminders", Modifier.weight(1f))
                         }
                     }
                 }
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    WaterInsight("Today", todayTotal, goal, Modifier.weight(1f))
-                    WaterInsight("7 days", weekTotal / 7, goal, Modifier.weight(1f))
-                    WaterInsight("Month", monthTotal / today.lengthOfMonth(), goal, Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    WaterInsight("Today", todayTotal, goal, Icons.Default.WaterDrop, cyan, Modifier.weight(1f))
+                    WaterInsight("7 days", weekTotal / 7, goal, Icons.Default.BarChart, Color(0xFFA78BFA), Modifier.weight(1f))
+                    WaterInsight("Month", monthTotal / today.lengthOfMonth(), goal, Icons.Default.CalendarMonth, Color(0xFF00E6B2), Modifier.weight(1f))
                 }
 
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Button(
                         onClick = onAdd,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(17.dp),
+                        modifier = Modifier.weight(1f).size(height = 72.dp, width = 1.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = brightBlue, contentColor = Color.White),
                     ) {
-                        Text("Log ${settings.intakePerReminderMl} ml", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.LocalDrink, null, modifier = Modifier.size(30.dp))
+                        Spacer(Modifier.size(10.dp))
+                        Text("Log ${settings.intakePerReminderMl} ml", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     }
-                    TextButton(onClick = onEdit) { Text("Edit") }
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(width = 148.dp, height = 72.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF9BCBFF)),
+                        border = BorderStroke(1.dp, Color(0xFF2A506D)),
+                    ) {
+                        Icon(Icons.Default.Settings, null, modifier = Modifier.size(29.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text("Edit", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         "Set a daily goal and hydration window. We'll automatically calculate the number of reminders and space them evenly.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = muted,
                     )
-                    Button(onClick = onEdit, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
+                    Button(onClick = onEdit, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
                         Text("Create water plan", fontWeight = FontWeight.Bold)
                     }
                 }
@@ -435,55 +506,64 @@ private fun WaterReminderCard(
 }
 
 @Composable
-private fun WaterScheduleItem(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+private fun ScheduleDivider() {
+    Box(Modifier.size(width = 1.dp, height = 54.dp).background(Color(0xFF31516A)))
+}
+
+@Composable
+private fun WaterScheduleCell(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(horizontal = 8.dp),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 9.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = iconTint, modifier = Modifier.size(21.dp))
+            Spacer(Modifier.size(7.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge, color = Color(0xFFA6B8CA), fontWeight = FontWeight.Medium)
         }
+        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color(0xFFEAF3FF))
     }
 }
 
 @Composable
-private fun WaterInsight(label: String, amount: Int, goal: Int, modifier: Modifier = Modifier) {
+private fun WaterInsight(
+    label: String,
+    amount: Int,
+    goal: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
     val percent = ((amount * 100) / goal.coerceAtLeast(1)).coerceIn(0, 100)
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-        ),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF112D45)),
+        border = BorderStroke(1.dp, Color(0xFF1C405C)),
     ) {
-        Column(
-            Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("$amount ml", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .size(6.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth(percent / 100f)
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.primary),
-                )
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(27.dp))
+                Spacer(Modifier.size(9.dp))
+                Text(label, style = MaterialTheme.typography.titleMedium, color = Color(0xFFA8BACC), modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF8DA8BF), modifier = Modifier.size(20.dp))
             }
-            Text(
-                if (amount >= goal) "Goal met" else "$percent%",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text("${amount} ml", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color(0xFFEAF3FF))
+            Box(
+                Modifier.fillMaxWidth().size(9.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF2C4A61)),
+            ) {
+                if (percent > 0) {
+                    Box(Modifier.fillMaxWidth(percent / 100f).fillMaxSize().clip(RoundedCornerShape(10.dp)).background(accent))
+                }
+            }
+            Text("${percent}%", style = MaterialTheme.typography.titleSmall, color = Color(0xFFDCE8F4), fontWeight = FontWeight.Medium)
         }
     }
 }
