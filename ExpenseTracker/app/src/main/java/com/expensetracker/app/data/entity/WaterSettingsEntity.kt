@@ -11,4 +11,7 @@ data class WaterSettingsEntity(
     val intervalHours: Int = 2,
     val intakePerReminderMl: Int = 300,
     val nextReminderAtEpochMillis: Long? = null,
+    val startTimeMinutes: Int = 8 * 60,
+    val endTimeMinutes: Int = 20 * 60,
+    val reminderCount: Int = 8,
 )
