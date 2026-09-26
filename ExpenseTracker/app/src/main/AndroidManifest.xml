@@ -14,6 +14,9 @@
         <receiver android:name=".data.sms.BankDebitSmsReceiver" android:enabled="true" android:exported="true"><intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter></receiver>
         <receiver android:name=".data.notification.BudgetCycleActionReceiver" android:enabled="true" android:exported="false" />
         <receiver android:name=".data.reminder.ReminderReceiver" android:exported="false" />
+        <receiver android:name=".data.reminder.WaterReminderReceiver" android:enabled="true" android:exported="false" />
+        <receiver android:name=".data.reminder.WaterReminderActionReceiver" android:enabled="true" android:exported="false" />
+        <receiver android:name=".data.reminder.WaterReminderBootReceiver" android:enabled="true" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter></receiver>
         <receiver android:name=".data.reminder.ReminderBootReceiver" android:enabled="true" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter></receiver>
     </application>
 </manifest>
