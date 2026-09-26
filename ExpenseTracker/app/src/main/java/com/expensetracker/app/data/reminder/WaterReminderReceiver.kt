@@ -20,8 +20,6 @@ import com.expensetracker.app.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
 
 class WaterReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -53,9 +51,7 @@ class WaterReminderReceiver : BroadcastReceiver() {
                         .build()
                     NotificationManagerCompat.from(context).notify(notificationId(profileId), notification)
                 }
-                val next = Instant.ofEpochMilli(System.currentTimeMillis()).atZone(ZoneId.systemDefault())
-                    .plusHours(settings.intervalHours.coerceAtLeast(1).toLong()).toInstant().toEpochMilli()
-                val updated = settings.copy(nextReminderAtEpochMillis = next)
+                val updated = settings.copy(nextReminderAtEpochMillis = null)
                 db.waterDao().upsertSettings(updated)
                 WaterReminderScheduler(context.applicationContext).schedule(updated)
             } finally {
