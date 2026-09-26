@@ -1,6 +1,7 @@
 package com.expensetracker.app.feature.reminders
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +73,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.data.entity.NoteEntity
 import com.expensetracker.app.data.entity.ReminderEntity
@@ -668,35 +673,27 @@ private fun WaterReminderCard(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(9.dp),
-                ) {
-                    WaterInsight(
-                        "Today",
-                        todayTotal,
-                        goal,
-                        Icons.Default.WaterDrop,
-                        cyan,
-                        Modifier.weight(1f),
-                    )
-                    WaterInsight(
-                        "7 days",
-                        weekTotal / 7,
-                        goal,
-                        Icons.Default.BarChart,
-                        Color(0xFFA78BFA),
-                        Modifier.weight(1f),
-                    )
-                    WaterInsight(
-                        "Month",
-                        monthTotal / today.lengthOfMonth(),
-                        goal,
-                        Icons.Default.CalendarMonth,
-                        Color(0xFF00E6B2),
-                        Modifier.weight(1f),
-                    )
+                var graphPeriod by remember { mutableStateOf(WaterGraphPeriod.DAILY) }
+                val graphPoints = remember(intake, today, graphPeriod) {
+                    buildWaterGraphPoints(intake, today, graphPeriod)
                 }
+                val graphTotal = when (graphPeriod) {
+                    WaterGraphPeriod.DAILY -> todayTotal
+                    WaterGraphPeriod.SEVEN_DAYS -> weekTotal
+                    WaterGraphPeriod.MONTHLY -> monthTotal
+                }
+
+                WaterHistoryGraph(
+                    period = graphPeriod,
+                    points = graphPoints,
+                    total = graphTotal,
+                    goal = goal,
+                    onPeriodSelected = { graphPeriod = it },
+                    panelColor = panelColor,
+                    cyan = cyan,
+                    muted = muted,
+                    textColor = textColor,
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -825,93 +822,6 @@ private fun WaterScheduleCell(
                 color = Color(0xFFEAF3FF),
                 maxLines = 2,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-        }
-    }
-}
-
-@Composable
-private fun WaterInsight(
-    label: String,
-    amount: Int,
-    goal: Int,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: Color,
-    modifier: Modifier = Modifier,
-) {
-    val percent = ((amount * 100) / goal.coerceAtLeast(1)).coerceIn(0, 100)
-    Card(
-        modifier = modifier.height(208.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF112D45)),
-        border = BorderStroke(1.dp, Color(0xFF1C405C)),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 11.dp, vertical = 11.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.size(5.dp))
-                Text(
-                    label,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp,
-                    color = Color(0xFFA8BACC),
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    softWrap = false,
-                )
-                Icon(
-                    Icons.Default.ChevronRight,
-                    null,
-                    tint = Color(0xFF8DA8BF),
-                    modifier = Modifier.size(14.dp),
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Text(
-                    "${amount} ml",
-                    fontSize = 21.sp,
-                    lineHeight = 25.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFFEAF3FF),
-                    maxLines = 2,
-                )
-            }
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(7.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF2C4A61)),
-            ) {
-                if (percent > 0) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth(percent / 100f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(accent),
-                    )
-                }
-            }
-            Text(
-                "${percent}%",
-                fontSize = 11.sp,
-                lineHeight = 13.sp,
-                color = Color(0xFFDCE8F4),
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
             )
         }
     }
