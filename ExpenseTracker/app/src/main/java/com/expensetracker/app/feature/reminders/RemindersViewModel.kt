@@ -6,6 +6,10 @@ import com.expensetracker.app.data.entity.NoteEntity
 import com.expensetracker.app.data.entity.ReminderEntity
 import com.expensetracker.app.data.local.dao.NoteDao
 import com.expensetracker.app.data.local.dao.ReminderDao
+import com.expensetracker.app.data.local.dao.WaterDao
+import com.expensetracker.app.data.entity.WaterSettingsEntity
+import com.expensetracker.app.data.entity.WaterIntakeEntity
+import com.expensetracker.app.data.reminder.WaterReminderScheduler
 import com.expensetracker.app.data.reminder.ReminderScheduler
 import com.expensetracker.app.data.repository.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,12 +24,22 @@ class RemindersViewModel(
     private val noteDao: NoteDao,
     private val profileRepository: ProfileRepository,
     private val scheduler: ReminderScheduler,
+    private val waterDao: WaterDao,
+    private val waterScheduler: WaterReminderScheduler,
 ) : ViewModel() {
     private val activeProfileId = profileRepository.observeActiveProfileId()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val reminders = activeProfileId.flatMapLatest { id ->
         if (id == null) kotlinx.coroutines.flow.flowOf(emptyList()) else reminderDao.observeForProfile(id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val waterSettings = activeProfileId.flatMapLatest { id ->
+        if (id == null) kotlinx.coroutines.flow.flowOf(null) else waterDao.observeSettings(id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val waterIntake = activeProfileId.flatMapLatest { id ->
+        if (id == null) kotlinx.coroutines.flow.flowOf(emptyList()) else waterDao.observeIntake(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val notes = activeProfileId.flatMapLatest { id ->
@@ -88,6 +102,62 @@ class RemindersViewModel(
         viewModelScope.launch {
             scheduler.cancel(reminder.id)
             reminderDao.delete(reminder)
+        }
+    }
+
+
+    fun saveWaterSettings(goalMl: Int, intervalHours: Int, amountMl: Int) {
+        val profileId = activeProfileId.value ?: return
+        if (goalMl <= 0 || intervalHours <= 0 || amountMl <= 0) return
+        viewModelScope.launch {
+            val existing = waterDao.getSettings(profileId)
+            val settings = WaterSettingsEntity(
+                profileId = profileId,
+                enabled = true,
+                dailyGoalMl = goalMl,
+                intervalHours = intervalHours,
+                intakePerReminderMl = amountMl,
+                nextReminderAtEpochMillis = null,
+            )
+            waterDao.upsertSettings(existing?.copy(
+                enabled = true,
+                dailyGoalMl = goalMl,
+                intervalHours = intervalHours,
+                intakePerReminderMl = amountMl,
+                nextReminderAtEpochMillis = null,
+            ) ?: settings)
+            waterScheduler.schedule((existing?.copy(
+                enabled = true,
+                dailyGoalMl = goalMl,
+                intervalHours = intervalHours,
+                intakePerReminderMl = amountMl,
+                nextReminderAtEpochMillis = null,
+            ) ?: settings))
+            _message.value = "Water reminder enabled"
+        }
+    }
+
+    fun toggleWaterReminder(enabled: Boolean) {
+        val profileId = activeProfileId.value ?: return
+        viewModelScope.launch {
+            val existing = waterDao.getSettings(profileId)
+            if (existing == null && enabled) {
+                _message.value = "SETUP_WATER"
+                return@launch
+            }
+            if (existing != null) {
+                val updated = existing.copy(enabled = enabled, nextReminderAtEpochMillis = null)
+                waterDao.upsertSettings(updated)
+                if (enabled) waterScheduler.schedule(updated) else waterScheduler.cancel(profileId)
+            }
+        }
+    }
+
+    fun addWaterIntake(amountMl: Int) {
+        val profileId = activeProfileId.value ?: return
+        if (amountMl <= 0) return
+        viewModelScope.launch {
+            waterDao.insertIntake(WaterIntakeEntity(profileId = profileId, amountMl = amountMl, drankAtEpochMillis = System.currentTimeMillis(), source = "MANUAL"))
         }
     }
 

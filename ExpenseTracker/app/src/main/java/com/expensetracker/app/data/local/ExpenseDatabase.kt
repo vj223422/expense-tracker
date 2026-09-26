@@ -7,6 +7,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.expensetracker.app.data.entity.BudgetLimitEntity
 import com.expensetracker.app.data.entity.ExpenseEntity
 import com.expensetracker.app.data.entity.FuelLogEntity
+import com.expensetracker.app.data.entity.WaterIntakeEntity
+import com.expensetracker.app.data.entity.WaterSettingsEntity
 import com.expensetracker.app.data.entity.NoteEntity
 import com.expensetracker.app.data.entity.ProfileEntity
 import com.expensetracker.app.data.entity.ReminderEntity
@@ -16,8 +18,9 @@ import com.expensetracker.app.data.local.dao.FuelLogDao
 import com.expensetracker.app.data.local.dao.NoteDao
 import com.expensetracker.app.data.local.dao.ProfileDao
 import com.expensetracker.app.data.local.dao.ReminderDao
+import com.expensetracker.app.data.local.dao.WaterDao
 
-@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class, FuelLogEntity::class], version = 12, exportSchema = true)
+@Database(entities = [ExpenseEntity::class, BudgetLimitEntity::class, ProfileEntity::class, ReminderEntity::class, NoteEntity::class, FuelLogEntity::class, WaterSettingsEntity::class, WaterIntakeEntity::class], version = 13, exportSchema = true)
 abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun fuelLogDao(): FuelLogDao
@@ -25,6 +28,7 @@ abstract class ExpenseDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun reminderDao(): ReminderDao
     abstract fun noteDao(): NoteDao
+    abstract fun waterDao(): WaterDao
 
     companion object {
         const val DATABASE_NAME = "expense_tracker.db"
@@ -93,5 +97,19 @@ abstract class ExpenseDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_logs_profileId_epochDay` ON `fuel_logs` (`profileId`, `epochDay`)")
             }
         }
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS water_settings (profileId INTEGER NOT NULL, enabled INTEGER NOT NULL, dailyGoalMl INTEGER NOT NULL, intervalHours INTEGER NOT NULL, intakePerReminderMl INTEGER NOT NULL, nextReminderAtEpochMillis INTEGER, PRIMARY KEY(profileId))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS water_intake (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, profileId INTEGER NOT NULL, amountMl INTEGER NOT NULL, drankAtEpochMillis INTEGER NOT NULL, source TEXT NOT NULL)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_water_intake_profileId_drankAtEpochMillis ON water_intake (profileId, drankAtEpochMillis)")
+            }
+        }
+
+        fun allMigrations(): Array<Migration> = arrayOf(
+            MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
+            MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+            MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
+        )
+
     }
 }

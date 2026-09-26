@@ -56,9 +56,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.data.entity.NoteEntity
 import com.expensetracker.app.data.entity.ReminderEntity
+import com.expensetracker.app.data.entity.WaterIntakeEntity
+import com.expensetracker.app.data.entity.WaterSettingsEntity
 import org.koin.androidx.compose.koinViewModel
 import java.text.DateFormat
 import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.LocalDate
 
 @Composable
 fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
@@ -70,6 +75,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
     var editingReminder by remember { mutableStateOf<ReminderEntity?>(null) }
     var showNoteEditor by remember { mutableStateOf(false) }
     var editingNote by remember { mutableStateOf<NoteEntity?>(null) }
+    var showWaterSetup by remember { mutableStateOf(false) }
 
     val filteredReminders = remember(reminders, searchQuery) {
         val query = searchQuery.trim()
@@ -121,6 +127,15 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     },
                     shape = RoundedCornerShape(16.dp),
                 )
+                WaterReminderCard(
+                    settings = viewModel.waterSettings.collectAsStateWithLifecycle().value,
+                    intake = viewModel.waterIntake.collectAsStateWithLifecycle().value,
+                    onToggle = { enabled ->
+                        if (enabled && viewModel.waterSettings.value == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
+                    },
+                    onEdit = { showWaterSetup = true },
+                    onAdd = { viewModel.addWaterIntake(viewModel.waterSettings.value?.intakePerReminderMl ?: 300) },
+                )
                 ReminderContent(filteredReminders, viewModel, onAdd = { editingReminder = null; showReminderEditor = true }, onEdit = { editingReminder = it; showReminderEditor = true })
             } else {
                 NotesContent(notes, viewModel, onAdd = { editingNote = null; showNoteEditor = true }, onEdit = { editingNote = it; showNoteEditor = true })
@@ -133,6 +148,13 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
             viewModel.saveReminder(editingReminder?.id, title, note, startAt, endDate, recurrence, days)
             showReminderEditor = false
         }, { showReminderEditor = false })
+    }
+    if (showWaterSetup) {
+        WaterSetupDialog(
+            initial = viewModel.waterSettings.value,
+            onSave = { goal, interval, amount -> viewModel.saveWaterSettings(goal, interval, amount); showWaterSetup = false },
+            onDismiss = { showWaterSetup = false },
+        )
     }
     if (showNoteEditor) {
         NoteEditorDialog(editingNote, { title, content ->
@@ -232,6 +254,107 @@ private fun ReminderDetailRow(icon: androidx.compose.ui.graphics.vector.ImageVec
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(width = 82.dp, height = 24.dp))
         Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
     }
+}
+
+
+@Composable
+private fun WaterReminderCard(
+    settings: WaterSettingsEntity?,
+    intake: List<WaterIntakeEntity>,
+    onToggle: (Boolean) -> Unit,
+    onEdit: () -> Unit,
+    onAdd: () -> Unit,
+) {
+    val goal = settings?.dailyGoalMl ?: 2000
+    val today = LocalDate.now()
+    val todayTotal = intake.filter { Instant.ofEpochMilli(it.drankAtEpochMillis).atZone(ZoneId.systemDefault()).toLocalDate() == today }.sumOf { it.amountMl }
+    val weekStart = today.minusDays(6)
+    val monthStart = today.withDayOfMonth(1)
+    val weekTotal = intake.filter { Instant.ofEpochMilli(it.drankAtEpochMillis).atZone(ZoneId.systemDefault()).toLocalDate() >= weekStart }.sumOf { it.amountMl }
+    val monthTotal = intake.filter { Instant.ofEpochMilli(it.drankAtEpochMillis).atZone(ZoneId.systemDefault()).toLocalDate() >= monthStart }.sumOf { it.amountMl }
+    val todayProgress = (todayTotal.toFloat() / goal.coerceAtLeast(1)).coerceIn(0f, 1f)
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("💧", style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.size(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Water reminder", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (settings == null) "Set your daily hydration goal" else settings.intervalHours.toString() + "h · " + settings.intakePerReminderMl + " ml each reminder",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = settings?.enabled == true, onCheckedChange = onToggle)
+            }
+            if (settings != null) {
+                Text(todayTotal.toString() + " / " + goal + " ml today", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { todayProgress },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    WaterInsight("Daily", todayTotal, goal)
+                    WaterInsight("7 days", weekTotal / 7, goal)
+                    WaterInsight("Monthly", monthTotal / today.lengthOfMonth(), goal)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onAdd, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
+                        Text("Drink " + settings.intakePerReminderMl + " ml")
+                    }
+                    TextButton(onClick = onEdit) { Text("Edit") }
+                }
+            } else {
+                Text("Get reminders, mark each drink as done, and track daily, weekly and monthly intake.", style = MaterialTheme.typography.bodyMedium)
+                Button(onClick = onEdit, shape = RoundedCornerShape(14.dp)) { Text("Set up water reminder") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WaterInsight(label: String, amount: Int, goal: Int) {
+    Card(Modifier.weight(1f), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))) {
+        Column(Modifier.padding(10.dp)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(amount.toString() + " ml", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(if (amount >= goal) "Goal met" else ((amount * 100) / goal.coerceAtLeast(1)).toString() + "%", style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun WaterSetupDialog(initial: WaterSettingsEntity?, onSave: (Int, Int, Int) -> Unit, onDismiss: () -> Unit) {
+    var goal by remember(initial) { mutableStateOf(((initial?.dailyGoalMl ?: 2000) / 1000f).toString()) }
+    var interval by remember(initial) { mutableStateOf((initial?.intervalHours ?: 2).toString()) }
+    var amount by remember(initial) { mutableStateOf((initial?.intakePerReminderMl ?: 300).toString()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        title = { Text(if (initial == null) "Set water reminder" else "Edit water reminder", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(value = goal, onValueChange = { goal = it }, label = { Text("Daily goal (litres)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = interval, onValueChange = { interval = it }, label = { Text("Remind me every (hours)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Drink each reminder (ml)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val goalMl = ((goal.toFloatOrNull() ?: 2f) * 1000).toInt().coerceAtLeast(250)
+                val hours = (interval.toIntOrNull() ?: 2).coerceIn(1, 12)
+                val ml = (amount.toIntOrNull() ?: 300).coerceIn(50, 2000)
+                onSave(goalMl, hours, ml)
+            }, shape = RoundedCornerShape(14.dp)) { Text("Save & enable") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable
