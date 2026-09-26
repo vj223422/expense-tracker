@@ -165,6 +165,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                             },
                             onEdit = { showWaterSetup = true },
                             onAdd = { viewModel.addWaterIntake(waterSettings?.intakePerReminderMl ?: 300) },
+                            onDelete = viewModel::deleteWaterIntake,
                         )
                     }
                 }
@@ -293,6 +294,7 @@ private fun WaterReminderCard(
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onAdd: () -> Unit,
+    onDelete: (WaterIntakeEntity) -> Unit,
 ) {
     val goal = settings?.dailyGoalMl ?: 4000
     val today = LocalDate.now()
@@ -347,12 +349,12 @@ private fun WaterReminderCard(
             ) {
                 Box(
                     Modifier
-                        .size(62.dp)
-                        .clip(RoundedCornerShape(18.dp))
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF183B59)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(36.dp))
+                    Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(30.dp))
                 }
                 Spacer(Modifier.size(13.dp))
                 Column(
@@ -361,14 +363,14 @@ private fun WaterReminderCard(
                 ) {
                     Text(
                         "Hydration",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = textColor,
                         maxLines = 1,
                     )
                     Text(
                         if (settings == null) "Set up your daily hydration" else "${settings.intakePerReminderMl} ml per reminder",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = muted,
                         maxLines = 1,
                     )
@@ -413,14 +415,14 @@ private fun WaterReminderCard(
                         ) {
                             Text(
                                 "${(progress * 100).toInt()}%",
-                                fontSize = 31.sp,
-                                lineHeight = 35.sp,
+                                fontSize = 25.sp,
+                                lineHeight = 29.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = textColor,
                             )
                             Text("today", fontSize = 15.sp, color = muted)
                             Spacer(Modifier.size(5.dp))
-                            Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(21.dp))
+                            Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(18.dp))
                         }
                     }
 
@@ -430,24 +432,24 @@ private fun WaterReminderCard(
                     ) {
                         Text(
                             "${todayTotal} ml",
-                            fontSize = 34.sp,
-                            lineHeight = 38.sp,
+                            fontSize = 28.sp,
+                            lineHeight = 32.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = textColor,
                             maxLines = 2,
                         )
                         Text(
                             "of ${goal} ml goal",
-                            fontSize = 15.sp,
-                            lineHeight = 20.sp,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
                             color = muted,
                             maxLines = 2,
                         )
                         ScheduleDivider(horizontal = true)
                         Text(
                             "${remaining} ml",
-                            fontSize = 21.sp,
-                            lineHeight = 25.sp,
+                            fontSize = 18.sp,
+                            lineHeight = 22.sp,
                             color = cyan,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -492,12 +494,12 @@ private fun WaterReminderCard(
                                 Icons.Default.CalendarMonth,
                                 null,
                                 tint = Color(0xFF79B7FF),
-                                modifier = Modifier.size(25.dp),
+                                modifier = Modifier.size(21.dp),
                             )
                             Spacer(Modifier.size(9.dp))
                             Text(
                                 "Today's plan",
-                                fontSize = 18.sp,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textColor,
                                 modifier = Modifier.weight(1f),
@@ -513,7 +515,7 @@ private fun WaterReminderCard(
                             ) {
                                 Text(
                                     "View schedule",
-                                    fontSize = 13.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = textColor,
                                     maxLines = 1,
@@ -564,6 +566,108 @@ private fun WaterReminderCard(
                     }
                 }
 
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Today's water logs",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            "${todayTotal} ml total",
+                            fontSize = 11.sp,
+                            color = muted,
+                        )
+                    }
+
+                    val todayLogs = intake.filter {
+                        Instant.ofEpochMilli(it.drankAtEpochMillis)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate() == today
+                    }
+
+                    if (todayLogs.isEmpty()) {
+                        Text(
+                            "No water logged today",
+                            fontSize = 12.sp,
+                            color = muted,
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
+                    } else {
+                        todayLogs.forEach { log ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = panelColor),
+                                border = BorderStroke(1.dp, Color(0xFF1C405C)),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 11.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF183B59)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Default.LocalDrink,
+                                            null,
+                                            tint = cyan,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                    Spacer(Modifier.size(9.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "${log.amountMl} ml",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textColor,
+                                            maxLines = 1,
+                                        )
+                                        Text(
+                                            formatWaterLogTime(log.drankAtEpochMillis),
+                                            fontSize = 11.sp,
+                                            color = muted,
+                                            maxLines = 1,
+                                        )
+                                    }
+                                    Text(
+                                        if (log.source == "REMINDER") "Reminder" else "Manual",
+                                        fontSize = 10.sp,
+                                        color = muted,
+                                        maxLines = 1,
+                                    )
+                                    IconButton(
+                                        onClick = { onDelete(log) },
+                                        modifier = Modifier.size(36.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Delete water log",
+                                            tint = Color(0xFFFF7187),
+                                            modifier = Modifier.size(19.dp),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(9.dp),
@@ -609,11 +713,11 @@ private fun WaterReminderCard(
                             contentColor = Color.White,
                         ),
                     ) {
-                        Icon(Icons.Default.LocalDrink, null, modifier = Modifier.size(27.dp))
+                        Icon(Icons.Default.LocalDrink, null, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.size(7.dp))
                         Text(
                             "Log ${settings.intakePerReminderMl} ml",
-                            fontSize = 17.sp,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                         )
@@ -629,9 +733,9 @@ private fun WaterReminderCard(
                         ),
                         border = BorderStroke(1.dp, Color(0xFF2A506D)),
                     ) {
-                        Icon(Icons.Default.Settings, null, modifier = Modifier.size(25.dp))
+                        Icon(Icons.Default.Settings, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
-                        Text("Edit", fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("Edit", fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                 }
             } else {
@@ -715,8 +819,8 @@ private fun WaterScheduleCell(
         ) {
             Text(
                 value,
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFFEAF3FF),
                 maxLines = 2,
@@ -750,12 +854,12 @@ private fun WaterInsight(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp))
+                Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(5.dp))
                 Text(
                     label,
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
                     color = Color(0xFFA8BACC),
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
@@ -982,6 +1086,9 @@ private fun TimePickerField(
         )
     }
 }
+
+private fun formatWaterLogTime(epochMillis: Long): String =
+    DateFormat.getTimeInstance(DateFormat.SHORT, Locale.getDefault()).format(Date(epochMillis))
 
 private fun formatWaterTime(minutes: Int): String {
     val hour = (minutes / 60).coerceIn(0, 23)
