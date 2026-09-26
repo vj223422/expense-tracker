@@ -327,166 +327,306 @@ private fun WaterReminderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(30.dp),
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
         border = BorderStroke(1.dp, Color(0xFF183B56)),
     ) {
         Column(
-            Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Box(
                     Modifier
-                        .size(70.dp)
-                        .clip(RoundedCornerShape(20.dp))
+                        .size(62.dp)
+                        .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFF183B59)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(42.dp))
+                    Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(36.dp))
                 }
-                Spacer(Modifier.size(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Hydration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = textColor)
+                Spacer(Modifier.size(13.dp))
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     Text(
-                        if (settings == null) "Set up your daily hydration" else "${settings.intakePerReminderMl} ml per reminder",
+                        "Hydration",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        maxLines = 1,
+                    )
+                    Text(
+                        if (settings == null) "Set up your daily hydration" else "\${settings.intakePerReminderMl} ml per reminder",
                         style = MaterialTheme.typography.bodyLarge,
                         color = muted,
+                        maxLines = 1,
                     )
                 }
-                Switch(checked = settings?.enabled == true, onCheckedChange = onToggle)
+                Spacer(Modifier.size(8.dp))
+                Switch(
+                    checked = settings?.enabled == true,
+                    onCheckedChange = onToggle,
+                )
             }
 
             if (settings != null) {
                 Row(
-                    Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Box(Modifier.size(178.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .weight(0.95f)
+                            .aspectRatio(1f)
+                            .padding(4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         CircularProgressIndicator(
                             progress = { 1f },
                             modifier = Modifier.fillMaxSize(),
-                            strokeWidth = 13.dp,
+                            strokeWidth = 11.dp,
                             color = Color(0xFF24455F),
                             strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
                         CircularProgressIndicator(
                             progress = { progress },
                             modifier = Modifier.fillMaxSize(),
-                            strokeWidth = 13.dp,
+                            strokeWidth = 11.dp,
                             color = cyan,
                             strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = textColor)
-                            Text("today", style = MaterialTheme.typography.titleMedium, color = muted)
-                            Spacer(Modifier.size(8.dp))
-                            Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(25.dp))
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                "\${(progress * 100).toInt()}%",
+                                fontSize = 31.sp,
+                                lineHeight = 35.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = textColor,
+                            )
+                            Text("today", fontSize = 15.sp, color = muted)
+                            Spacer(Modifier.size(5.dp))
+                            Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(21.dp))
                         }
                     }
 
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("${todayTotal} ml", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.ExtraBold, color = textColor)
-                        Text("of ${goal} ml goal", style = MaterialTheme.typography.titleMedium, color = muted)
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 5.dp)
-                                .size(height = 1.dp, width = 1.dp)
-                                .background(Color(0xFF25435B)),
+                    Column(
+                        modifier = Modifier.weight(1.05f),
+                        verticalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        Text(
+                            "\${todayTotal} ml",
+                            fontSize = 34.sp,
+                            lineHeight = 38.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = textColor,
+                            maxLines = 2,
                         )
                         Text(
-                            if (remaining > 0) "${remaining} ml remaining" else "Goal completed!",
-                            style = MaterialTheme.typography.titleMedium,
+                            "of \${goal} ml goal",
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp,
+                            color = muted,
+                            maxLines = 2,
+                        )
+                        ScheduleDivider(horizontal = true)
+                        Text(
+                            "\${remaining} ml",
+                            fontSize = 21.sp,
+                            lineHeight = 25.sp,
                             color = cyan,
                             fontWeight = FontWeight.Bold,
+                            maxLines = 1,
                         )
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 5.dp)
-                                .size(height = 1.dp, width = 1.dp)
-                                .background(Color(0xFF25435B)),
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Notifications, null, tint = Color(0xFF73B9FF), modifier = Modifier.size(28.dp))
-                            Spacer(Modifier.size(10.dp))
-                            Column {
-                                Text("${completedReminders} of ${reminderCount} reminders", style = MaterialTheme.typography.titleMedium, color = textColor, fontWeight = FontWeight.SemiBold)
-                                Text("completed", style = MaterialTheme.typography.bodyMedium, color = muted)
-                            }
+                        Text("remaining", fontSize = 13.sp, color = muted, maxLines = 1)
+                        ScheduleDivider(horizontal = true)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.Notifications,
+                                null,
+                                tint = Color(0xFF73B9FF),
+                                modifier = Modifier.size(22.dp),
+                            )
+                            Spacer(Modifier.size(7.dp))
+                            Text(
+                                "\${completedReminders} / \${reminderCount} completed",
+                                fontSize = 13.sp,
+                                lineHeight = 17.sp,
+                                color = textColor,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 2,
+                            )
                         }
                     }
                 }
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = panelColor),
                     border = BorderStroke(1.dp, Color(0xFF1C405C)),
                 ) {
-                    Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CalendarMonth, null, tint = Color(0xFF79B7FF), modifier = Modifier.size(30.dp))
-                            Spacer(Modifier.size(14.dp))
-                            Text("Today's plan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = textColor, modifier = Modifier.weight(1f))
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.CalendarMonth,
+                                null,
+                                tint = Color(0xFF79B7FF),
+                                modifier = Modifier.size(25.dp),
+                            )
+                            Spacer(Modifier.size(9.dp))
+                            Text(
+                                "Today's plan",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                            )
                             Row(
                                 modifier = Modifier
                                     .clip(CircleShape)
                                     .background(Color(0xFF1A3A55))
                                     .clickable(onClick = onEdit)
-                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                    .padding(horizontal = 11.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("View schedule", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = textColor)
-                                Spacer(Modifier.size(5.dp))
-                                Icon(Icons.Default.ChevronRight, null, tint = textColor, modifier = Modifier.size(20.dp))
+                                Text(
+                                    "View schedule",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textColor,
+                                    maxLines = 1,
+                                )
+                                Spacer(Modifier.size(2.dp))
+                                Icon(Icons.Default.ChevronRight, null, tint = textColor, modifier = Modifier.size(17.dp))
                             }
                         }
 
-                        Spacer(Modifier.size(16.dp))
+                        Spacer(Modifier.size(13.dp))
 
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            WaterScheduleCell(Icons.Default.PlayArrow, Color(0xFF00E6B2), "START", formatWaterTime(settings.startTimeMinutes), Modifier.weight(1f))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            WaterScheduleCell(
+                                Icons.Default.PlayArrow,
+                                Color(0xFF00E6B2),
+                                "START",
+                                formatWaterTime(settings.startTimeMinutes),
+                                Modifier.weight(1f),
+                            )
                             ScheduleDivider()
-                            WaterScheduleCell(Icons.Default.AccessTime, Color(0xFF79B7FF), "EVERY", formatWaterInterval(frequencyMinutes), Modifier.weight(1f))
+                            WaterScheduleCell(
+                                Icons.Default.AccessTime,
+                                Color(0xFF79B7FF),
+                                "EVERY",
+                                formatWaterInterval(frequencyMinutes),
+                                Modifier.weight(1f),
+                            )
                             ScheduleDivider()
-                            WaterScheduleCell(Icons.Default.Stop, Color(0xFFFF647E), "END", formatWaterTime(settings.endTimeMinutes), Modifier.weight(1f))
+                            WaterScheduleCell(
+                                Icons.Default.Stop,
+                                Color(0xFFFF647E),
+                                "END",
+                                formatWaterTime(settings.endTimeMinutes),
+                                Modifier.weight(1f),
+                            )
                             ScheduleDivider()
-                            WaterScheduleCell(Icons.Default.Notifications, Color(0xFF79B7FF), "TOTAL", "${reminderCount} reminders", Modifier.weight(1f))
+                            WaterScheduleCell(
+                                Icons.Default.Notifications,
+                                Color(0xFF79B7FF),
+                                "TOTAL",
+                                "\${reminderCount}",
+                                Modifier.weight(1f),
+                            )
                         }
                     }
                 }
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    WaterInsight("Today", todayTotal, goal, Icons.Default.WaterDrop, cyan, Modifier.weight(1f))
-                    WaterInsight("7 days", weekTotal / 7, goal, Icons.Default.BarChart, Color(0xFFA78BFA), Modifier.weight(1f))
-                    WaterInsight("Month", monthTotal / today.lengthOfMonth(), goal, Icons.Default.CalendarMonth, Color(0xFF00E6B2), Modifier.weight(1f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                ) {
+                    WaterInsight(
+                        "Today",
+                        todayTotal,
+                        goal,
+                        Icons.Default.WaterDrop,
+                        cyan,
+                        Modifier.weight(1f),
+                    )
+                    WaterInsight(
+                        "7 days",
+                        weekTotal / 7,
+                        goal,
+                        Icons.Default.BarChart,
+                        Color(0xFFA78BFA),
+                        Modifier.weight(1f),
+                    )
+                    WaterInsight(
+                        "Month",
+                        monthTotal / today.lengthOfMonth(),
+                        goal,
+                        Icons.Default.CalendarMonth,
+                        Color(0xFF00E6B2),
+                        Modifier.weight(1f),
+                    )
                 }
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     Button(
                         onClick = onAdd,
-                        modifier = Modifier.weight(1f).size(height = 72.dp, width = 1.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = brightBlue, contentColor = Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = brightBlue,
+                            contentColor = Color.White,
+                        ),
                     ) {
-                        Icon(Icons.Default.LocalDrink, null, modifier = Modifier.size(30.dp))
-                        Spacer(Modifier.size(10.dp))
-                        Text("Log ${settings.intakePerReminderMl} ml", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.LocalDrink, null, modifier = Modifier.size(27.dp))
+                        Spacer(Modifier.size(7.dp))
+                        Text(
+                            "Log \${settings.intakePerReminderMl} ml",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                        )
                     }
                     androidx.compose.material3.OutlinedButton(
                         onClick = onEdit,
-                        modifier = Modifier.size(width = 148.dp, height = 72.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF9BCBFF)),
+                        modifier = Modifier
+                            .weight(0.72f)
+                            .height(64.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFF9BCBFF),
+                        ),
                         border = BorderStroke(1.dp, Color(0xFF2A506D)),
                     ) {
-                        Icon(Icons.Default.Settings, null, modifier = Modifier.size(29.dp))
-                        Spacer(Modifier.size(8.dp))
-                        Text("Edit", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Settings, null, modifier = Modifier.size(25.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Edit", fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                 }
             } else {
@@ -496,7 +636,11 @@ private fun WaterReminderCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = muted,
                     )
-                    Button(onClick = onEdit, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                    Button(
+                        onClick = onEdit,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
                         Text("Create water plan", fontWeight = FontWeight.Bold)
                     }
                 }
@@ -506,8 +650,20 @@ private fun WaterReminderCard(
 }
 
 @Composable
-private fun ScheduleDivider() {
-    Box(Modifier.size(width = 1.dp, height = 54.dp).background(Color(0xFF31516A)))
+private fun ScheduleDivider(horizontal: Boolean = false) {
+    Box(
+        modifier = if (horizontal) {
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Color(0xFF31516A))
+        } else {
+            Modifier
+                .width(1.dp)
+                .height(42.dp)
+                .background(Color(0xFF31516A))
+        }
+    )
 }
 
 @Composable
@@ -519,16 +675,34 @@ private fun WaterScheduleCell(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.padding(horizontal = 8.dp),
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = modifier.padding(horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = iconTint, modifier = Modifier.size(21.dp))
-            Spacer(Modifier.size(7.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge, color = Color(0xFFA6B8CA), fontWeight = FontWeight.Medium)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(icon, null, tint = iconTint, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.size(4.dp))
+            Text(
+                label,
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                color = Color(0xFFA6B8CA),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
         }
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color(0xFFEAF3FF))
+        Text(
+            value,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFEAF3FF),
+            maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
 
@@ -544,26 +718,70 @@ private fun WaterInsight(
     val percent = ((amount * 100) / goal.coerceAtLeast(1)).coerceIn(0, 100)
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF112D45)),
         border = BorderStroke(1.dp, Color(0xFF1C405C)),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(27.dp))
-                Spacer(Modifier.size(9.dp))
-                Text(label, style = MaterialTheme.typography.titleMedium, color = Color(0xFFA8BACC), modifier = Modifier.weight(1f))
-                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF8DA8BF), modifier = Modifier.size(20.dp))
+        Column(
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 11.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp))
+                Spacer(Modifier.size(5.dp))
+                Text(
+                    label,
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    color = Color(0xFFA8BACC),
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    softWrap = false,
+                )
+                Icon(
+                    Icons.Default.ChevronRight,
+                    null,
+                    tint = Color(0xFF8DA8BF),
+                    modifier = Modifier.size(16.dp),
+                )
             }
-            Text("${amount} ml", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color(0xFFEAF3FF))
+            Text(
+                "\${amount} ml",
+                fontSize = 21.sp,
+                lineHeight = 25.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFFEAF3FF),
+                maxLines = 2,
+            )
             Box(
-                Modifier.fillMaxWidth().size(9.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF2C4A61)),
+                Modifier
+                    .fillMaxWidth()
+                    .height(7.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF2C4A61)),
             ) {
                 if (percent > 0) {
-                    Box(Modifier.fillMaxWidth(percent / 100f).fillMaxSize().clip(RoundedCornerShape(10.dp)).background(accent))
+                    Box(
+                        Modifier
+                            .fillMaxWidth(percent / 100f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(accent),
+                    )
                 }
             }
-            Text("${percent}%", style = MaterialTheme.typography.titleSmall, color = Color(0xFFDCE8F4), fontWeight = FontWeight.Medium)
+            Text(
+                "\${percent}%",
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                color = Color(0xFFDCE8F4),
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
         }
     }
 }
