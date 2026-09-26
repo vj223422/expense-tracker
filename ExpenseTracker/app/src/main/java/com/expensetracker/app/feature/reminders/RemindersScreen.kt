@@ -380,15 +380,29 @@ private fun WaterReminderCard(
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Today's plan", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                             Text(
-                                "${reminderCount} reminders",
+                                "Today's plan",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "$reminderCount reminders",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold,
                             )
                         }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            WaterScheduleItem("START", formatWaterTime(settings.startTimeMinutes), Modifier.weight(1f))
+                            WaterScheduleItem("EVERY", formatWaterInterval(frequencyMinutes), Modifier.weight(1f))
+                            WaterScheduleItem("END", formatWaterTime(settings.endTimeMinutes), Modifier.weight(1f))
+                            WaterScheduleItem("TOTAL", "$reminderCount", Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             WaterScheduleItem("START", formatWaterTime(settings.startTimeMinutes), Modifier.weight(1f))
                             WaterScheduleItem("EVERY", formatWaterInterval(frequencyMinutes), Modifier.weight(1f))
                             WaterScheduleItem("END", formatWaterTime(settings.endTimeMinutes), Modifier.weight(1f))
@@ -444,17 +458,39 @@ private fun WaterScheduleItem(label: String, value: String, modifier: Modifier =
 
 @Composable
 private fun WaterInsight(label: String, amount: Int, goal: Int, modifier: Modifier = Modifier) {
+    val percent = ((amount * 100) / goal.coerceAtLeast(1)).coerceIn(0, 100)
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f)),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        ),
     ) {
-        Column(Modifier.padding(10.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(amount.toString() + " ml", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Column(
+            Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("$amount ml", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .size(6.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(percent / 100f)
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            }
             Text(
-                if (amount >= goal) "Goal met" else ((amount * 100) / goal.coerceAtLeast(1)).toString() + "%",
+                if (amount >= goal) "Goal met" else "$percent%",
                 style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
