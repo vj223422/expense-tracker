@@ -264,19 +264,70 @@ private fun DateGroupHeader(
     val safeColor = LocalExtendedColors.current.safe
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(date.toRelativeOrFormatted(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Row(Modifier.width(205.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-                Row(Modifier.width(78.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-                    Text("↑", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = safeColor)
-                    Text(receivedMinor.formatAsCurrency(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = safeColor, modifier = Modifier.padding(start = 3.dp))
+            Text(
+                date.toRelativeOrFormatted(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            // Keep both totals on one fixed-width row. The values are intentionally
+            // single-line so amounts up to 7 digits never push the expense total
+            // onto a second line or change the header height.
+            Row(
+                Modifier.width(220.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Row(
+                    Modifier.width(100.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Text("↑", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = safeColor)
+                    Text(
+                        receivedMinor.formatAsCurrency(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = safeColor,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.padding(start = 2.dp),
+                    )
                 }
-                Text("|", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 6.dp))
-                Row(Modifier.width(95.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-                    Text("↓", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                    Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 3.dp))
+                Text(
+                    "|",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+                Row(
+                    Modifier.width(100.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Text("↓", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    Text(
+                        spentMinor.formatAsCurrency(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.padding(start = 2.dp),
+                    )
                 }
             }
-            Icon(if (collapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess, if (collapsed) "Expand" else "Collapse", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 8.dp).size(22.dp))
+            Icon(
+                if (collapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                if (collapsed) "Expand" else "Collapse",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp).size(22.dp),
+            )
         }
     }
 }
