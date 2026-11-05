@@ -18,9 +18,11 @@ object BankDebitSmsParser {
     private val merchantRegex = Regex("(?im)^\\s*To\\s+(.+?)\\s*$")
     private val inlineMerchantRegex = Regex("(?i)\\bto\\s+(.+?)\\s*\\.\\s*(?:RRN|Ref(?:erence)?)\\b")
     private val dateRegex = Regex("(?im)^\\s*On\\s*[:\\-]?\\s*(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\s*$")
+    // Some bank UPI mandate alerts place the date on its own line (e.g. 05/11/26).
+    private val standaloneDateRegex = Regex("(?im)^\\s*(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\s*$")
     private val inlineDateRegex = Regex("(?i)\\bon\\s+(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\b")
     private val referenceRegex = Regex("(?im)^\\s*Ref(?:erence)?(?:\\s+No)?\\s*[:#-]?\\s*([A-Za-z0-9-]+)\\s*$")
-    private val inlineReferenceRegex = Regex("(?i)\\bRRN\\s*[:#-]?\\s*([A-Za-z0-9-]+)")
+    private val inlineReferenceRegex = Regex("(?i)\\b(?:RRN|Ref(?:erence)?)\\s*[:#-]?\\s*([A-Za-z0-9-]+)")
     private val fromBankRegex = Regex("(?im)^\\s*From\\s+.+?\\bBank\\s+A/C\\b")
     private val dateFormats = listOf(
         DateTimeFormatter.ofPattern("d/M/yy", Locale.US),
@@ -37,12 +39,21 @@ object BankDebitSmsParser {
 
         if (!Regex("(?i)\\bSent\\s*(?:Rs\\.?|INR)\\s*").containsMatchIn(normalized)) return null
 
-        val isLineBasedFormat = Regex("(?im)^\\s*To\\s+.+$").containsMatchIn(normalized) &&
-            Regex("(?im)^\\s*On\\s*[:\\-]?\\s*\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\s*$").containsMatchIn(normalized)
+        val hasRecipient = merchantRegex.containsMatchIn(normalized) || inlineMerchantRegex.containsMatchIn(normalized)
+        val hasDate = dateRegex.containsMatchIn(normalized) ||
+            standaloneDateRegex.containsMatchIn(normalized) ||
+            inlineDateRegex.containsMatchIn(normalized)
+        val hasReference = referenceRegex.containsMatchIn(normalized) ||
+            inlineReferenceRegex.containsMatchIn(normalized)
+        // HDFC/KreditBee UPI mandate messages use "Sent Rs...", "To ...",
+        // a standalone date and "Ref ..." rather than the older "On ..." layout.
+        val isMandateDebitFormat = Regex("(?i)\\bUPI\\s+Mandate\\b").containsMatchIn(normalized) &&
+            hasRecipient && hasDate
+        val isLineBasedFormat = hasRecipient && dateRegex.containsMatchIn(normalized)
         val isInlineFormat = inlineMerchantRegex.containsMatchIn(normalized) &&
             inlineDateRegex.containsMatchIn(normalized) &&
             inlineReferenceRegex.containsMatchIn(normalized)
-        if (!isLineBasedFormat && !isInlineFormat) return null
+        if (!isLineBasedFormat && !isInlineFormat && !isMandateDebitFormat) return null
 
         val amountText = amountRegex.find(normalized)?.groupValues?.getOrNull(1) ?: return null
         val amountMinor = runCatching {
@@ -59,6 +70,7 @@ object BankDebitSmsParser {
             ?: return null
 
         val dateText = dateRegex.find(normalized)?.groupValues?.getOrNull(1)
+            ?: standaloneDateRegex.find(normalized)?.groupValues?.getOrNull(1)
             ?: inlineDateRegex.find(normalized)?.groupValues?.getOrNull(1)
         val date = dateText?.let(::parseDate) ?: return null
 
