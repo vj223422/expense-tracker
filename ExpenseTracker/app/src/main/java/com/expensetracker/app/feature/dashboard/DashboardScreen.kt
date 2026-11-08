@@ -66,6 +66,7 @@ import com.expensetracker.app.core.designsystem.AnimatedAmountText
 import com.expensetracker.app.core.designsystem.CategoryDonutChart
 import com.expensetracker.app.core.designsystem.DonutSegment
 import com.expensetracker.app.core.designsystem.EmptyState
+import com.expensetracker.app.core.designsystem.PremiumPageIntro
 import com.expensetracker.app.core.designsystem.SwipeToDeleteExpenseItem
 import com.expensetracker.app.core.designsystem.color
 import com.expensetracker.app.core.theme.LocalExtendedColors
@@ -93,6 +94,7 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
     } } }
     Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item { PremiumPageIntro("MONTHLY OVERVIEW", "Your money, in focus", "A clear view of spending, income and what remains this month.") }
             item { MonthSelector(uiState.yearMonth, viewModel::onPreviousMonth, viewModel::onNextMonth) }
             item { SummaryCard(uiState, onRemainingClick = viewModel::onRemainingClick) }
             item { TransactionActionButtons(onAddExpenseClick, onAddIncomeClick) }
