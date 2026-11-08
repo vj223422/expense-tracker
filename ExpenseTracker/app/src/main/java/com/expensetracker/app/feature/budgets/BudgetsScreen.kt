@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.core.designsystem.AnimatedAmountText
 import com.expensetracker.app.core.designsystem.CategoryProgressRow
 import com.expensetracker.app.core.designsystem.EmptyState
+import com.expensetracker.app.core.designsystem.PremiumPageIntro
 import com.expensetracker.app.core.designsystem.SectionHeader
 import com.expensetracker.app.core.theme.LocalExtendedColors
 import com.expensetracker.app.core.theme.LocalReducedMotion
@@ -96,6 +97,7 @@ private fun BudgetsContent(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
+                item(key = "budget_intro") { PremiumPageIntro("PLAN WITH PURPOSE", "Budgets that work for you", "Set clear limits and keep every category on track.") }
                 item(key = "overall_card") {
                     OverallLimitCard(
                         limitMinor = uiState.overallLimitMinor,
