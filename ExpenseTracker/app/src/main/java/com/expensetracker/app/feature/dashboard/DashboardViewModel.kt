@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.YearMonth
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -39,6 +40,7 @@ class DashboardViewModel(
     private val _showBudgetEditor = MutableStateFlow(false)
     val showBudgetEditor: StateFlow<Boolean> = _showBudgetEditor
     private val selectedMonth = MutableStateFlow<YearMonth?>(null)
+    private val selectedDate = MutableStateFlow(LocalDate.now())
 
     val uiState: StateFlow<DashboardUiState> = profileRepository.observeActiveProfileId()
         .filterNotNull()
@@ -51,11 +53,23 @@ class DashboardViewModel(
         .flatMapLatest { (selection, activeBudgetMonth) ->
             val (profileId, yearMonth) = selection
             combine(
-                expenseRepository.observeCategoryTotals(profileId, yearMonth),
-                budgetRepository.observeLimits(profileId),
-                expenseRepository.observeExpensesForBudgetPeriod(profileId, yearMonth),
-                expenseRepository.observeIncomeTotal(profileId, yearMonth),
-            ) { totals, limits, monthExpenses, incomeTotal ->
+                combine(
+                    expenseRepository.observeCategoryTotals(profileId, yearMonth),
+                    budgetRepository.observeLimits(profileId),
+                    expenseRepository.observeIncomeTotal(profileId, yearMonth),
+                ) { totals, limits, incomeTotal ->
+                    MonthlyDashboardData(totals, limits, incomeTotal)
+                },
+                expenseRepository.observeExpensesForMonth(profileId, yearMonth),
+                expenseRepository.observeAllExpenses(profileId),
+                selectedDate,
+            ) { monthly, calendarExpenses, allExpenses, selected ->
+                val totals = monthly.totals
+                val limits = monthly.limits
+                val incomeTotal = monthly.incomeTotal
+                val selectedDay = if (selected.yearMonth == yearMonth) selected else {
+                    yearMonth.atDay(selected.dayOfMonth.coerceAtMost(yearMonth.lengthOfMonth()))
+                }
                 val cycleMonth = yearMonth.toString()
                 val isActiveCycle = activeBudgetMonth == cycleMonth
                 val isConfiguredForMonth = appPreferences.isBudgetMonthConfigured(profileId, cycleMonth)
@@ -82,12 +96,16 @@ class DashboardViewModel(
                     categorySpends = summary.categorySpends.filter { it.spentMinor > 0 }.sortedByDescending { it.spentMinor },
                     // Show both outgoing and incoming transactions together, newest first.
                     // Use the exact transaction timestamp as the secondary sort key.
-                    recentExpenses = monthExpenses
-                        .sortedWith(
-                            compareByDescending<Expense> { it.date }
-                                .thenByDescending { it.createdAtEpochMillis }
-                        )
-                        .take(5),
+                    recentExpenses = calendarExpenses
+                        .filter { it.date == selectedDay }
+                        .sortedByDescending { it.createdAtEpochMillis },
+                    selectedDate = selectedDay,
+                    selectedDaySpentMinor = calendarExpenses.filter { it.date == selectedDay && !it.isIncome }.sumOf { it.amountMinor },
+                    selectedDayExpenses = calendarExpenses.filter { it.date == selectedDay }
+                        .sortedByDescending { it.createdAtEpochMillis },
+                    allTimeSpentMinor = allExpenses.filterNot { it.isIncome }.sumOf { it.amountMinor },
+                    allTimeIncomeMinor = allExpenses.filter { it.isIncome }.sumOf { it.amountMinor },
+                    daysWithTransactions = calendarExpenses.map { it.date }.toSet(),
                     isLoading = false,
                 )
             }
@@ -96,6 +114,7 @@ class DashboardViewModel(
 
     override fun onPreviousMonth() { selectedMonth.value = (selectedMonth.value ?: YearMonth.now()).minusMonths(1) }
     override fun onNextMonth() { selectedMonth.value = (selectedMonth.value ?: YearMonth.now()).plusMonths(1) }
+    fun onSelectDate(date: LocalDate) { selectedMonth.value = YearMonth.from(date); selectedDate.value = date }
 
     fun onRemainingClick() { _showBudgetEditor.value = true }
     fun onDismissBudgetEditor() { _showBudgetEditor.value = false }
@@ -141,4 +160,10 @@ class DashboardViewModel(
         }
     }
     private val Expense.displayLabel: String get() = note.ifBlank { category.displayName }
+
+    private data class MonthlyDashboardData(
+        val totals: Map<com.expensetracker.app.data.model.ExpenseCategory, Long>,
+        val limits: List<com.expensetracker.app.data.model.BudgetLimit>,
+        val incomeTotal: Long,
+    )
 }
