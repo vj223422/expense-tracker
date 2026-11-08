@@ -129,7 +129,16 @@ fun ExpenseTrackerApp(
                             },
                         )
                     } else {
+                        val pageHeader = when (currentRoute) {
+                            Destination.Transactions.route -> "Transactions" to "Your complete money activity"
+                            Destination.Budgets.route -> "Budgets" to "Stay on top of your spending limits"
+                            Destination.Reminders.route -> "Reminders" to "Build better everyday money habits"
+                            Destination.Settings.route -> "Settings" to "Make FinTrack work your way"
+                            else -> "Overview" to "Your money, clearly in view"
+                        }
                         AppTopBar(
+                            title = pageHeader.first,
+                            subtitle = pageHeader.second,
                             onSettingsClick = { navController.navigate(Destination.Settings.route) { launchSingleTop = true } },
                         )
                     }
