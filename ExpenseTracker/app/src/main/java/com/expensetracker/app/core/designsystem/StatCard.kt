@@ -1,5 +1,6 @@
 package com.expensetracker.app.core.designsystem
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,15 +13,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/**
- * Fills whatever height [modifier] resolves to (rather than just wrapping its own content) and
- * centers its label/value vertically within it — so two of these side by side in a
- * height(IntrinsicSize.Max) Row (see DashboardScreen's Spent/Remaining pair) end up the same
- * height with their content balanced, instead of the shorter one's text pinned to the top with
- * dead space below it.
- */
+/** Consistent premium statistic tile shared by dashboard and analytics surfaces. */
 @Composable
 fun StatCard(
     label: String,
@@ -30,21 +26,21 @@ fun StatCard(
 ) {
     Surface(
         modifier = if (onClick != null) modifier.clickable(onClick = onClick) else modifier,
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        tonalElevation = 0.dp,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(7.dp))
             valueContent()
         }
     }

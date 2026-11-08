@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.core.designsystem.AnimatedAmountText
 import com.expensetracker.app.core.designsystem.EmptyState
+import com.expensetracker.app.core.designsystem.PremiumPageIntro
 import com.expensetracker.app.core.designsystem.SwipeToDeleteExpenseItem
 import com.expensetracker.app.core.designsystem.color
 import com.expensetracker.app.core.designsystem.icon
@@ -109,6 +110,7 @@ private fun TransactionsContent(uiState: TransactionsUiState, actions: Transacti
         collapsedDates = uiState.expensesByDate.map { it.date }.toSet()
     }
     Column(modifier.fillMaxSize()) {
+        PremiumPageIntro("ACTIVITY", "Every transaction, together", "Search, filter and review where your money moves.")
         MonthSelector(uiState.selectedMonth, actions::onPreviousMonth, actions::onNextMonth)
         SearchAndFilterBar(uiState.searchQuery, actions::onSearchQueryChange, filterExpanded) { filterExpanded = !filterExpanded }
         if (filterExpanded) CategoryFilterRow(uiState.selectedCategoryFilter, actions::onFilterChange)

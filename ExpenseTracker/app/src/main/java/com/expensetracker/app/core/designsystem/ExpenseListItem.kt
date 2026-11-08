@@ -20,6 +20,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -50,25 +52,32 @@ fun ExpenseListItem(expense: Expense, modifier: Modifier = Modifier, onClick: ((
     val amountColor = if (expense.isIncome) LocalExtendedColors.current.safe else MaterialTheme.colorScheme.error
     val amountPrefix = if (expense.isIncome) "+" else "-"
     val typeLabel = if (expense.isIncome) "Income" else expense.category.displayName
-    Row(
-        modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).let {
-            if (onClick != null || onLongClick != null) it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick) else it
-        }.padding(vertical = 10.dp, horizontal = 4.dp).semantics(mergeDescendants = true) {},
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f)),
     ) {
-        Box(Modifier.size(44.dp).clip(CircleShape).background(expense.category.color().copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-            Icon(expense.category.icon(), null, tint = expense.category.color(), modifier = Modifier.size(22.dp))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(expense.note.ifBlank { typeLabel }, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(typeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("  |  ${expense.date.format(transactionDateFormatter)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Row(
+            modifier = Modifier.fillMaxWidth().let {
+                if (onClick != null || onLongClick != null) it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick) else it
+            }.padding(horizontal = 14.dp, vertical = 13.dp).semantics(mergeDescendants = true) {},
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(42.dp).clip(CircleShape).background(expense.category.color().copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+                Icon(expense.category.icon(), null, tint = expense.category.color(), modifier = Modifier.size(21.dp))
             }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(expense.note.ifBlank { typeLabel }, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(typeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("  ·  ${expense.date.format(transactionDateFormatter)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(amountPrefix + expense.amountMinor.formatAsCurrency(), style = MaterialTheme.typography.titleSmall, color = amountColor)
         }
-        Spacer(Modifier.width(12.dp))
-        Text(amountPrefix + expense.amountMinor.formatAsCurrency(), style = MaterialTheme.typography.bodyLarge, color = amountColor)
     }
 }
 

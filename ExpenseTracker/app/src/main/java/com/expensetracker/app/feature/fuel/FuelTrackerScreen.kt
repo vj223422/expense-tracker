@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import com.expensetracker.app.core.designsystem.CreateProfileDialog
+import com.expensetracker.app.core.designsystem.PremiumPageIntro
 import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -143,6 +144,7 @@ fun FuelTrackerScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        item { PremiumPageIntro("FUEL & MILEAGE", "Know every kilometre", "Understand fuel costs, mileage trends and your riding history.") }
         item {
             FuelVehicleHero(
                 lastCycleDistance = lastCycleDistance,
@@ -201,7 +203,7 @@ private fun FuelVehicleHero(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(FuelHero),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0DCE0)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
     ) {
         Box(
             modifier = Modifier
