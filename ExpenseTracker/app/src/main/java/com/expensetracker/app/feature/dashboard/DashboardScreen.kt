@@ -92,15 +92,34 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
         is DashboardEffect.ShowError -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
     } } }
     Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            contentPadding = PaddingValues(start = 18.dp, top = 10.dp, end = 18.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item { DashboardGreeting() }
             item { MonthSelector(uiState.yearMonth, viewModel::onPreviousMonth, viewModel::onNextMonth) }
             item { SummaryCard(uiState, onRemainingClick = viewModel::onRemainingClick) }
             item { TransactionActionButtons(onAddExpenseClick, onAddIncomeClick) }
             val topCategories = uiState.categorySpends.take(5)
-            if (topCategories.isNotEmpty()) { item { SectionTitle("Top categories", "See all", onSeeAllTransactionsClick) }; item { LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 2.dp)) { items(topCategories, key = { it.category.name }) { spend -> CategoryCard(spend.category, spend.spentMinor, uiState.totalSpentMinor) } } } }
-            item { SectionTitle("Recent transactions", "See all", onSeeAllTransactionsClick) }
-            if (uiState.recentExpenses.isEmpty() && !uiState.isLoading) item { EmptyState(icon = Icons.Outlined.ReceiptLong, title = "No transactions yet", message = "Your latest expenses and received amounts will appear here.") }
-            else items(uiState.recentExpenses, key = { it.id }) { expense -> SwipeToDeleteExpenseItem(expense = expense, onDelete = viewModel::onDeleteExpense, onClick = { onEditExpenseClick(expense.id) }) }
+            if (topCategories.isNotEmpty()) {
+                item { SectionTitle("Spending categories", "See all", onSeeAllTransactionsClick) }
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
+                        items(topCategories, key = { it.category.name }) { spend ->
+                            CategoryCard(spend.category, spend.spentMinor, uiState.totalSpentMinor)
+                        }
+                    }
+                }
+            }
+            item { SectionTitle("Recent activity", "View all", onSeeAllTransactionsClick) }
+            if (uiState.recentExpenses.isEmpty() && !uiState.isLoading) {
+                item { EmptyState(icon = Icons.Outlined.ReceiptLong, title = "No transactions yet", message = "Your latest expenses and received amounts will appear here.") }
+            } else {
+                items(uiState.recentExpenses, key = { it.id }) { expense ->
+                    SwipeToDeleteExpenseItem(expense = expense, onDelete = viewModel::onDeleteExpense, onClick = { onEditExpenseClick(expense.id) })
+                }
+            }
         }
     }
     if (showBudgetEditor) BudgetEditorDialog(
@@ -112,6 +131,45 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
         onClear = viewModel::onClearBudget,
         onDismiss = viewModel::onDismissBudgetEditor,
     )
+}
+
+@Composable
+private fun DashboardGreeting() {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                "YOUR MONEY, IN FOCUS",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = androidx.compose.ui.unit.sp(1.2f),
+            )
+            Text(
+                "Good evening",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                "A clear view of your finances",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(48.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Wallet, contentDescription = "Finance overview", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            }
+        }
+    }
 }
 
 @Composable
