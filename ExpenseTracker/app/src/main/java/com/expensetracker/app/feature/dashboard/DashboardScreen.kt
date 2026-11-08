@@ -281,7 +281,7 @@ private fun LifetimeMetric(label: String, amount: Long, tint: Color) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Surface(shape = CircleShape, color = tint.copy(alpha = .13f), modifier = Modifier.size(28.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(if (label == "Income") Icons.Default.ArrowDownward else Icons.Default.ReceiptLong, null, tint = tint, modifier = Modifier.size(16.dp))
+                Icon(if (label == "Income") Icons.Default.ArrowUpward else Icons.Default.ReceiptLong, null, tint = tint, modifier = Modifier.size(16.dp))
             }
         }
         Spacer(Modifier.width(7.dp))
