@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.expensetracker.app.data.model.CategorySpend
 import com.expensetracker.app.data.model.Expense
+import java.time.LocalDate
 import java.time.YearMonth
 
 @Immutable
@@ -15,6 +16,12 @@ data class DashboardUiState(
     val carryForwardMinor: Long = 0L,
     val categorySpends: List<CategorySpend> = emptyList(),
     val recentExpenses: List<Expense> = emptyList(),
+    val selectedDate: LocalDate = LocalDate.now(),
+    val selectedDaySpentMinor: Long = 0L,
+    val selectedDayExpenses: List<Expense> = emptyList(),
+    val allTimeSpentMinor: Long = 0L,
+    val allTimeIncomeMinor: Long = 0L,
+    val daysWithTransactions: Set<LocalDate> = emptySet(),
     val isLoading: Boolean = true,
 ) {
     val effectiveBudgetMinor: Long?
