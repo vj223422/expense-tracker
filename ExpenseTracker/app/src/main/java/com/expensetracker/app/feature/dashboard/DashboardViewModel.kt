@@ -51,10 +51,11 @@ class DashboardViewModel(
             }
         }
         .flatMapLatest { (selection, activeBudgetMonth) ->
-            val (profileId, yearMonth) = selection
+            val profileId = selection.first
+            val displayedMonth = selection.second
             combine(
                 combine(
-                    expenseRepository.observeCategoryTotals(profileId, yearMonth),
+                    expenseRepository.observeCategoryTotals(profileId, displayedMonth),
                     budgetRepository.observeLimits(profileId),
                     expenseRepository.observeIncomeTotal(profileId, yearMonth),
                 ) { totals, limits, incomeTotal ->
@@ -67,10 +68,10 @@ class DashboardViewModel(
                 val totals = monthly.totals
                 val limits = monthly.limits
                 val incomeTotal = monthly.incomeTotal
-                val selectedDay = if (selected.yearMonth == yearMonth) selected else {
-                    yearMonth.atDay(selected.dayOfMonth.coerceAtMost(yearMonth.lengthOfMonth()))
+                val selectedDay = if (selected.yearMonth == displayedMonth) selected else {
+                    displayedMonth.atDay(selected.dayOfMonth.coerceAtMost(displayedMonth.lengthOfMonth()))
                 }
-                val cycleMonth = yearMonth.toString()
+                val cycleMonth = displayedMonth.toString()
                 val isActiveCycle = activeBudgetMonth == cycleMonth
                 val isConfiguredForMonth = appPreferences.isBudgetMonthConfigured(profileId, cycleMonth)
                 val baseBudget = if (isConfiguredForMonth) {
@@ -88,7 +89,7 @@ class DashboardViewModel(
                 val cycleLimits = limits.filter { it.category != null } + com.expensetracker.app.data.model.BudgetLimit(null, baseBudget)
                 val summary = buildMonthlySummary(totals, cycleLimits)
                 DashboardUiState(
-                    yearMonth = yearMonth,
+                    yearMonth = displayedMonth,
                     totalSpentMinor = summary.totalSpentMinor,
                     totalIncomeMinor = incomeTotal,
                     overallLimitMinor = baseBudget,
