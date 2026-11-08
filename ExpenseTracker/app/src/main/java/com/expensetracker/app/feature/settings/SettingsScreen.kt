@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.core.designsystem.CreateProfileDialog
+import com.expensetracker.app.core.designsystem.PremiumPageIntro
 import com.expensetracker.app.data.model.Profile
 import com.expensetracker.app.data.prefs.ThemeMode
 import com.expensetracker.app.data.sound.UISfxSoundPlayer
@@ -52,6 +53,7 @@ fun SettingsScreen(onFuelTrackerClick: () -> Unit, viewModel: SettingsViewModel 
 private fun SettingsContent(uiState: SettingsUiState, onTheme: (ThemeMode) -> Unit, onLock: (Boolean) -> Unit, onReminderSoundChange: (String) -> Unit,
     onProfile: (Long) -> Unit, onAdd: () -> Unit, onRename: (Profile) -> Unit, onDelete: (Profile) -> Unit,
     showReceived: Boolean, onShowReceived: (Boolean) -> Unit, reminders: Boolean, onReminders: (Boolean) -> Unit, reminderSound: String, onFuelTrackerClick: () -> Unit) {
+        PremiumPageIntro("PERSONAL SPACE", "Your app, your way", "Manage profiles, appearance, privacy and everyday preferences.")
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         ProfilesSection(uiState.profiles, uiState.activeProfileId, uiState.canDeleteProfiles, onProfile, onAdd, onRename, onDelete)
         SettingsSection("Theme", "Choose how the app looks") {
