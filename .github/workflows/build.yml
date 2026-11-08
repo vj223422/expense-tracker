@@ -3,6 +3,8 @@ name: Build debug APK
 on:
   push:
     branches: [ main, 'ui/**' ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
