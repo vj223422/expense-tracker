@@ -139,12 +139,12 @@ fun FuelTrackerScreen(
         FuelTripInsight(distance / log.liters, cost, cost / distance, distance)
     }.takeLast(12)
 
-        item { PremiumPageIntro("FUEL & MILEAGE", "Know every kilometre", "Understand fuel costs, mileage trends and your riding history.") }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        item { PremiumPageIntro("FUEL & MILEAGE", "Know every kilometre", "Understand fuel costs, mileage trends and your riding history.") }
         item {
             FuelVehicleHero(
                 lastCycleDistance = lastCycleDistance,
