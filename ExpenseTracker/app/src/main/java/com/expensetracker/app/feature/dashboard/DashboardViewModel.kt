@@ -57,11 +57,11 @@ class DashboardViewModel(
                 combine(
                     expenseRepository.observeCategoryTotals(profileId, displayedMonth),
                     budgetRepository.observeLimits(profileId),
-                    expenseRepository.observeIncomeTotal(profileId, yearMonth),
+                    expenseRepository.observeIncomeTotal(profileId, displayedMonth),
                 ) { totals, limits, incomeTotal ->
                     MonthlyDashboardData(totals, limits, incomeTotal)
                 },
-                expenseRepository.observeExpensesForMonth(profileId, yearMonth),
+                expenseRepository.observeExpensesForMonth(profileId, displayedMonth),
                 expenseRepository.observeAllExpenses(profileId),
                 selectedDate,
             ) { monthly, calendarExpenses, allExpenses, selected ->
