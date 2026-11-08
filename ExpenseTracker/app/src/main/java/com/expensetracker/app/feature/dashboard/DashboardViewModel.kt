@@ -67,7 +67,6 @@ class DashboardViewModel(
             ) { monthly, calendarExpenses, allExpenses, selected ->
                 val totals = monthly.totals
                 val limits = monthly.limits
-                val monthExpenses = monthly.monthExpenses
                 val incomeTotal = monthly.incomeTotal
                 val selectedDay = if (selected.yearMonth == yearMonth) selected else {
                     yearMonth.atDay(selected.dayOfMonth.coerceAtMost(yearMonth.lengthOfMonth()))
@@ -116,7 +115,7 @@ class DashboardViewModel(
 
     override fun onPreviousMonth() { selectedMonth.value = (selectedMonth.value ?: YearMonth.now()).minusMonths(1) }
     override fun onNextMonth() { selectedMonth.value = (selectedMonth.value ?: YearMonth.now()).plusMonths(1) }
-    fun onSelectDate(date: LocalDate) { selectedDate.value = date }
+    fun onSelectDate(date: LocalDate) { selectedMonth.value = YearMonth.from(date); selectedDate.value = date }
 
     fun onRemainingClick() { _showBudgetEditor.value = true }
     fun onDismissBudgetEditor() { _showBudgetEditor.value = false }
