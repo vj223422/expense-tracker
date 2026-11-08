@@ -68,7 +68,7 @@ class DashboardViewModel(
                 val totals = monthly.totals
                 val limits = monthly.limits
                 val incomeTotal = monthly.incomeTotal
-                val selectedDay = if (selected.yearMonth == displayedMonth) selected else {
+                val selectedDay = if ((selected.year == displayedMonth.year && selected.monthValue == displayedMonth.monthValue)) selected else {
                     displayedMonth.atDay(selected.dayOfMonth.coerceAtMost(displayedMonth.lengthOfMonth()))
                 }
                 val cycleMonth = displayedMonth.toString()
