@@ -68,6 +68,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.expensetracker.app.core.designsystem.color
+import com.expensetracker.app.core.designsystem.PremiumPageIntro
 import com.expensetracker.app.core.designsystem.icon
 import com.expensetracker.app.core.theme.LocalReducedMotion
 import com.expensetracker.app.core.theme.MotionDurations
@@ -232,6 +233,16 @@ private fun AddExpenseContent(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
+        PremiumPageIntro(
+            eyebrow = if (uiState.isEditMode) "UPDATE ACTIVITY" else "NEW ACTIVITY",
+            title = when {
+                uiState.isEditMode && uiState.isIncome -> "Update received money"
+                uiState.isEditMode -> "Update expense"
+                uiState.isIncome -> "Record income"
+                else -> "Record an expense"
+            },
+            description = "Add the details once. Your totals and insights stay up to date.",
+        )
         TransactionTypeSelector(
             isIncome = uiState.isIncome,
             enabled = !uiState.isEditMode,
