@@ -81,7 +81,10 @@ import com.expensetracker.app.core.util.toDisplayString
 import com.expensetracker.app.data.model.Expense
 import com.expensetracker.app.data.model.ExpenseCategory
 import org.koin.androidx.compose.koinViewModel
+import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
@@ -102,7 +105,9 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
         ) {
             item { DashboardGreeting() }
             item { MonthSelector(uiState.yearMonth, viewModel::onPreviousMonth, viewModel::onNextMonth) }
-            item { SummaryCard(uiState, onRemainingClick = viewModel::onRemainingClick) }
+            item { CalendarWeekStrip(uiState.selectedDate, uiState.daysWithTransactions, viewModel::onSelectDate) }
+            item { DailyExpenseCard(uiState.selectedDate, uiState.selectedDaySpentMinor) }
+            item { LifetimeSummaryCard(uiState, onRemainingClick = viewModel::onRemainingClick) }
             item { TransactionActionButtons(onAddExpenseClick, onAddIncomeClick) }
             val topCategories = uiState.categorySpends.take(5)
             if (topCategories.isNotEmpty()) {
@@ -115,11 +120,11 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
                     }
                 }
             }
-            item { SectionTitle("Recent activity", "View all", onSeeAllTransactionsClick) }
-            if (uiState.recentExpenses.isEmpty() && !uiState.isLoading) {
-                item { EmptyState(icon = Icons.Outlined.ReceiptLong, title = "No transactions yet", message = "Your latest expenses and received amounts will appear here.") }
+            item { SectionTitle("Transactions · " + uiState.selectedDate.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())), "View all", onSeeAllTransactionsClick) }
+            if (uiState.selectedDayExpenses.isEmpty() && !uiState.isLoading) {
+                item { EmptyState(icon = Icons.Outlined.ReceiptLong, title = "No transactions for this day", message = "Choose another date or add an expense or income.") }
             } else {
-                items(uiState.recentExpenses, key = { it.id }) { expense ->
+                items(uiState.selectedDayExpenses, key = { it.id }) { expense ->
                     SwipeToDeleteExpenseItem(expense = expense, onDelete = viewModel::onDeleteExpense, onClick = { onEditExpenseClick(expense.id) })
                 }
             }
@@ -183,74 +188,108 @@ private fun MonthSelector(yearMonth: YearMonth, onPreviousMonth: () -> Unit, onN
 }
 
 @Composable
-private fun SummaryCard(uiState: DashboardUiState, onRemainingClick: () -> Unit) {
-    val reduceMotion = LocalReducedMotion.current
-    val effectiveBudget = uiState.effectiveBudgetMinor
-    val progress = uiState.overallProgress
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(if (reduceMotion) 0 else MotionDurations.MEDIUM, easing = MotionEasing.Standard),
-        label = "dashboardBudgetProgress",
-    )
-    val remaining = uiState.remainingMinor
-    val remainingColor = when {
-        remaining == null -> Color.White
-        remaining < 0L -> Color(0xFFFFB4AB)
-        progress >= .8f -> Color(0xFFFFD08A)
-        else -> Color(0xFF9BE4C8)
-    }
-    Surface(shape = RoundedCornerShape(28.dp), color = Color.Transparent, shadowElevation = 7.dp) {
-        Column(
-            Modifier.fillMaxWidth()
-                .background(
-                    Brush.linearGradient(listOf(Color(0xFF32245F), Color(0xFF514080), Color(0xFF29204D))),
-                    RoundedCornerShape(28.dp),
-                )
-                .padding(20.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text("TOTAL SPENT", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = .72f), fontWeight = FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.sp(1.2f))
-                    AnimatedAmountText(amountMinor = uiState.totalSpentMinor, style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold), color = Color.White)
-                    Text("of " + (effectiveBudget?.formatAsCurrency() ?: "No budget set") + " budget", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = .78f))
-                }
-                Surface(shape = RoundedCornerShape(20.dp), color = Color.White.copy(alpha = .12f), modifier = Modifier.size(62.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Wallet, null, tint = Color(0xFFFFD18D), modifier = Modifier.size(30.dp))
-                    }
-                }
-            }
-            Spacer(Modifier.height(18.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                LinearProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = Modifier.weight(1f).height(8.dp).clip(CircleShape),
-                    color = Color(0xFFFFC477),
-                    trackColor = Color.White.copy(alpha = .18f),
-                )
-                Spacer(Modifier.width(12.dp))
-                Text((progress.coerceIn(0f, 1f) * 100).toInt().toString() + "%", color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .10f)).clickable(onClick = onRemainingClick).padding(12.dp)) {
-                    Text("REMAINING", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .68f), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    Text(remaining?.formatAsCurrency() ?: "Set budget", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = remainingColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .10f)).padding(12.dp)) {
-                    Text("RECEIVED", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .68f), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    Text(uiState.totalIncomeMinor.formatAsCurrency(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF9BE4C8), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            if (uiState.carryForwardMinor > 0L) {
-                Spacer(Modifier.height(12.dp))
-                Text("↗  Includes " + uiState.carryForwardMinor.formatAsCurrency() + " carried forward", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = .76f))
+private fun CalendarWeekStrip(
+    selectedDate: LocalDate,
+    daysWithTransactions: Set<LocalDate>,
+    onSelectDate: (LocalDate) -> Unit,
+) {
+    val weekStart = selectedDate.minusDays((selectedDate.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
+    val days = (0L..6L).map { weekStart.plusDays(it) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        days.forEach { date ->
+            val selected = date == selectedDate
+            Column(
+                Modifier.weight(1f).clip(RoundedCornerShape(22.dp))
+                    .background(if (selected) Color(0xFFFFC84A) else MaterialTheme.colorScheme.surfaceContainerLowest)
+                    .clickable { onSelectDate(date) }
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                Text(date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()), style = MaterialTheme.typography.labelSmall, color = if (selected) Color(0xFF4A3210) else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium, color = if (selected) Color(0xFF39264F) else MaterialTheme.colorScheme.onSurface)
+                Box(Modifier.size(5.dp).clip(CircleShape).background(if (date in daysWithTransactions) { if (selected) Color(0xFF39264F) else Color(0xFFFFA62B) } else Color.Transparent))
             }
         }
     }
 }
+
+@Composable
+private fun DailyExpenseCard(date: LocalDate, spentMinor: Long) {
+    Surface(
+        shape = RoundedCornerShape(26.dp),
+        color = Color.Transparent,
+        shadowElevation = 3.dp,
+    ) {
+        Row(
+            Modifier.fillMaxWidth()
+                .background(Brush.linearGradient(listOf(Color(0xFFFFE8B9), Color(0xFFFFD18B), Color(0xFFFFC18E))))
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.CalendarMonth, null, tint = Color(0xFF70451D), modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleSmall, color = Color(0xFF70451D), fontWeight = FontWeight.SemiBold)
+                }
+                Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color(0xFF352448))
+                Text("Total expense", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF70451D))
+            }
+            Surface(shape = CircleShape, color = Color.White.copy(alpha = .55f), modifier = Modifier.size(48.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.ReceiptLong, null, tint = Color(0xFF70451D), modifier = Modifier.size(24.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        tonalElevation = 1.dp,
+        shadowElevation = 2.dp,
+    ) {
+        Row(Modifier.fillMaxWidth().padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("Total expense till date", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                AnimatedAmountText(amountMinor = uiState.allTimeSpentMinor, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
+                Text("All recorded expenses", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                LifetimeMetric("Expense", uiState.allTimeSpentMinor, Color(0xFFE77A4D))
+                LifetimeMetric("Income", uiState.allTimeIncomeMinor, Color(0xFF39A96B))
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onRemainingClick).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = CircleShape, color = Color(0xFFFFEBCB), modifier = Modifier.size(28.dp)) {
+                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Wallet, null, tint = Color(0xFFC17A20), modifier = Modifier.size(16.dp)) }
+                    }
+                    Spacer(Modifier.width(7.dp))
+                    Text("Budget", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                    Text(uiState.effectiveBudgetMinor?.formatAsCurrency() ?: "Set", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LifetimeMetric(label: String, amount: Long, tint: Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Surface(shape = CircleShape, color = tint.copy(alpha = .13f), modifier = Modifier.size(28.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(if (label == "Income") Icons.Default.ArrowDownward else Icons.Default.ReceiptLong, null, tint = tint, modifier = Modifier.size(16.dp))
+            }
+        }
+        Spacer(Modifier.width(7.dp))
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+        Text(amount.formatAsCurrency(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
+}
+
 
 @Composable
 private fun BudgetEditorDialog(
