@@ -56,10 +56,9 @@ class DashboardViewModel(
                 combine(
                     expenseRepository.observeCategoryTotals(profileId, yearMonth),
                     budgetRepository.observeLimits(profileId),
-                    expenseRepository.observeExpensesForBudgetPeriod(profileId, yearMonth),
                     expenseRepository.observeIncomeTotal(profileId, yearMonth),
-                ) { totals, limits, monthExpenses, incomeTotal ->
-                    MonthlyDashboardData(totals, limits, monthExpenses, incomeTotal)
+                ) { totals, limits, incomeTotal ->
+                    MonthlyDashboardData(totals, limits, incomeTotal)
                 },
                 expenseRepository.observeExpensesForMonth(profileId, yearMonth),
                 expenseRepository.observeAllExpenses(profileId),
@@ -165,7 +164,6 @@ class DashboardViewModel(
     private data class MonthlyDashboardData(
         val totals: Map<com.expensetracker.app.data.model.ExpenseCategory, Long>,
         val limits: List<com.expensetracker.app.data.model.BudgetLimit>,
-        val monthExpenses: List<Expense>,
         val incomeTotal: Long,
     )
 }
