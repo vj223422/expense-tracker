@@ -40,8 +40,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import com.expensetracker.app.core.designsystem.import com.expensetracker.app.core.designsystem.PremiumPageIntro
-CreateProfileDialog
+import com.expensetracker.app.core.designsystem.CreateProfileDialog
+import com.expensetracker.app.core.designsystem.PremiumPageIntro
 import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
