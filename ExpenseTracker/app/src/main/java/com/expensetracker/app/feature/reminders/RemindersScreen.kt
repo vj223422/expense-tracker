@@ -56,6 +56,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.expensetracker.app.core.designsystem.PremiumPageIntro
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
@@ -133,6 +134,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     )
                 },
         ) {
+            PremiumPageIntro("DAILY ROUTINES", "Small habits, made simple", "Keep reminders, notes and hydration in one calm space.", Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Reminders") }, icon = { Icon(Icons.Default.Notifications, null) })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Notes") }, icon = { Icon(Icons.Default.Notes, null) })
