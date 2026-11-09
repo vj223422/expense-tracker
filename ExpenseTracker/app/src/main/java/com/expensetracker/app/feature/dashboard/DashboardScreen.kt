@@ -268,36 +268,69 @@ private fun DailyExpenseCard(date: LocalDate, spentMinor: Long) {
 private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        color = Color(0xFFFFFDFA),
         tonalElevation = 1.dp,
         shadowElevation = 2.dp,
     ) {
-        Row(Modifier.fillMaxWidth().padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text("Total expense till date", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                AnimatedAmountText(amountMinor = uiState.allTimeSpentMinor, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
-                Text("All recorded expenses", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                LifetimeMetric("Expense", uiState.allTimeSpentMinor, Color(0xFFE77A4D))
-                LifetimeMetric("Income", uiState.allTimeIncomeMinor, Color(0xFF39A96B))
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onRemainingClick).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = Color(0xFFFFEBCB), modifier = Modifier.size(28.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Wallet, null, tint = Color(0xFFC17A20), modifier = Modifier.size(16.dp)) }
+        Column(Modifier.fillMaxWidth().padding(17.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = CircleShape, color = Color(0xFFF4E9D4), modifier = Modifier.size(30.dp)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.ReceiptLong, null, tint = Color(0xFF9A7439), modifier = Modifier.size(17.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(7.dp))
+                        Text("Till date", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
-                    Spacer(Modifier.width(7.dp))
-                    Text("Budget", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
-                    Text(uiState.effectiveBudgetMinor?.formatAsCurrency() ?: "Set", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                    AnimatedAmountText(
+                        amountMinor = uiState.allTimeSpentMinor,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                    )
+                    Text("All recorded expenses", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Box(Modifier.width(1.dp).height(104.dp).background(Color(0xFFE9E0D3)))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = CircleShape, color = Color(0xFFFFF0CF), modifier = Modifier.size(30.dp)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.CalendarMonth, null, tint = Color(0xFFB18128), modifier = Modifier.size(17.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(7.dp))
+                        Text("This month", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    }
+                    AnimatedAmountText(
+                        amountMinor = uiState.totalSpentMinor,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                    )
+                    Text(uiState.yearMonth.toDisplayString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    LinearProgressIndicator(
+                        progress = { uiState.overallProgress.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                        color = Color(0xFFE5B94F),
+                        trackColor = Color(0xFFF2EBDD),
+                    )
+                }
+            }
+            Spacer(Modifier.height(15.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFE9E0D3)))
+            Spacer(Modifier.height(13.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                LifetimeMetric("Income", uiState.allTimeIncomeMinor, Color(0xFF65A66C), Modifier.weight(1f))
+                LifetimeMetric("Budget", uiState.effectiveBudgetMinor ?: 0L, Color(0xFFC18A35), Modifier.weight(1f), onClick = onRemainingClick, showSetWhenZero = uiState.effectiveBudgetMinor == null)
             }
         }
     }
 }
 
 @Composable
-private fun LifetimeMetric(label: String, amount: Long, tint: Color) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun LifetimeMetric(label: String, amount: Long, tint: Color, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, showSetWhenZero: Boolean = false) {
+    Row(modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick() } else Modifier), verticalAlignment = Alignment.CenterVertically) {
         Surface(shape = CircleShape, color = tint.copy(alpha = .13f), modifier = Modifier.size(28.dp)) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(if (label == "Income") Icons.Default.ArrowUpward else Icons.Default.ReceiptLong, null, tint = tint, modifier = Modifier.size(16.dp))
@@ -305,7 +338,7 @@ private fun LifetimeMetric(label: String, amount: Long, tint: Color) {
         }
         Spacer(Modifier.width(7.dp))
         Text(label, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
-        Text(amount.formatAsCurrency(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(if (showSetWhenZero) "Set" else amount.formatAsCurrency(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
