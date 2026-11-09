@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -100,7 +102,7 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
     } } }
     Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            modifier = Modifier.fillMaxSize().background(Color(0xFFFAF6EF)).padding(innerPadding),
             contentPadding = PaddingValues(start = 18.dp, top = 10.dp, end = 18.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
@@ -173,8 +175,8 @@ private fun DashboardGreeting() {
 private fun MonthSelector(yearMonth: YearMonth, onPreviousMonth: () -> Unit, onNextMonth: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .28f), RoundedCornerShape(18.dp)),
+        color = Color(0xFFF2EDE4),
+        modifier = Modifier.border(1.dp, Color(0xFFE7DED0), RoundedCornerShape(18.dp)),
     ) {
         Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             IconButton(onClick = onPreviousMonth) { Icon(Icons.Default.ChevronLeft, "Previous month") }
@@ -196,12 +198,28 @@ private fun CalendarWeekStrip(
 ) {
     val weekStart = selectedDate.minusDays((selectedDate.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
     val days = (0L..6L).map { weekStart.plusDays(it) }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+    Row(
+        Modifier.fillMaxWidth().pointerInput(selectedDate) {
+            var dragDistance = 0f
+            detectHorizontalDragGestures(
+                onHorizontalDrag = { _, delta -> dragDistance += delta },
+                onDragEnd = {
+                    when {
+                        dragDistance < -48f -> onSelectDate(selectedDate.plusDays(7))
+                        dragDistance > 48f -> onSelectDate(selectedDate.minusDays(7))
+                    }
+                    dragDistance = 0f
+                },
+                onDragCancel = { dragDistance = 0f },
+            )
+        },
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
         days.forEach { date ->
             val selected = date == selectedDate
             Column(
                 Modifier.weight(1f).clip(RoundedCornerShape(22.dp))
-                    .background(if (selected) Color(0xFFFFC84A) else MaterialTheme.colorScheme.surfaceContainerLowest)
+                    .background(if (selected) Color(0xFFF2C968) else Color(0xFFFFFDFA))
                     .clickable { onSelectDate(date) }
                     .padding(vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -230,11 +248,11 @@ private fun DailyExpenseCard(date: LocalDate, spentMinor: Long) {
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.CalendarMonth, null, tint = Color(0xFF70451D), modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.CalendarMonth, null, tint = Color(0xFF6E5735), modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleSmall, color = Color(0xFF70451D), fontWeight = FontWeight.SemiBold)
                 }
-                Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color(0xFF352448))
+                Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color(0xFF30291F))
                 Text("Total expense", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF70451D))
             }
             Surface(shape = CircleShape, color = Color.White.copy(alpha = .55f), modifier = Modifier.size(48.dp)) {
