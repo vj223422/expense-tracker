@@ -19,13 +19,20 @@ class WaterReminderBootReceiver : BroadcastReceiver() {
         ) return
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
-            val db = Room.databaseBuilder(context.applicationContext, ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-                .addMigrations(*ExpenseDatabase.allMigrations()).build()
+            var db: ExpenseDatabase? = null
             try {
+                val database = Room.databaseBuilder(
+                    context.applicationContext,
+                    ExpenseDatabase::class.java,
+                    ExpenseDatabase.DATABASE_NAME,
+                ).addMigrations(*ExpenseDatabase.allMigrations()).build()
+                db = database
                 val scheduler = WaterReminderScheduler(context.applicationContext)
-                db.waterDao().getSettingsForScheduling().forEach { scheduler.schedule(it) }
+                database.waterDao().getSettingsForScheduling().forEach { scheduler.schedule(it) }
+            } catch (_: Exception) {
+                // A later boot or exact-alarm permission event can retry scheduling.
             } finally {
-                db.close()
+                db?.close()
                 pending.finish()
             }
         }
