@@ -22,9 +22,17 @@ class WaterReminderScheduler(private val context: Context) {
             putExtra(WaterReminderReceiver.EXTRA_PROFILE_ID, settings.profileId)
         }
         val pi = PendingIntent.getBroadcast(context, code(settings.profileId), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi)
-        } else {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi)
+            } else {
+                // Android may defer inexact alarms under Doze. The reminders screen
+                // surfaces the missing exact-alarm access so the user can enable it.
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi)
+            }
+        } catch (_: SecurityException) {
+            // Permission can be revoked between the capability check and scheduling.
+            // Keep the recurring reminder alive with an inexact alarm instead.
             alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi)
         }
     }

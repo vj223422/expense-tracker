@@ -65,6 +65,13 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import android.app.AlarmManager
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -101,6 +108,10 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
     var showNoteEditor by remember { mutableStateOf(false) }
     var editingNote by remember { mutableStateOf<NoteEntity?>(null) }
     var showWaterSetup by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val notificationsAllowed = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    val alarmManager = context.getSystemService(AlarmManager::class.java)
+    val exactAlarmsAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
 
     val filteredReminders = remember(reminders, searchQuery) {
         val query = searchQuery.trim()
@@ -113,6 +124,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
         Column(
             Modifier
                 .fillMaxSize()
+                .background(Color(0xFFFAF6EF))
                 .padding(padding)
                 .pointerInput(tab) {
                     var totalDrag = 0f
@@ -133,10 +145,19 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     )
                 },
         ) {
-            TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Reminders") }, icon = { Icon(Icons.Default.Notifications, null) })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Notes") }, icon = { Icon(Icons.Default.Notes, null) })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Water") }, icon = { Text("💧") })
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp)) {
+                Text("Reminders", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF30291F))
+                Text("Stay on track with your daily goals", fontSize = 14.sp, color = Color(0xFF715B3A))
+            }
+            TabRow(
+                selectedTabIndex = tab,
+                containerColor = Color(0xFFFAF6EF),
+                contentColor = Color(0xFF4A3210),
+                indicator = {},
+            ) {
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("All", fontWeight = if (tab == 0) FontWeight.Bold else FontWeight.Medium) }, icon = { Icon(Icons.Default.Notifications, null) }, selectedContentColor = Color(0xFF4A3210), unselectedContentColor = Color(0xFF715B3A))
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Water", fontWeight = if (tab == 1) FontWeight.Bold else FontWeight.Medium) }, icon = { Icon(Icons.Default.WaterDrop, null) }, selectedContentColor = Color(0xFF4A3210), unselectedContentColor = Color(0xFF715B3A))
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Notes", fontWeight = if (tab == 2) FontWeight.Bold else FontWeight.Medium) }, icon = { Icon(Icons.Default.Notes, null) }, selectedContentColor = Color(0xFF4A3210), unselectedContentColor = Color(0xFF715B3A))
             }
             if (tab == 0) {
                 OutlinedTextField(
@@ -154,7 +175,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     shape = RoundedCornerShape(16.dp),
                 )
                 ReminderContent(filteredReminders, viewModel, onAdd = { editingReminder = null; showReminderEditor = true }, onEdit = { editingReminder = it; showReminderEditor = true })
-            } else if (tab == 1) {
+            } else if (tab == 2) {
                 NotesContent(notes, viewModel, onAdd = { editingNote = null; showNoteEditor = true }, onEdit = { editingNote = it; showNoteEditor = true })
             } else {
                 LazyColumn(
@@ -162,16 +183,36 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 10.dp),
                 ) {
                     item {
-                        WaterReminderCard(
-                            settings = waterSettings,
-                            intake = waterIntake,
-                            onToggle = { enabled ->
-                                if (enabled && waterSettings == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
-                            },
-                            onEdit = { showWaterSetup = true },
-                            onAdd = { viewModel.addWaterIntake(waterSettings?.intakePerReminderMl ?: 300) },
-                            onDelete = viewModel::deleteWaterIntake,
-                        )
+                        Column {
+                            if (waterSettings?.enabled == true && (!notificationsAllowed || !exactAlarmsAllowed)) {
+                                WaterReminderPermissionNotice(
+                                    exactAlarmsAllowed = exactAlarmsAllowed,
+                                    notificationsAllowed = notificationsAllowed,
+                                    onOpenSettings = {
+                                        val settingsIntent = if (!exactAlarmsAllowed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                                data = Uri.parse("package:${context.packageName}")
+                                            }
+                                        } else {
+                                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                            }
+                                        }
+                                        context.startActivity(settingsIntent)
+                                    },
+                                )
+                            }
+                            WaterReminderCard(
+                                settings = waterSettings,
+                                intake = waterIntake,
+                                onToggle = { enabled ->
+                                    if (enabled && waterSettings == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
+                                },
+                                onEdit = { showWaterSetup = true },
+                                onAdd = { viewModel.addWaterIntake(waterSettings?.intakePerReminderMl ?: 300) },
+                                onDelete = viewModel::deleteWaterIntake,
+                            )
+                        }
                     }
                 }
             }
@@ -208,18 +249,18 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
     ) {
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.primaryContainer).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFFFFF0CF)).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onPrimary)
+                    Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFC18422)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Add, null, tint = Color(0xFFFFFDFA))
                     }
                     Spacer(Modifier.size(14.dp))
-                    Text("Add reminder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                    Text("Add reminder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color(0xFFC18422))
                 }
-                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFC18422))
             }
         }
         item {
@@ -230,7 +271,7 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
         }
         if (reminders.isEmpty()) {
             item {
-                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))) {
+                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0CF).copy(alpha = 0.45f))) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.size(8.dp))
@@ -242,7 +283,7 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
         } else {
             items(reminders, key = { it.id }) { reminder -> ModernReminderCard(reminder, vm, onEdit) }
             item {
-                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))) {
+                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0CF).copy(alpha = 0.45f))) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.size(8.dp))
@@ -257,11 +298,11 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
 
 @Composable
 private fun ModernReminderCard(reminder: ReminderEntity, vm: RemindersViewModel, onEdit: (ReminderEntity) -> Unit) {
-    Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+    Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDFA)), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(if (reminder.title.contains("birthday", true) || reminder.note.contains("gift", true)) Icons.Default.Notes else Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                Box(Modifier.size(52.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                    Icon(if (reminder.title.contains("birthday", true) || reminder.note.contains("gift", true)) Icons.Default.Notes else Icons.Default.CalendarMonth, null, tint = Color(0xFFC18422), modifier = Modifier.size(28.dp))
                 }
                 Spacer(Modifier.size(14.dp))
                 Column(Modifier.weight(1f)) {
@@ -291,6 +332,45 @@ private fun ReminderDetailRow(icon: androidx.compose.ui.graphics.vector.ImageVec
     }
 }
 
+
+@Composable
+private fun WaterReminderPermissionNotice(
+    exactAlarmsAllowed: Boolean,
+    notificationsAllowed: Boolean,
+    onOpenSettings: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0D9)),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                "Water reminders need attention",
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF70451D),
+            )
+            Text(
+                when {
+                    !notificationsAllowed -> "Notifications are blocked for this app. Android may trigger the alarm, but you will not see the reminder."
+                    !exactAlarmsAllowed -> "Exact-alarm access is off. Android may delay water reminders, especially while the phone is idle."
+                    else -> "Check notification and alarm access in Android settings."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF70451D),
+            )
+            Button(
+                onClick = onOpenSettings,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text(if (!exactAlarmsAllowed) "Allow exact alarms" else "Enable notifications")
+            }
+        }
+    }
+}
 
 @Composable
 private fun WaterReminderCard(
@@ -329,12 +409,12 @@ private fun WaterReminderCard(
         } else 0
     } ?: 0
 
-    val cardColor = Color(0xFF0D2237)
-    val panelColor = Color(0xFF102B42)
-    val cyan = Color(0xFF08C9F4)
-    val brightBlue = Color(0xFF0B91FF)
-    val muted = Color(0xFF9FB3C7)
-    val textColor = Color(0xFFEAF3FF)
+    val cardColor = Color(0xFFFFFDFA)
+    val panelColor = Color(0xFFFFF0CF)
+    val cyan = Color(0xFFC18422)
+    val brightBlue = Color(0xFFF2A000)
+    val muted = Color(0xFF715B3A)
+    val textColor = Color(0xFF30291F)
 
     Card(
         modifier = Modifier
@@ -342,7 +422,7 @@ private fun WaterReminderCard(
             .padding(horizontal = 18.dp, vertical = 12.dp),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        border = BorderStroke(1.dp, Color(0xFF183B56)),
+        border = BorderStroke(1.dp, Color(0xFFE7DED0)),
     ) {
         Column(
             Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
@@ -356,7 +436,7 @@ private fun WaterReminderCard(
                     Modifier
                         .size(44.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF183B59)),
+                        .background(Color(0xFFFFF0D1)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(24.dp))
@@ -367,14 +447,14 @@ private fun WaterReminderCard(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Text(
-                        "Hydration",
+                        "Water Reminder",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = textColor,
                         maxLines = 1,
                     )
                     Text(
-                        if (settings == null) "Set up your daily hydration" else "${settings.intakePerReminderMl} ml per reminder",
+                        if (settings == null) "Set up your daily water goal" else "${settings.intakePerReminderMl} ml per reminder",
                         style = MaterialTheme.typography.bodySmall,
                         color = muted,
                         maxLines = 1,
@@ -404,7 +484,7 @@ private fun WaterReminderCard(
                             progress = { 1f },
                             modifier = Modifier.fillMaxSize(),
                             strokeWidth = 8.dp,
-                            color = Color(0xFF24455F),
+                            color = Color(0xFFECE5DA),
                             strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
                         CircularProgressIndicator(
@@ -468,7 +548,7 @@ private fun WaterReminderCard(
                             Icon(
                                 Icons.Default.Notifications,
                                 null,
-                                tint = Color(0xFF73B9FF),
+                                tint = Color(0xFFE09A20),
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.size(7.dp))
@@ -488,7 +568,7 @@ private fun WaterReminderCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = panelColor),
-                    border = BorderStroke(1.dp, Color(0xFF1C405C)),
+                    border = BorderStroke(1.dp, Color(0xFFE7DED0)),
                 ) {
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
                         Row(
@@ -498,7 +578,7 @@ private fun WaterReminderCard(
                             Icon(
                                 Icons.Default.CalendarMonth,
                                 null,
-                                tint = Color(0xFF79B7FF),
+                                tint = Color(0xFFC18422),
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.size(9.dp))
@@ -513,7 +593,7 @@ private fun WaterReminderCard(
                             Row(
                                 modifier = Modifier
                                     .clip(CircleShape)
-                                    .background(Color(0xFF1A3A55))
+                                    .background(Color(0xFFF2EDE4))
                                     .clickable(onClick = onEdit)
                                     .padding(horizontal = 11.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -538,7 +618,7 @@ private fun WaterReminderCard(
                         ) {
                             WaterScheduleCell(
                                 Icons.Default.PlayArrow,
-                                Color(0xFF00E6B2),
+                                Color(0xFF21834A),
                                 "START",
                                 formatWaterTime(settings.startTimeMinutes),
                                 Modifier.weight(1f),
@@ -546,7 +626,7 @@ private fun WaterReminderCard(
                             ScheduleDivider()
                             WaterScheduleCell(
                                 Icons.Default.AccessTime,
-                                Color(0xFF79B7FF),
+                                Color(0xFFC18422),
                                 "EVERY",
                                 formatWaterInterval(frequencyMinutes),
                                 Modifier.weight(1f),
@@ -554,7 +634,7 @@ private fun WaterReminderCard(
                             ScheduleDivider()
                             WaterScheduleCell(
                                 Icons.Default.Stop,
-                                Color(0xFFFF647E),
+                                Color(0xFFE36C27),
                                 "END",
                                 formatWaterTime(settings.endTimeMinutes),
                                 Modifier.weight(1f),
@@ -562,7 +642,7 @@ private fun WaterReminderCard(
                             ScheduleDivider()
                             WaterScheduleCell(
                                 Icons.Default.Notifications,
-                                Color(0xFF79B7FF),
+                                Color(0xFFC18422),
                                 "TOTAL",
                                 "${reminderCount}",
                                 Modifier.weight(1f),
@@ -612,7 +692,7 @@ private fun WaterReminderCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.cardColors(containerColor = panelColor),
-                                border = BorderStroke(1.dp, Color(0xFF1C405C)),
+                                border = BorderStroke(1.dp, Color(0xFFE7DED0)),
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -624,7 +704,7 @@ private fun WaterReminderCard(
                                         modifier = Modifier
                                             .size(34.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFF183B59)),
+                                            .background(Color(0xFFFFF0D1)),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
@@ -663,7 +743,7 @@ private fun WaterReminderCard(
                                         Icon(
                                             Icons.Default.Delete,
                                             contentDescription = "Delete water log",
-                                            tint = Color(0xFFFF7187),
+                                            tint = Color(0xFFC33F3F),
                                             modifier = Modifier.size(14.dp),
                                         )
                                     }
@@ -726,9 +806,9 @@ private fun WaterReminderCard(
                             .height(64.dp),
                         shape = RoundedCornerShape(20.dp),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFF9BCBFF),
+                            contentColor = Color(0xFF8A673C),
                         ),
-                        border = BorderStroke(1.dp, Color(0xFF2A506D)),
+                        border = BorderStroke(1.dp, Color(0xFFE7DED0)),
                     ) {
                         Icon(Icons.Default.Settings, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
@@ -762,12 +842,12 @@ private fun ScheduleDivider(horizontal: Boolean = false) {
             Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(Color(0xFF31516A))
+                .background(Color(0xFFE7DED0))
         } else {
             Modifier
                 .width(1.dp)
                 .height(42.dp)
-                .background(Color(0xFF31516A))
+                .background(Color(0xFFE7DED0))
         }
     )
 }
@@ -801,7 +881,7 @@ private fun WaterScheduleCell(
                     label,
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
-                    color = Color(0xFFA6B8CA),
+                    color = Color(0xFF8A673C),
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     softWrap = false,
@@ -819,7 +899,7 @@ private fun WaterScheduleCell(
                 fontSize = 13.sp,
                 lineHeight = 17.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFEAF3FF),
+                color = Color(0xFF30291F),
                 maxLines = 2,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
@@ -919,7 +999,7 @@ private fun WaterHistoryGraph(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = panelColor),
-        border = BorderStroke(1.dp, Color(0xFF1C405C)),
+        border = BorderStroke(1.dp, Color(0xFFE7DED0)),
     ) {
         Column(
             Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -927,7 +1007,7 @@ private fun WaterHistoryGraph(
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Hydration history", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = textColor)
+                    Text("Water intake history", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = textColor)
                     Text(
                         when (period) {
                             WaterGraphPeriod.DAILY -> "Hourly intake today"
@@ -942,7 +1022,7 @@ private fun WaterHistoryGraph(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF183B59))
+                            .background(Color(0xFFFFF0D1))
                             .clickable { menuExpanded = true }
                             .padding(horizontal = 10.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1001,7 +1081,7 @@ private fun WaterHistoryGraph(
                     val fraction = index / 3f
                     val y = verticalPadding + chartHeight * fraction
                     drawLine(
-                        color = Color(0xFF28465E),
+                        color = Color(0xFFE7DED0),
                         start = Offset(horizontalPadding, y),
                         end = Offset(size.width - horizontalPadding, y),
                         strokeWidth = 1.dp.toPx(),
@@ -1013,7 +1093,7 @@ private fun WaterHistoryGraph(
                     val left = horizontalPadding + index * barSlot + (barSlot - barWidth) / 2f
                     val top = verticalPadding + chartHeight - barHeight
                     drawRoundRect(
-                        color = if (point.value > 0) cyan else Color(0xFF24455F),
+                        color = if (point.value > 0) cyan else Color(0xFFECE5DA),
                         topLeft = Offset(left, top),
                         size = androidx.compose.ui.geometry.Size(
                             barWidth,
@@ -1078,7 +1158,7 @@ private fun WaterSetupDialog(
                 Text(
                     "Frequency is calculated automatically",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFFC18422),
                 )
             }
         },
@@ -1120,7 +1200,7 @@ private fun WaterSetupDialog(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0CF)),
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (reminderCount > 0 && (reminderCount == 1 || durationMinutes > 0)) {
@@ -1128,7 +1208,7 @@ private fun WaterSetupDialog(
                                 "${reminderCount} reminders",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = Color(0xFFC18422),
                             )
                             Text(
                                 if (reminderCount == 1) {
@@ -1267,8 +1347,8 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Notes, null, tint = Color(0xFFC18422), modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -1292,18 +1372,18 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
         }
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primary).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFFC18422)).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onPrimary)
+                Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFFFFDFA).copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Add, null, tint = Color(0xFFFFFDFA))
                 }
                 Spacer(Modifier.size(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Create a note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                    Text("Write something you want to remember", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f))
+                    Text("Create a note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFFFFFDFA))
+                    Text("Write something you want to remember", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFFDFA).copy(alpha = 0.82f))
                 }
-                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFFFFDFA))
             }
         }
         if (filteredNotes.isEmpty()) {
@@ -1311,11 +1391,11 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0CF).copy(alpha = 0.45f)),
                 ) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 34.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                        Box(Modifier.size(64.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Notes, null, tint = Color(0xFFC18422), modifier = Modifier.size(32.dp))
                         }
                         Spacer(Modifier.size(14.dp))
                         Text(if (noteSearch.isBlank()) "No notes yet" else "No notes found", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -1336,8 +1416,8 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                 ) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
-                        Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
+                        Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Notes, null, tint = Color(0xFFC18422), modifier = Modifier.size(23.dp))
                         }
                         Spacer(Modifier.size(12.dp))
                         Column(Modifier.weight(1f)) {
@@ -1370,8 +1450,8 @@ private fun NoteEditorDialog(initial: NoteEntity?, onSave: (String, String) -> U
         shape = RoundedCornerShape(28.dp),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Notes, null, tint = Color(0xFFC18422), modifier = Modifier.size(24.dp))
                 }
                 Spacer(Modifier.size(12.dp))
                 Column {
