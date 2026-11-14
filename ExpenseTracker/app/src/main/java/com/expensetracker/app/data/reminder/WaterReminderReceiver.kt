@@ -30,13 +30,14 @@ class WaterReminderReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             var db: ExpenseDatabase? = null
             try {
-                db = Room.databaseBuilder(
+                val database = Room.databaseBuilder(
                     context.applicationContext,
                     ExpenseDatabase::class.java,
                     ExpenseDatabase.DATABASE_NAME,
                 ).addMigrations(*ExpenseDatabase.allMigrations()).build()
+                db = database
 
-                val settings = db.waterDao().getSettings(profileId) ?: return@launch
+                val settings = database.waterDao().getSettings(profileId) ?: return@launch
                 if (!settings.enabled) return@launch
 
                 val allowed = Build.VERSION.SDK_INT < 33 ||
@@ -83,7 +84,7 @@ class WaterReminderReceiver : BroadcastReceiver() {
 
                 val updated = settings.copy(nextReminderAtEpochMillis = null)
                 WaterReminderScheduler(context.applicationContext).schedule(updated)
-                db.waterDao().upsertSettings(updated)
+                database.waterDao().upsertSettings(updated)
             } catch (_: Exception) {
                 // A transient notification/database exception should not crash the
                 // receiver process. The next boot/permission-change event re-arms alarms.
