@@ -1,5 +1,12 @@
 package com.expensetracker.app.feature.dashboard
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -193,37 +200,84 @@ private fun CalendarWeekStrip(
     onSelectDate: (LocalDate) -> Unit,
 ) {
     val weekStart = selectedDate.minusDays((selectedDate.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
-    val days = (0L..6L).map { weekStart.plusDays(it) }
-    Row(
-        Modifier.fillMaxWidth().pointerInput(selectedDate) {
-            var dragDistance = 0f
-            detectHorizontalDragGestures(
-                onHorizontalDrag = { _, delta -> dragDistance += delta },
-                onDragEnd = {
-                    when {
-                        dragDistance < -48f -> onSelectDate(selectedDate.plusDays(7))
-                        dragDistance > 48f -> onSelectDate(selectedDate.minusDays(7))
-                    }
-                    dragDistance = 0f
-                },
-                onDragCancel = { dragDistance = 0f },
-            )
-        },
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                var dragDistance = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, delta -> dragDistance += delta },
+                    onDragEnd = {
+                        when {
+                            dragDistance < -48f -> onSelectDate(selectedDate.plusDays(7))
+                            dragDistance > 48f -> onSelectDate(selectedDate.minusDays(7))
+                        }
+                        dragDistance = 0f
+                    },
+                    onDragCancel = { dragDistance = 0f },
+                )
+            },
+        contentAlignment = Alignment.Center,
     ) {
-        days.forEach { date ->
-            val selected = date == selectedDate
-            Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(22.dp))
-                    .background(if (selected) Color(0xFFF2C968) else Color(0xFFFFFDFA))
-                    .clickable { onSelectDate(date) }
-                    .padding(vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(7.dp),
+        AnimatedContent(
+            targetState = weekStart,
+            transitionSpec = {
+                val direction = if (targetState.isAfter(initialState)) 1 else -1
+                (
+                    slideInHorizontally(
+                        animationSpec = tween(260, easing = FastOutSlowInEasing),
+                    ) { fullWidth -> direction * fullWidth } + fadeIn(tween(180))
+                ).togetherWith(
+                    slideOutHorizontally(
+                        animationSpec = tween(260, easing = FastOutSlowInEasing),
+                    ) { fullWidth -> -direction * fullWidth } + fadeOut(tween(180))
+                )
+            },
+            label = "calendar-week-transition",
+        ) { displayedWeekStart ->
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
-                Text(date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()), style = MaterialTheme.typography.labelSmall, color = if (selected) Color(0xFF4A3210) else MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium, color = if (selected) Color(0xFF39264F) else MaterialTheme.colorScheme.onSurface)
-                Box(Modifier.size(5.dp).clip(CircleShape).background(if (date in daysWithTransactions) { if (selected) Color(0xFF39264F) else Color(0xFFFFA62B) } else Color.Transparent))
+                (0L..6L).forEach { offset ->
+                    val date = displayedWeekStart.plusDays(offset)
+                    val selected = date == selectedDate
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(if (selected) Color(0xFFF2C968) else Color(0xFFFFFDFA))
+                            .clickable { onSelectDate(date) }
+                            .padding(vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        Text(
+                            date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (selected) Color(0xFF4A3210) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            date.dayOfMonth.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+                            color = if (selected) Color(0xFF39264F) else MaterialTheme.colorScheme.onSurface,
+                        )
+                        Box(
+                            Modifier
+                                .size(5.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (date in daysWithTransactions) {
+                                        if (selected) Color(0xFF39264F) else Color(0xFFFFA62B)
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                ),
+                        )
+                    }
+                }
             }
         }
     }
@@ -262,63 +316,195 @@ private fun DailyExpenseCard(date: LocalDate, spentMinor: Long) {
 
 @Composable
 private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () -> Unit) {
+    val remaining = uiState.remainingMinor
+    val budget = uiState.effectiveBudgetMinor
+    val progress = uiState.overallProgress.coerceIn(0f, 1f)
+    val progressPercent = (progress * 100).toInt()
+
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = Color(0xFFFFFDFA),
         tonalElevation = 1.dp,
         shadowElevation = 2.dp,
     ) {
-        Column(Modifier.fillMaxWidth().padding(17.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             Row(
-                Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable(onClick = onRemainingClick)
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = Color(0xFFF4E9D4), modifier = Modifier.size(30.dp)) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ReceiptLong, null, tint = Color(0xFF9A7439), modifier = Modifier.size(17.dp))
-                            }
-                        }
-                        Spacer(Modifier.width(7.dp))
-                        Text("Till date", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFE2F3E9),
+                    modifier = Modifier.size(58.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Wallet,
+                            contentDescription = null,
+                            tint = Color(0xFF21834A),
+                            modifier = Modifier.size(29.dp),
+                        )
                     }
-                    AnimatedAmountText(
-                        amountMinor = uiState.allTimeSpentMinor,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                    )
-                    Text("All recorded expenses", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Box(Modifier.width(1.dp).height(104.dp).background(Color(0xFFE9E0D3)))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = Color(0xFFFFF0CF), modifier = Modifier.size(30.dp)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        "Remaining purse",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (remaining != null) {
+                        AnimatedAmountText(
+                            amountMinor = remaining,
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (remaining >= 0L) Color(0xFF21834A) else Color(0xFFC34A3A),
+                            ),
+                        )
+                    } else {
+                        Text(
+                            "Set monthly budget",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF21834A),
+                        )
+                    }
+                }
+            }
+
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color(0xFFECE5DA)),
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFFFF0D9),
+                            modifier = Modifier.size(32.dp),
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Outlined.CalendarMonth, null, tint = Color(0xFFB18128), modifier = Modifier.size(17.dp))
+                                Icon(
+                                    Icons.Default.Wallet,
+                                    contentDescription = null,
+                                    tint = Color(0xFFC18422),
+                                    modifier = Modifier.size(17.dp),
+                                )
                             }
                         }
-                        Spacer(Modifier.width(7.dp))
-                        Text("This month", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Budget",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Text(
+                        budget?.formatAsCurrency() ?: "No limit",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Box(
+                    Modifier
+                        .width(1.dp)
+                        .height(62.dp)
+                        .background(Color(0xFFECE5DA)),
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFFFF0D9),
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.ReceiptLong,
+                                    contentDescription = null,
+                                    tint = Color(0xFFE09A20),
+                                    modifier = Modifier.size(17.dp),
+                                )
+                            }
+                        }
+                        Text(
+                            "Expense",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                     AnimatedAmountText(
                         amountMinor = uiState.totalSpentMinor,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                    )
-                    Text(uiState.yearMonth.toDisplayString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    LinearProgressIndicator(
-                        progress = { uiState.overallProgress.coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                        color = Color(0xFFE5B94F),
-                        trackColor = Color(0xFFF2EBDD),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                        ),
                     )
                 }
             }
-            Spacer(Modifier.height(15.dp))
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFE9E0D3)))
-            Spacer(Modifier.height(13.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                LifetimeMetric("Income", uiState.allTimeIncomeMinor, Color(0xFF65A66C), Modifier.weight(1f))
-                LifetimeMetric("Budget", uiState.effectiveBudgetMinor ?: 0L, Color(0xFFC18A35), Modifier.weight(1f), onClick = onRemainingClick, showSetWhenZero = uiState.effectiveBudgetMinor == null)
+
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(9.dp)
+                        .clip(CircleShape),
+                    color = Color(0xFFF2A000),
+                    trackColor = Color(0xFFF0ECE6),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        uiState.yearMonth.toDisplayString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        if (budget != null) "$progressPercent% used" else "No budget set",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
     }
