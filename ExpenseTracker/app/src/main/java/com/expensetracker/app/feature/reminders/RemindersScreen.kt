@@ -249,18 +249,18 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
     ) {
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.primaryContainer).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFFFFF0CF)).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onPrimary)
+                    Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFC18422)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Add, null, tint = Color(0xFFFFFDFA))
                     }
                     Spacer(Modifier.size(14.dp))
-                    Text("Add reminder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                    Text("Add reminder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color(0xFFC18422))
                 }
-                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFC18422))
             }
         }
         item {
@@ -271,7 +271,7 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
         }
         if (reminders.isEmpty()) {
             item {
-                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))) {
+                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0CF).copy(alpha = 0.45f))) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.size(8.dp))
@@ -283,7 +283,7 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
         } else {
             items(reminders, key = { it.id }) { reminder -> ModernReminderCard(reminder, vm, onEdit) }
             item {
-                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))) {
+                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0CF).copy(alpha = 0.45f))) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(34.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.size(8.dp))
@@ -298,11 +298,11 @@ private fun ReminderContent(reminders: List<ReminderEntity>, vm: RemindersViewMo
 
 @Composable
 private fun ModernReminderCard(reminder: ReminderEntity, vm: RemindersViewModel, onEdit: (ReminderEntity) -> Unit) {
-    Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+    Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDFA)), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(if (reminder.title.contains("birthday", true) || reminder.note.contains("gift", true)) Icons.Default.Notes else Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                Box(Modifier.size(52.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                    Icon(if (reminder.title.contains("birthday", true) || reminder.note.contains("gift", true)) Icons.Default.Notes else Icons.Default.CalendarMonth, null, tint = Color(0xFFC18422), modifier = Modifier.size(28.dp))
                 }
                 Spacer(Modifier.size(14.dp))
                 Column(Modifier.weight(1f)) {
@@ -1158,7 +1158,7 @@ private fun WaterSetupDialog(
                 Text(
                     "Frequency is calculated automatically",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFFC18422),
                 )
             }
         },
@@ -1200,7 +1200,7 @@ private fun WaterSetupDialog(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0CF)),
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (reminderCount > 0 && (reminderCount == 1 || durationMinutes > 0)) {
@@ -1208,7 +1208,7 @@ private fun WaterSetupDialog(
                                 "${reminderCount} reminders",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = Color(0xFFC18422),
                             )
                             Text(
                                 if (reminderCount == 1) {
@@ -1347,8 +1347,8 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Notes, null, tint = Color(0xFFC18422), modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -1372,18 +1372,18 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
         }
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primary).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFFC18422)).clickable(onClick = onAdd).padding(horizontal = 18.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onPrimary)
+                Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFFFFDFA).copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Add, null, tint = Color(0xFFFFFDFA))
                 }
                 Spacer(Modifier.size(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Create a note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                    Text("Write something you want to remember", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f))
+                    Text("Create a note", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFFFFFDFA))
+                    Text("Write something you want to remember", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFFDFA).copy(alpha = 0.82f))
                 }
-                Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFFFFDFA))
             }
         }
         if (filteredNotes.isEmpty()) {
@@ -1391,11 +1391,11 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0CF).copy(alpha = 0.45f)),
                 ) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 34.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                        Box(Modifier.size(64.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Notes, null, tint = Color(0xFFC18422), modifier = Modifier.size(32.dp))
                         }
                         Spacer(Modifier.size(14.dp))
                         Text(if (noteSearch.isBlank()) "No notes yet" else "No notes found", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -1416,8 +1416,8 @@ private fun NotesContent(notes: List<NoteEntity>, vm: RemindersViewModel, onAdd:
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                 ) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
-                        Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
+                        Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Notes, null, tint = Color(0xFFC18422), modifier = Modifier.size(23.dp))
                         }
                         Spacer(Modifier.size(12.dp))
                         Column(Modifier.weight(1f)) {
@@ -1450,8 +1450,8 @@ private fun NoteEditorDialog(initial: NoteEntity?, onSave: (String, String) -> U
         shape = RoundedCornerShape(28.dp),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Notes, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFFFF0CF)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Notes, null, tint = Color(0xFFC18422), modifier = Modifier.size(24.dp))
                 }
                 Spacer(Modifier.size(12.dp))
                 Column {
