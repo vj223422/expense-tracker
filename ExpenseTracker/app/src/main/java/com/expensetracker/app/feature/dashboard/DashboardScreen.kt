@@ -64,7 +64,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -98,7 +97,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit, onEditExpenseClick: (Long) -> Unit, onSeeAllTransactionsClick: () -> Unit, viewModel: DashboardViewModel = koinViewModel()) {
@@ -212,27 +210,6 @@ private fun CalendarWeekStrip(
         listState.animateScrollToItem(selectedDate.dayOfMonth - 1)
     }
 
-    // Once scrolling settles, select the date nearest the center of the strip.
-    LaunchedEffect(listState, month) {
-        snapshotFlow {
-            if (listState.isScrollInProgress) {
-                null
-            } else {
-                val layoutInfo = listState.layoutInfo
-                val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-                layoutInfo.visibleItemsInfo.minByOrNull { item ->
-                    kotlin.math.abs((item.offset + item.size / 2) - viewportCenter)
-                }?.index
-            }
-        }
-            .distinctUntilChanged()
-            .collect { index ->
-                if (index != null && index in 0 until month.lengthOfMonth()) {
-                    val visibleDate = month.atDay(index + 1)
-                    if (visibleDate != selectedDate) onSelectDate(visibleDate)
-                }
-            }
-    }
 
     LazyRow(
         state = listState,
