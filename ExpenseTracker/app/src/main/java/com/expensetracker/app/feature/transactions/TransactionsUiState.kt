@@ -17,6 +17,9 @@ data class TransactionsUiState(
     val selectedCategoryFilter: ExpenseCategory? = null,
     val searchQuery: String = "",
     val selectedMonth: YearMonth = YearMonth.now(),
+    val monthlyIncomeMinor: Long = 0L,
+    val monthlyExpenseMinor: Long = 0L,
+    val monthlyRemainingMinor: Long = 0L,
     val isLoading: Boolean = true,
 ) {
     val isEmpty: Boolean get() = !isLoading && expensesByDate.isEmpty()
