@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.expensetracker.app.data.model.Expense
 import com.expensetracker.app.data.model.ExpenseCategory
 import com.expensetracker.app.data.notification.toSnackbarMessage
+import com.expensetracker.app.data.prefs.AppPreferences
+import com.expensetracker.app.data.repository.BudgetRepository
 import com.expensetracker.app.data.repository.AddExpenseResult
 import com.expensetracker.app.data.repository.ExpenseRepository
 import com.expensetracker.app.data.repository.ProfileRepository
@@ -27,6 +29,8 @@ import java.time.YearMonth
 class TransactionsViewModel(
     private val expenseRepository: ExpenseRepository,
     profileRepository: ProfileRepository,
+    private val budgetRepository: BudgetRepository,
+    private val appPreferences: AppPreferences,
 ) : ViewModel(), TransactionsActions {
 
     private val categoryFilter = MutableStateFlow<ExpenseCategory?>(null)
@@ -39,10 +43,24 @@ class TransactionsViewModel(
     val uiState: kotlinx.coroutines.flow.StateFlow<TransactionsUiState> = profileRepository.observeActiveProfileId()
         .filterNotNull()
         .flatMapLatest { profileId ->
-            combine(expenseRepository.observeAllExpenses(profileId), categoryFilter, searchQuery, selectedMonth) { expenses, filter, query, month ->
+            combine(expenseRepository.observeAllExpenses(profileId), categoryFilter, searchQuery, selectedMonth, budgetRepository.observeLimits(profileId)) { expenses, filter, query, month, limits ->
                 val monthExpenses = expenses.filter { YearMonth.from(it.date) == month }
                 val monthlyIncome = monthExpenses.filter { it.isIncome }.sumOf { it.amountMinor }
                 val monthlyExpense = monthExpenses.filter { !it.isIncome }.sumOf { it.amountMinor }
+                val cycleMonth = month.toString()
+                val activeBudgetMonth = appPreferences.getActiveBudgetMonth(profileId)
+                val isConfiguredForMonth = appPreferences.isBudgetMonthConfigured(profileId, cycleMonth)
+                val baseBudget = if (isConfiguredForMonth) {
+                    appPreferences.getCycleBaseBudget(profileId, cycleMonth) ?: 0L
+                } else if (activeBudgetMonth == cycleMonth) {
+                    appPreferences.getCycleBaseBudget(profileId, cycleMonth)
+                        ?: limits.firstOrNull { it.category == null }?.limitMinor
+                        ?: 0L
+                } else {
+                    0L
+                }
+                val carryForward = appPreferences.getCarryForward(profileId, cycleMonth)
+                val effectiveBudget = baseBudget + monthlyIncome + carryForward
                 val normalizedQuery = query.trim().lowercase()
                 val filtered = expenses.filter { expense ->
                     val matchesMonth = YearMonth.from(expense.date) == month
@@ -65,7 +83,8 @@ class TransactionsViewModel(
                     selectedMonth = month,
                     monthlyIncomeMinor = monthlyIncome,
                     monthlyExpenseMinor = monthlyExpense,
-                    monthlyRemainingMinor = monthlyIncome - monthlyExpense,
+                    monthlyRemainingMinor = effectiveBudget - monthlyExpense,
+                    monthlyBudgetMinor = effectiveBudget.takeIf { it > 0L },
                     isLoading = false,
                 )
             }
