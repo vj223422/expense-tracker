@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -63,6 +64,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -96,6 +98,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit, onEditExpenseClick: (Long) -> Unit, onSeeAllTransactionsClick: () -> Unit, viewModel: DashboardViewModel = koinViewModel()) {
@@ -199,85 +202,83 @@ private fun CalendarWeekStrip(
     daysWithTransactions: Set<LocalDate>,
     onSelectDate: (LocalDate) -> Unit,
 ) {
-    val weekStart = selectedDate.minusDays((selectedDate.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
+    val month = YearMonth.from(selectedDate)
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = selectedDate.dayOfMonth - 1,
+    )
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(Unit) {
-                var dragDistance = 0f
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, delta -> dragDistance += delta },
-                    onDragEnd = {
-                        when {
-                            dragDistance < -48f -> onSelectDate(selectedDate.plusDays(7))
-                            dragDistance > 48f -> onSelectDate(selectedDate.minusDays(7))
-                        }
-                        dragDistance = 0f
-                    },
-                    onDragCancel = { dragDistance = 0f },
-                )
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        AnimatedContent(
-            targetState = weekStart,
-            transitionSpec = {
-                val direction = if (targetState.isAfter(initialState)) 1 else -1
-                (
-                    slideInHorizontally(
-                        animationSpec = tween(260, easing = FastOutSlowInEasing),
-                    ) { fullWidth -> direction * fullWidth } + fadeIn(tween(180))
-                ).togetherWith(
-                    slideOutHorizontally(
-                        animationSpec = tween(260, easing = FastOutSlowInEasing),
-                    ) { fullWidth -> -direction * fullWidth } + fadeOut(tween(180))
-                )
-            },
-            label = "calendar-week-transition",
-        ) { displayedWeekStart ->
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                (0L..6L).forEach { offset ->
-                    val date = displayedWeekStart.plusDays(offset)
-                    val selected = date == selectedDate
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(if (selected) Color(0xFFF2C968) else Color(0xFFFFFDFA))
-                            .clickable { onSelectDate(date) }
-                            .padding(vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(7.dp),
-                    ) {
-                        Text(
-                            date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (selected) Color(0xFF4A3210) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            date.dayOfMonth.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = if (selected) Color(0xFF39264F) else MaterialTheme.colorScheme.onSurface,
-                        )
-                        Box(
-                            Modifier
-                                .size(5.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (date in daysWithTransactions) {
-                                        if (selected) Color(0xFF39264F) else Color(0xFFFFA62B)
-                                    } else {
-                                        Color.Transparent
-                                    },
-                                ),
-                        )
-                    }
+    // Preserve the scroll position while browsing; only reposition when month changes.
+    LaunchedEffect(month) {
+        listState.animateScrollToItem(selectedDate.dayOfMonth - 1)
+    }
+
+    // Once scrolling settles, select the date nearest the center of the strip.
+    LaunchedEffect(listState, month) {
+        snapshotFlow {
+            if (listState.isScrollInProgress) {
+                null
+            } else {
+                val layoutInfo = listState.layoutInfo
+                val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+                layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                    kotlin.math.abs((item.offset + item.size / 2) - viewportCenter)
+                }?.index
+            }
+        }
+            .distinctUntilChanged()
+            .collect { index ->
+                if (index != null && index in 0 until month.lengthOfMonth()) {
+                    val visibleDate = month.atDay(index + 1)
+                    if (visibleDate != selectedDate) onSelectDate(visibleDate)
                 }
+            }
+    }
+
+    LazyRow(
+        state = listState,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(
+            count = month.lengthOfMonth(),
+            key = { index -> month.atDay(index + 1).toEpochDay() },
+        ) { index ->
+            val date = month.atDay(index + 1)
+            val selected = date == selectedDate
+            Column(
+                Modifier
+                    .width(46.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(if (selected) Color(0xFFF2C968) else Color(0xFFFFFDFA))
+                    .clickable { onSelectDate(date) }
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                Text(
+                    date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) Color(0xFF4A3210) else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+                    color = if (selected) Color(0xFF39264F) else MaterialTheme.colorScheme.onSurface,
+                )
+                Box(
+                    Modifier
+                        .size(5.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (date in daysWithTransactions) {
+                                if (selected) Color(0xFF39264F) else Color(0xFFFFA62B)
+                            } else {
+                                Color.Transparent
+                            },
+                        ),
+                )
             }
         }
     }
