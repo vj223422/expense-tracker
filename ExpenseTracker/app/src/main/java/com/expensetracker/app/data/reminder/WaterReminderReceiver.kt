@@ -25,37 +25,70 @@ class WaterReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val profileId = intent.getLongExtra(EXTRA_PROFILE_ID, -1L)
         if (profileId < 0) return
+
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
-            val db = Room.databaseBuilder(context.applicationContext, ExpenseDatabase::class.java, ExpenseDatabase.DATABASE_NAME)
-                .addMigrations(*ExpenseDatabase.allMigrations()).build()
+            var db: ExpenseDatabase? = null
             try {
+                db = Room.databaseBuilder(
+                    context.applicationContext,
+                    ExpenseDatabase::class.java,
+                    ExpenseDatabase.DATABASE_NAME,
+                ).addMigrations(*ExpenseDatabase.allMigrations()).build()
+
                 val settings = db.waterDao().getSettings(profileId) ?: return@launch
                 if (!settings.enabled) return@launch
-                val allowed = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                ensureChannel(context)
+
+                val allowed = Build.VERSION.SDK_INT < 33 ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS,
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                // Notification delivery must not prevent the next alarm from being
+                // scheduled. Android can revoke notification access while the app
+                // is in the background.
                 if (allowed) {
-                    val action = Intent(context, WaterReminderActionReceiver::class.java).apply {
-                        putExtra(WaterReminderActionReceiver.EXTRA_PROFILE_ID, profileId)
-                        putExtra(WaterReminderActionReceiver.EXTRA_AMOUNT_ML, settings.intakePerReminderMl)
+                    try {
+                        ensureChannel(context)
+                        val action = Intent(context, WaterReminderActionReceiver::class.java).apply {
+                            putExtra(WaterReminderActionReceiver.EXTRA_PROFILE_ID, profileId)
+                            putExtra(WaterReminderActionReceiver.EXTRA_AMOUNT_ML, settings.intakePerReminderMl)
+                        }
+                        val actionPi = PendingIntent.getBroadcast(
+                            context,
+                            actionCode(profileId),
+                            action,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                        )
+                        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+                            .setContentTitle("Time to hydrate")
+                            .setContentText("Drink " + settings.intakePerReminderMl + " ml of water")
+                            .setStyle(
+                                NotificationCompat.BigTextStyle().bigText(
+                                    "Daily goal: " + settings.dailyGoalMl + " ml. Tap Done after drinking " +
+                                        settings.intakePerReminderMl + " ml.",
+                                ),
+                            )
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setAutoCancel(true)
+                            .addAction(android.R.drawable.ic_menu_add, "Mark as done", actionPi)
+                            .build()
+                        NotificationManagerCompat.from(context).notify(notificationId(profileId), notification)
+                    } catch (_: SecurityException) {
+                        // Keep scheduling even if Android blocks this notification.
                     }
-                    val actionPi = PendingIntent.getBroadcast(context, actionCode(profileId), action, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                    val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                        .setSmallIcon(android.R.drawable.ic_popup_reminder)
-                        .setContentTitle("Time to hydrate")
-                        .setContentText("Drink " + settings.intakePerReminderMl + " ml of water")
-                        .setStyle(NotificationCompat.BigTextStyle().bigText("Daily goal: " + settings.dailyGoalMl + " ml. Tap Done after drinking " + settings.intakePerReminderMl + " ml."))
-                        .setPriority(NotificationCompat.PRIORITY_HIGH)
-                        .setAutoCancel(true)
-                        .addAction(android.R.drawable.ic_menu_add, "Mark as done", actionPi)
-                        .build()
-                    NotificationManagerCompat.from(context).notify(notificationId(profileId), notification)
                 }
+
                 val updated = settings.copy(nextReminderAtEpochMillis = null)
-                db.waterDao().upsertSettings(updated)
                 WaterReminderScheduler(context.applicationContext).schedule(updated)
+                db.waterDao().upsertSettings(updated)
+            } catch (_: Exception) {
+                // A transient notification/database exception should not crash the
+                // receiver process. The next boot/permission-change event re-arms alarms.
             } finally {
-                db.close()
+                db?.close()
                 pending.finish()
             }
         }
