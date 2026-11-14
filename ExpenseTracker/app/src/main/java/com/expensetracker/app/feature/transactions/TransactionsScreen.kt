@@ -1,6 +1,8 @@
 package com.expensetracker.app.feature.transactions
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +52,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.expensetracker.app.core.designsystem.AnimatedAmountText
@@ -100,39 +104,74 @@ fun TransactionsScreen(onEditExpenseClick: (Long) -> Unit, viewModel: Transactio
 
 @Composable
 private fun TransactionsContent(uiState: TransactionsUiState, actions: TransactionsActions, onEditExpenseClick: (Long) -> Unit, modifier: Modifier = Modifier) {
-    var collapsedDates by remember { mutableStateOf<Set<LocalDate>>(emptySet()) }
-    var filterExpanded by remember { mutableStateOf(true) }
+    var collapsedDates by rememberSaveable { mutableStateOf<Set<LocalDate>>(emptySet()) }
+    var filterExpanded by rememberSaveable { mutableStateOf(false) }
+    var groupByDate by rememberSaveable { mutableStateOf(true) }
     var selectedExpense by remember { mutableStateOf<Expense?>(null) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(uiState.expensesByDate) {
-        collapsedDates = uiState.expensesByDate.map { it.date }.toSet()
-    }
-    Column(modifier.fillMaxSize()) {
+    LaunchedEffect(uiState.selectedMonth) { collapsedDates = emptySet() }
+    Column(modifier.fillMaxSize().background(Color(0xFFFAF6EF))) {
+        TransactionsHeader()
         MonthSelector(uiState.selectedMonth, actions::onPreviousMonth, actions::onNextMonth)
+        MonthlySummaryRow(uiState)
         SearchAndFilterBar(uiState.searchQuery, actions::onSearchQueryChange, filterExpanded) { filterExpanded = !filterExpanded }
         if (filterExpanded) CategoryFilterRow(uiState.selectedCategoryFilter, actions::onFilterChange)
+        DateGroupingToggle(groupByDate = groupByDate, onToggle = { groupByDate = it })
         when {
             uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(strokeWidth = 2.dp) }
             uiState.isEmpty -> {
                 val hasFilter = uiState.selectedCategoryFilter != null || uiState.searchQuery.isNotBlank()
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { EmptyState(Icons.Filled.ReceiptLong, if (hasFilter) "No matching transactions" else "No transactions in ${uiState.selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault()))}", if (hasFilter) "Try a different search or category filter." else "Choose another month or add an expense from the Home tab.") }
             }
-            else -> LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                uiState.expensesByDate.forEach { group ->
-                    val collapsed = group.date in collapsedDates
-                    item(key = "header-${group.date}") {
-                        DateGroupHeader(
-                            date = group.date,
-                            receivedMinor = group.expenses.filter { it.isIncome }.sumOf { it.amountMinor },
-                            spentMinor = group.expenses.filter { !it.isIncome }.sumOf { it.amountMinor },
-                            collapsed = collapsed,
-                        ) {
-                            collapsedDates = if (collapsed) collapsedDates - group.date else collapsedDates + group.date
+            else -> LazyColumn(
+                Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (groupByDate) {
+                    uiState.expensesByDate.forEach { group ->
+                        val collapsed = group.date in collapsedDates
+                        item(key = "header-${group.date}") {
+                            DateGroupHeader(
+                                date = group.date,
+                                receivedMinor = group.expenses.filter { it.isIncome }.sumOf { it.amountMinor },
+                                spentMinor = group.expenses.filter { !it.isIncome }.sumOf { it.amountMinor },
+                                collapsed = collapsed,
+                            ) {
+                                collapsedDates = if (collapsed) collapsedDates - group.date else collapsedDates + group.date
+                            }
+                        }
+                        if (!collapsed) items(group.expenses, key = { it.id }) { expense ->
+                            TransactionCard(
+                                expense = expense,
+                                onDelete = actions::onDeleteExpense,
+                                onClick = { onEditExpenseClick(expense.id) },
+                                onLongClick = { selectedExpense = expense },
+                                onDeleteRequest = { selectedExpense = expense; showDeleteConfirmation = true },
+                            )
                         }
                     }
-                    if (!collapsed) items(group.expenses, key = { it.id }) { expense ->
-                        TransactionCard(expense = expense, onDelete = actions::onDeleteExpense, onClick = { onEditExpenseClick(expense.id) }, onLongClick = { selectedExpense = expense }, onDeleteRequest = { selectedExpense = expense; showDeleteConfirmation = true })
+                } else {
+                    uiState.expensesByDate.forEach { group ->
+                        items(group.expenses, key = { "flat-${it.id}" }) { expense ->
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    expense.date.toRelativeOrFormatted(),
+                                    modifier = Modifier.padding(start = 5.dp, top = 3.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color(0xFF8A673C),
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                TransactionCard(
+                                    expense = expense,
+                                    onDelete = actions::onDeleteExpense,
+                                    onClick = { onEditExpenseClick(expense.id) },
+                                    onLongClick = { selectedExpense = expense },
+                                    onDeleteRequest = { selectedExpense = expense; showDeleteConfirmation = true },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -148,6 +187,106 @@ private fun TransactionsContent(uiState: TransactionsUiState, actions: Transacti
             val expense = selectedExpense ?: return@DeleteTransactionConfirmation
             scope.launch { if (actions.onDeleteExpense(expense)) { showDeleteConfirmation = false; selectedExpense = null } }
         }, onDismiss = { showDeleteConfirmation = false; selectedExpense = null })
+    }
+}
+
+@Composable
+private fun TransactionsHeader() {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Text(
+            "Transactions",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF191D25),
+        )
+        Text(
+            "Your spending, day by day",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color(0xFF555B65),
+        )
+    }
+}
+
+@Composable
+private fun MonthlySummaryRow(uiState: TransactionsUiState) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SummaryTile("Income", uiState.monthlyIncomeMinor, Color(0xFF21834A), Modifier.weight(1f))
+        SummaryTile("Expense", uiState.monthlyExpenseMinor, Color(0xFFE36C27), Modifier.weight(1f))
+        SummaryTile("Remaining", uiState.monthlyRemainingMinor, if (uiState.monthlyRemainingMinor >= 0L) Color(0xFF21834A) else Color(0xFFC33F3F), Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun SummaryTile(label: String, amount: Long, amountColor: Color, modifier: Modifier) {
+    Surface(
+        modifier = modifier.height(82.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFFFFFDFA),
+        shadowElevation = 2.dp,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 11.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFF555B65),
+                maxLines = 1,
+                softWrap = false,
+            )
+            Text(
+                amount.formatAsCurrency(),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+                fontWeight = FontWeight.ExtraBold,
+                color = amountColor,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DateGroupingToggle(groupByDate: Boolean, onToggle: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFF1EAE0),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            listOf(true to "Group by date", false to "All transactions").forEach { (grouped, label) ->
+                val selected = groupByDate == grouped
+                Surface(
+                    onClick = { onToggle(grouped) },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    shape = RoundedCornerShape(13.dp),
+                    color = if (selected) Color(0xFFD9E9FF) else Color.Transparent,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) Color(0xFF0868C9) else Color(0xFF505762),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
