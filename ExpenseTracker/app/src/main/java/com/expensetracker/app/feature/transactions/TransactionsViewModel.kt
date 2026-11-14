@@ -40,6 +40,9 @@ class TransactionsViewModel(
         .filterNotNull()
         .flatMapLatest { profileId ->
             combine(expenseRepository.observeAllExpenses(profileId), categoryFilter, searchQuery, selectedMonth) { expenses, filter, query, month ->
+                val monthExpenses = expenses.filter { YearMonth.from(it.date) == month }
+                val monthlyIncome = monthExpenses.filter { it.isIncome }.sumOf { it.amountMinor }
+                val monthlyExpense = monthExpenses.filter { !it.isIncome }.sumOf { it.amountMinor }
                 val normalizedQuery = query.trim().lowercase()
                 val filtered = expenses.filter { expense ->
                     val matchesMonth = YearMonth.from(expense.date) == month
@@ -60,6 +63,9 @@ class TransactionsViewModel(
                     selectedCategoryFilter = filter,
                     searchQuery = query,
                     selectedMonth = month,
+                    monthlyIncomeMinor = monthlyIncome,
+                    monthlyExpenseMinor = monthlyExpense,
+                    monthlyRemainingMinor = monthlyIncome - monthlyExpense,
                     isLoading = false,
                 )
             }
