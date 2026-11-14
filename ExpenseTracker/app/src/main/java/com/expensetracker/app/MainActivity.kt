@@ -105,7 +105,7 @@ class MainActivity : FragmentActivity() {
             }
         })
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock Kanakku")
+            .setTitle("Unlock FinTrack")
             .setSubtitle("Use fingerprint or your device credentials")
             .setAllowedAuthenticators(authenticators)
             .build()
@@ -178,7 +178,7 @@ private fun LockedAppScreen(onUnlock: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(Icons.Filled.Fingerprint, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 16.dp))
-        Text("Kanakku is locked", style = MaterialTheme.typography.headlineSmall)
+        Text("FinTrack is locked", style = MaterialTheme.typography.headlineSmall)
         Text("Authenticate to view your expenses", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp, bottom = 20.dp))
         Button(onClick = onUnlock) { Text("Unlock") }
     }
