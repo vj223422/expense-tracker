@@ -124,6 +124,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
         Column(
             Modifier
                 .fillMaxSize()
+                .background(Color(0xFFFAF6EF))
                 .padding(padding)
                 .pointerInput(tab) {
                     var totalDrag = 0f
@@ -144,10 +145,19 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     )
                 },
         ) {
-            TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Reminders") }, icon = { Icon(Icons.Default.Notifications, null) })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Notes") }, icon = { Icon(Icons.Default.Notes, null) })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Water") }, icon = { Text("💧") })
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp)) {
+                Text("Reminders", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF30291F))
+                Text("Stay on track with your daily goals", fontSize = 14.sp, color = Color(0xFF715B3A))
+            }
+            TabRow(
+                selectedTabIndex = tab,
+                containerColor = Color(0xFFFAF6EF),
+                contentColor = Color(0xFF4A3210),
+                indicator = {},
+            ) {
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("All", fontWeight = if (tab == 0) FontWeight.Bold else FontWeight.Medium) }, icon = { Icon(Icons.Default.Notifications, null) }, selectedContentColor = Color(0xFF4A3210), unselectedContentColor = Color(0xFF715B3A))
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Water", fontWeight = if (tab == 1) FontWeight.Bold else FontWeight.Medium) }, icon = { Icon(Icons.Default.WaterDrop, null) }, selectedContentColor = Color(0xFF4A3210), unselectedContentColor = Color(0xFF715B3A))
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Notes", fontWeight = if (tab == 2) FontWeight.Bold else FontWeight.Medium) }, icon = { Icon(Icons.Default.Notes, null) }, selectedContentColor = Color(0xFF4A3210), unselectedContentColor = Color(0xFF715B3A))
             }
             if (tab == 0) {
                 OutlinedTextField(
@@ -165,7 +175,7 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     shape = RoundedCornerShape(16.dp),
                 )
                 ReminderContent(filteredReminders, viewModel, onAdd = { editingReminder = null; showReminderEditor = true }, onEdit = { editingReminder = it; showReminderEditor = true })
-            } else if (tab == 1) {
+            } else if (tab == 2) {
                 NotesContent(notes, viewModel, onAdd = { editingNote = null; showNoteEditor = true }, onEdit = { editingNote = it; showNoteEditor = true })
             } else {
                 LazyColumn(
@@ -332,7 +342,7 @@ private fun WaterReminderPermissionNotice(
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1D9)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0D9)),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(14.dp),
@@ -399,12 +409,12 @@ private fun WaterReminderCard(
         } else 0
     } ?: 0
 
-    val cardColor = Color(0xFF0D2237)
-    val panelColor = Color(0xFF102B42)
-    val cyan = Color(0xFF08C9F4)
-    val brightBlue = Color(0xFF0B91FF)
-    val muted = Color(0xFF9FB3C7)
-    val textColor = Color(0xFFEAF3FF)
+    val cardColor = Color(0xFFFFFDFA)
+    val panelColor = Color(0xFFFFF0CF)
+    val cyan = Color(0xFFC18422)
+    val brightBlue = Color(0xFFF2A000)
+    val muted = Color(0xFF715B3A)
+    val textColor = Color(0xFF30291F)
 
     Card(
         modifier = Modifier
@@ -412,7 +422,7 @@ private fun WaterReminderCard(
             .padding(horizontal = 18.dp, vertical = 12.dp),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        border = BorderStroke(1.dp, Color(0xFF183B56)),
+        border = BorderStroke(1.dp, Color(0xFFE7DED0)),
     ) {
         Column(
             Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
@@ -426,7 +436,7 @@ private fun WaterReminderCard(
                     Modifier
                         .size(44.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF183B59)),
+                        .background(Color(0xFFFFF0D1)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Default.WaterDrop, null, tint = cyan, modifier = Modifier.size(24.dp))
@@ -437,14 +447,14 @@ private fun WaterReminderCard(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Text(
-                        "Hydration",
+                        "Water Reminder",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = textColor,
                         maxLines = 1,
                     )
                     Text(
-                        if (settings == null) "Set up your daily hydration" else "${settings.intakePerReminderMl} ml per reminder",
+                        if (settings == null) "Set up your daily water goal" else "${settings.intakePerReminderMl} ml per reminder",
                         style = MaterialTheme.typography.bodySmall,
                         color = muted,
                         maxLines = 1,
@@ -474,7 +484,7 @@ private fun WaterReminderCard(
                             progress = { 1f },
                             modifier = Modifier.fillMaxSize(),
                             strokeWidth = 8.dp,
-                            color = Color(0xFF24455F),
+                            color = Color(0xFFECE5DA),
                             strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
                         CircularProgressIndicator(
@@ -538,7 +548,7 @@ private fun WaterReminderCard(
                             Icon(
                                 Icons.Default.Notifications,
                                 null,
-                                tint = Color(0xFF73B9FF),
+                                tint = Color(0xFFE09A20),
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.size(7.dp))
@@ -558,7 +568,7 @@ private fun WaterReminderCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = panelColor),
-                    border = BorderStroke(1.dp, Color(0xFF1C405C)),
+                    border = BorderStroke(1.dp, Color(0xFFE7DED0)),
                 ) {
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
                         Row(
@@ -568,7 +578,7 @@ private fun WaterReminderCard(
                             Icon(
                                 Icons.Default.CalendarMonth,
                                 null,
-                                tint = Color(0xFF79B7FF),
+                                tint = Color(0xFFC18422),
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.size(9.dp))
@@ -583,7 +593,7 @@ private fun WaterReminderCard(
                             Row(
                                 modifier = Modifier
                                     .clip(CircleShape)
-                                    .background(Color(0xFF1A3A55))
+                                    .background(Color(0xFFF2EDE4))
                                     .clickable(onClick = onEdit)
                                     .padding(horizontal = 11.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -608,7 +618,7 @@ private fun WaterReminderCard(
                         ) {
                             WaterScheduleCell(
                                 Icons.Default.PlayArrow,
-                                Color(0xFF00E6B2),
+                                Color(0xFF21834A),
                                 "START",
                                 formatWaterTime(settings.startTimeMinutes),
                                 Modifier.weight(1f),
@@ -616,7 +626,7 @@ private fun WaterReminderCard(
                             ScheduleDivider()
                             WaterScheduleCell(
                                 Icons.Default.AccessTime,
-                                Color(0xFF79B7FF),
+                                Color(0xFFC18422),
                                 "EVERY",
                                 formatWaterInterval(frequencyMinutes),
                                 Modifier.weight(1f),
@@ -624,7 +634,7 @@ private fun WaterReminderCard(
                             ScheduleDivider()
                             WaterScheduleCell(
                                 Icons.Default.Stop,
-                                Color(0xFFFF647E),
+                                Color(0xFFE36C27),
                                 "END",
                                 formatWaterTime(settings.endTimeMinutes),
                                 Modifier.weight(1f),
@@ -632,7 +642,7 @@ private fun WaterReminderCard(
                             ScheduleDivider()
                             WaterScheduleCell(
                                 Icons.Default.Notifications,
-                                Color(0xFF79B7FF),
+                                Color(0xFFC18422),
                                 "TOTAL",
                                 "${reminderCount}",
                                 Modifier.weight(1f),
@@ -682,7 +692,7 @@ private fun WaterReminderCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.cardColors(containerColor = panelColor),
-                                border = BorderStroke(1.dp, Color(0xFF1C405C)),
+                                border = BorderStroke(1.dp, Color(0xFFE7DED0)),
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -694,7 +704,7 @@ private fun WaterReminderCard(
                                         modifier = Modifier
                                             .size(34.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFF183B59)),
+                                            .background(Color(0xFFFFF0D1)),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
@@ -733,7 +743,7 @@ private fun WaterReminderCard(
                                         Icon(
                                             Icons.Default.Delete,
                                             contentDescription = "Delete water log",
-                                            tint = Color(0xFFFF7187),
+                                            tint = Color(0xFFC33F3F),
                                             modifier = Modifier.size(14.dp),
                                         )
                                     }
@@ -796,9 +806,9 @@ private fun WaterReminderCard(
                             .height(64.dp),
                         shape = RoundedCornerShape(20.dp),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFF9BCBFF),
+                            contentColor = Color(0xFF8A673C),
                         ),
-                        border = BorderStroke(1.dp, Color(0xFF2A506D)),
+                        border = BorderStroke(1.dp, Color(0xFFE7DED0)),
                     ) {
                         Icon(Icons.Default.Settings, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
@@ -832,12 +842,12 @@ private fun ScheduleDivider(horizontal: Boolean = false) {
             Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(Color(0xFF31516A))
+                .background(Color(0xFFE7DED0))
         } else {
             Modifier
                 .width(1.dp)
                 .height(42.dp)
-                .background(Color(0xFF31516A))
+                .background(Color(0xFFE7DED0))
         }
     )
 }
@@ -871,7 +881,7 @@ private fun WaterScheduleCell(
                     label,
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
-                    color = Color(0xFFA6B8CA),
+                    color = Color(0xFF8A673C),
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     softWrap = false,
@@ -889,7 +899,7 @@ private fun WaterScheduleCell(
                 fontSize = 13.sp,
                 lineHeight = 17.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFEAF3FF),
+                color = Color(0xFF30291F),
                 maxLines = 2,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
@@ -989,7 +999,7 @@ private fun WaterHistoryGraph(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = panelColor),
-        border = BorderStroke(1.dp, Color(0xFF1C405C)),
+        border = BorderStroke(1.dp, Color(0xFFE7DED0)),
     ) {
         Column(
             Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -997,7 +1007,7 @@ private fun WaterHistoryGraph(
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Hydration history", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = textColor)
+                    Text("Water intake history", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = textColor)
                     Text(
                         when (period) {
                             WaterGraphPeriod.DAILY -> "Hourly intake today"
@@ -1012,7 +1022,7 @@ private fun WaterHistoryGraph(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF183B59))
+                            .background(Color(0xFFFFF0D1))
                             .clickable { menuExpanded = true }
                             .padding(horizontal = 10.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1071,7 +1081,7 @@ private fun WaterHistoryGraph(
                     val fraction = index / 3f
                     val y = verticalPadding + chartHeight * fraction
                     drawLine(
-                        color = Color(0xFF28465E),
+                        color = Color(0xFFE7DED0),
                         start = Offset(horizontalPadding, y),
                         end = Offset(size.width - horizontalPadding, y),
                         strokeWidth = 1.dp.toPx(),
@@ -1083,7 +1093,7 @@ private fun WaterHistoryGraph(
                     val left = horizontalPadding + index * barSlot + (barSlot - barWidth) / 2f
                     val top = verticalPadding + chartHeight - barHeight
                     drawRoundRect(
-                        color = if (point.value > 0) cyan else Color(0xFF24455F),
+                        color = if (point.value > 0) cyan else Color(0xFFECE5DA),
                         topLeft = Offset(left, top),
                         size = androidx.compose.ui.geometry.Size(
                             barWidth,
