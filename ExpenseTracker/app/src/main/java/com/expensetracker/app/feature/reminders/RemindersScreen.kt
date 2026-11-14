@@ -65,6 +65,13 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import android.app.AlarmManager
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -101,6 +108,10 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
     var showNoteEditor by remember { mutableStateOf(false) }
     var editingNote by remember { mutableStateOf<NoteEntity?>(null) }
     var showWaterSetup by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val notificationsAllowed = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    val alarmManager = context.getSystemService(AlarmManager::class.java)
+    val exactAlarmsAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
 
     val filteredReminders = remember(reminders, searchQuery) {
         val query = searchQuery.trim()
@@ -162,16 +173,36 @@ fun RemindersScreen(viewModel: RemindersViewModel = koinViewModel()) {
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 10.dp),
                 ) {
                     item {
-                        WaterReminderCard(
-                            settings = waterSettings,
-                            intake = waterIntake,
-                            onToggle = { enabled ->
-                                if (enabled && waterSettings == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
-                            },
-                            onEdit = { showWaterSetup = true },
-                            onAdd = { viewModel.addWaterIntake(waterSettings?.intakePerReminderMl ?: 300) },
-                            onDelete = viewModel::deleteWaterIntake,
-                        )
+                        Column {
+                            if (waterSettings?.enabled == true && (!notificationsAllowed || !exactAlarmsAllowed)) {
+                                WaterReminderPermissionNotice(
+                                    exactAlarmsAllowed = exactAlarmsAllowed,
+                                    notificationsAllowed = notificationsAllowed,
+                                    onOpenSettings = {
+                                        val settingsIntent = if (!exactAlarmsAllowed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                                data = Uri.parse("package:${context.packageName}")
+                                            }
+                                        } else {
+                                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                            }
+                                        }
+                                        context.startActivity(settingsIntent)
+                                    },
+                                )
+                            }
+                            WaterReminderCard(
+                                settings = waterSettings,
+                                intake = waterIntake,
+                                onToggle = { enabled ->
+                                    if (enabled && waterSettings == null) showWaterSetup = true else viewModel.toggleWaterReminder(enabled)
+                                },
+                                onEdit = { showWaterSetup = true },
+                                onAdd = { viewModel.addWaterIntake(waterSettings?.intakePerReminderMl ?: 300) },
+                                onDelete = viewModel::deleteWaterIntake,
+                            )
+                        }
                     }
                 }
             }
@@ -291,6 +322,45 @@ private fun ReminderDetailRow(icon: androidx.compose.ui.graphics.vector.ImageVec
     }
 }
 
+
+@Composable
+private fun WaterReminderPermissionNotice(
+    exactAlarmsAllowed: Boolean,
+    notificationsAllowed: Boolean,
+    onOpenSettings: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1D9)),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                "Water reminders need attention",
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF70451D),
+            )
+            Text(
+                when {
+                    !notificationsAllowed -> "Notifications are blocked for this app. Android may trigger the alarm, but you will not see the reminder."
+                    !exactAlarmsAllowed -> "Exact-alarm access is off. Android may delay water reminders, especially while the phone is idle."
+                    else -> "Check notification and alarm access in Android settings."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF70451D),
+            )
+            Button(
+                onClick = onOpenSettings,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text(if (!exactAlarmsAllowed) "Allow exact alarms" else "Enable notifications")
+            }
+        }
+    }
+}
 
 @Composable
 private fun WaterReminderCard(
