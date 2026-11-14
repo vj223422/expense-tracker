@@ -218,12 +218,12 @@ private fun MonthlySummaryRow(uiState: TransactionsUiState) {
     ) {
         SummaryTile("Income", uiState.monthlyIncomeMinor, Color(0xFF21834A), Modifier.weight(1f))
         SummaryTile("Expense", uiState.monthlyExpenseMinor, Color(0xFFE36C27), Modifier.weight(1f))
-        SummaryTile("Remaining", uiState.monthlyRemainingMinor, if (uiState.monthlyRemainingMinor >= 0L) Color(0xFF21834A) else Color(0xFFC33F3F), Modifier.weight(1f))
+        SummaryTile("Remaining", uiState.monthlyRemainingMinor, if (uiState.monthlyRemainingMinor >= 0L) Color(0xFF21834A) else Color(0xFFC33F3F), Modifier.weight(1f), if (uiState.monthlyBudgetMinor == null) "Set budget" else null)
     }
 }
 
 @Composable
-private fun SummaryTile(label: String, amount: Long, amountColor: Color, modifier: Modifier) {
+private fun SummaryTile(label: String, amount: Long, amountColor: Color, modifier: Modifier, displayValue: String? = null) {
     Surface(
         modifier = modifier.height(82.dp),
         shape = RoundedCornerShape(18.dp),
@@ -242,7 +242,7 @@ private fun SummaryTile(label: String, amount: Long, amountColor: Color, modifie
                 softWrap = false,
             )
             Text(
-                amount.formatAsCurrency(),
+                displayValue ?: amount.formatAsCurrency(),
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 10.sp),
                 fontWeight = FontWeight.ExtraBold,
                 color = amountColor,
