@@ -77,8 +77,8 @@ class WaterReminderReceiver : BroadcastReceiver() {
                             .addAction(android.R.drawable.ic_menu_add, "Mark as done", actionPi)
                             .build()
                         NotificationManagerCompat.from(context).notify(notificationId(profileId), notification)
-                    } catch (_: SecurityException) {
-                        // Keep scheduling even if Android blocks this notification.
+                    } catch (_: Exception) {
+                        // Keep scheduling even if Android blocks or fails to post this notification.
                     }
                 }
 
