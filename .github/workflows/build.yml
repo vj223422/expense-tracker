@@ -2,7 +2,7 @@ name: Build debug APK
 
 on:
   push:
-    branches: [ main, fix/water-reminder-reliability ]
+    branches: [ main, fix/water-reminder-reliability, fix/calendar-continuous-scroll ]
   workflow_dispatch:
 
 jobs:
