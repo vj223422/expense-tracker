@@ -104,7 +104,7 @@ fun TransactionsScreen(onEditExpenseClick: (Long) -> Unit, viewModel: Transactio
 
 @Composable
 private fun TransactionsContent(uiState: TransactionsUiState, actions: TransactionsActions, onEditExpenseClick: (Long) -> Unit, modifier: Modifier = Modifier) {
-    var collapsedDates by rememberSaveable { mutableStateOf<Set<LocalDate>>(emptySet()) }
+    var collapsedDates by remember { mutableStateOf<Set<LocalDate>>(emptySet()) }
     var filterExpanded by rememberSaveable { mutableStateOf(false) }
     var groupByDate by rememberSaveable { mutableStateOf(true) }
     var selectedExpense by remember { mutableStateOf<Expense?>(null) }
@@ -243,7 +243,7 @@ private fun SummaryTile(label: String, amount: Long, amountColor: Color, modifie
             )
             Text(
                 amount.formatAsCurrency(),
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 10.sp),
                 fontWeight = FontWeight.ExtraBold,
                 color = amountColor,
                 maxLines = 1,
@@ -401,75 +401,56 @@ private fun DateGroupHeader(
     onClick: () -> Unit,
 ) {
     val safeColor = LocalExtendedColors.current.safe
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFFFF0DF),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Text(
                 date.toRelativeOrFormatted(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF70451D),
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            // Keep both totals on one fixed-width row. The values are intentionally
-            // single-line so amounts up to 7 digits never push the expense total
-            // onto a second line or change the header height.
-            Row(
-                Modifier.width(220.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End,
-            ) {
-                Row(
-                    Modifier.width(100.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    Text("↑", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = safeColor)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "Spent ${spentMinor.formatAsCurrency()}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+                if (receivedMinor > 0L) {
                     Text(
-                        receivedMinor.formatAsCurrency(),
+                        "In ${receivedMinor.formatAsCurrency()}",
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
                         color = safeColor,
                         maxLines = 1,
                         softWrap = false,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.padding(start = 2.dp),
-                    )
-                }
-                Text(
-                    "|",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-                Row(
-                    Modifier.width(100.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    Text("↓", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                    Text(
-                        spentMinor.formatAsCurrency(),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.error,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.padding(start = 2.dp),
                     )
                 }
             }
             Icon(
                 if (collapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
                 if (collapsed) "Expand" else "Collapse",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 6.dp).size(22.dp),
+                tint = Color(0xFF70451D),
+                modifier = Modifier.size(20.dp),
             )
         }
     }
 }
+
 @Composable
 private fun TransactionCard(expense: Expense, onDelete: suspend (Expense) -> Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onDeleteRequest: (Expense) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest), elevation = CardDefaults.cardElevation(1.dp)) {
