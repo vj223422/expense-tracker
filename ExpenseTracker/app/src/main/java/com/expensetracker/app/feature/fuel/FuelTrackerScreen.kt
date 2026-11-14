@@ -69,29 +69,20 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.max
 
-private val FuelBlue: Color
-    @Composable get() = MaterialTheme.colorScheme.primary
-private val FuelGreen = Color(0xFF0FAE68)
-private val FuelOrange = Color(0xFFF58B18)
-private val FuelPurple = Color(0xFF7B6BE8)
-private val FuelInk: Color
-    @Composable get() = MaterialTheme.colorScheme.onSurface
-private val FuelMuted: Color
-    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
-private val FuelBorder: Color
-    @Composable get() = MaterialTheme.colorScheme.outlineVariant
-private val FuelPage: Color
-    @Composable get() = MaterialTheme.colorScheme.background
-private val FuelHero: Color
-    @Composable get() = MaterialTheme.colorScheme.surfaceContainerHigh
-private val FuelGreenSoft: Color
-    @Composable get() = MaterialTheme.colorScheme.tertiaryContainer
-private val FuelBlueSoft: Color
-    @Composable get() = MaterialTheme.colorScheme.primaryContainer
-private val FuelOrangeSoft: Color
-    @Composable get() = MaterialTheme.colorScheme.secondaryContainer
-private val FuelPurpleSoft: Color
-    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+private val FuelBlue = Color(0xFFC18422)
+private val FuelGreen = Color(0xFFC18422)
+private val FuelOrange = Color(0xFFB87918)
+private val FuelPurple = Color(0xFF8A673C)
+private val FuelInk = Color(0xFF30291F)
+private val FuelMuted = Color(0xFF715B3A)
+private val FuelBorder = Color(0xFFE7DED0)
+private val FuelPage = Color(0xFFFAF6EF)
+private val FuelCard = Color(0xFFFFFDFA)
+private val FuelHero = Color(0xFFFFF0CF)
+private val FuelGreenSoft = Color(0xFFFFF0CF)
+private val FuelBlueSoft = Color(0xFFFFF0CF)
+private val FuelOrangeSoft = Color(0xFFFFF0CF)
+private val FuelPurpleSoft = Color(0xFFFFF0CF)
 
 @Composable
 fun FuelTrackerScreen(
@@ -139,10 +130,28 @@ fun FuelTrackerScreen(
     }.takeLast(12)
 
     LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        Modifier.fillMaxSize().background(FuelPage),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    "Fuel Tracker",
+                    color = FuelInk,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Text(
+                    "Track every fill. Know every kilometre.",
+                    color = FuelMuted,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
         item {
             FuelVehicleHero(
                 lastCycleDistance = lastCycleDistance,
@@ -201,7 +210,7 @@ private fun FuelVehicleHero(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(FuelHero),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0DCE0)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
     ) {
         Box(
             modifier = Modifier
@@ -427,7 +436,7 @@ private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageV
     Surface(
         modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(15.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = FuelCard,
         border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
     ) {
         Row(
@@ -481,7 +490,7 @@ private fun FuelKpi(title: String, value: String, subtitle: String, icon: ImageV
 @Composable
 private fun FuelRangeSelector(selected: String, onSelected: (String) -> Unit) {
     val options = listOf("1M", "3M", "6M", "1Y", "All")
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = Color(0xFFFFF0D9)) {
         Row(Modifier.padding(3.dp)) {
             options.forEach { option ->
                 Surface(
@@ -522,7 +531,7 @@ private fun FuelCharts(trips: List<FuelTripInsight>) {
 
 @Composable
 private fun FuelChartCard(title: String, icon: ImageVector, accent: Color, badge: String, modifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(modifier, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
+    Surface(modifier, shape = RoundedCornerShape(16.dp), color = FuelCard, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, tint = accent, modifier = Modifier.size(25.dp))
@@ -618,7 +627,7 @@ private fun FuelHighlight(
     Surface(
         modifier = modifier.height(180.dp),
         shape = RoundedCornerShape(15.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = FuelCard,
         border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
     ) {
         Column(
@@ -669,8 +678,8 @@ private fun FuelHistoryHeader(count: Int, onAdd: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Default.History, null, tint = FuelMuted, modifier = Modifier.size(31.dp))
         Spacer(Modifier.width(9.dp))
-        Text("Recent Fuel History", color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        TextButton(onClick = onAdd) { Text("View All", color = FuelBlue, fontWeight = FontWeight.Bold) }
+        Text("Fuel History", color = FuelInk, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Button(onClick = onAdd, shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2A000), contentColor = Color.White)) { Icon(Icons.Default.Add, null, modifier = Modifier.size(17.dp)); Spacer(Modifier.width(5.dp)); Text("Add Fuel", fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -707,7 +716,7 @@ private fun FuelHistoryRow(log: FuelLogEntity, onDelete: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = FuelCard,
         border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder),
     ) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
@@ -903,7 +912,7 @@ private fun FuelHistoryMetric(
 
 @Composable
 private fun FuelEmptyState(onAdd: () -> Unit) {
-    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
+    Surface(shape = RoundedCornerShape(16.dp), color = FuelCard, border = androidx.compose.foundation.BorderStroke(1.dp, FuelBorder)) {
         Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.LocalGasStation, null, tint = FuelBlue, modifier = Modifier.size(42.dp))
             Spacer(Modifier.height(10.dp))
@@ -940,7 +949,7 @@ private fun AddFuelDialog(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = FuelCard,
         tonalElevation = 4.dp,
         dragHandle = {
             Box(
@@ -948,7 +957,7 @@ private fun AddFuelDialog(
                     .padding(top = 10.dp)
                     .size(width = 42.dp, height = 4.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)),
+                    .background(FuelMuted.copy(alpha = 0.35f)),
             )
         },
     ) {
@@ -984,13 +993,13 @@ private fun AddFuelDialog(
                 Column(Modifier.weight(1f)) {
                     Text(
                         "Add fuel fill",
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = FuelInk,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         "Record this fill to track mileage",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = FuelMuted,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -998,7 +1007,7 @@ private fun AddFuelDialog(
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = FuelMuted,
                     )
                 }
             }
@@ -1006,7 +1015,7 @@ private fun AddFuelDialog(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                color = Color(0xFFFFF0D9),
             ) {
                 Row(
                     modifier = Modifier
@@ -1026,13 +1035,13 @@ private fun AddFuelDialog(
                         Text(
                             "Fill date",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = FuelMuted,
                         )
                         Text(
                             date.format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy", Locale.ENGLISH)),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = FuelInk,
                         )
                     }
                     Text(
@@ -1046,7 +1055,7 @@ private fun AddFuelDialog(
 
             Text(
                 "FILL DETAILS",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = FuelMuted,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -1107,10 +1116,10 @@ private fun AddFuelDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = FuelGreen.copy(alpha = 0.09f),
+                    color = Color(0xFFFFF0CF),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        FuelGreen.copy(alpha = 0.18f),
+                        Color(0xFFE7DED0),
                     ),
                 ) {
                     Row(
@@ -1127,19 +1136,19 @@ private fun AddFuelDialog(
                         Column(Modifier.weight(1f)) {
                             Text(
                                 "Total fuel cost",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = FuelMuted,
                                 style = MaterialTheme.typography.labelSmall,
                             )
                             Text(
                                 "${currency(totalCost)}",
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = FuelInk,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
                         }
                         Text(
                             "%.2f L × ₹%.2f".format(litersValue, priceValue),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = FuelMuted,
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
@@ -1148,7 +1157,7 @@ private fun AddFuelDialog(
 
             Text(
                 "Saving this fill closes the previous open cycle using this date and odometer.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = FuelMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
 
@@ -1224,7 +1233,7 @@ private fun List<Double>.averageOrNull(): Double? = if (isEmpty()) null else ave
 @Composable
 private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
     val green = FuelGreen
-    val grid = MaterialTheme.colorScheme.outlineVariant
+    val grid = FuelBorder
     Canvas(modifier) {
         val left = 10f
         val right = size.width - 4f
@@ -1260,7 +1269,7 @@ private fun FuelLineChart(values: List<Double>, modifier: Modifier = Modifier) {
 @Composable
 private fun FuelBarChart(values: List<Double>, modifier: Modifier = Modifier) {
     val blue = FuelBlue
-    val grid = MaterialTheme.colorScheme.outlineVariant
+    val grid = FuelBorder
     Canvas(modifier) {
         val left = 10f
         val right = size.width - 4f
