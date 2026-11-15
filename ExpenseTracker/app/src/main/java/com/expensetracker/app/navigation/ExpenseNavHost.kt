@@ -105,7 +105,7 @@ fun ExpenseTrackerApp(
         Scaffold(
             modifier = Modifier,
             topBar = {
-                if (showChrome) {
+                if (showTopBar) {
                     if (currentRoute == Destination.FuelTracker.route) {
                         AppTopBar(
                             title = "Fuel & Mileage",
@@ -173,6 +173,9 @@ fun ExpenseTrackerApp(
                 composable(Destination.Dashboard.route) {
                     DashboardScreen(
                         onAddExpenseClick = { navController.navigate(Destination.AddExpense.routeForAdd()) },
+                        onFuelClick = { navController.navigate(Destination.FuelTracker.route) { launchSingleTop = true } },
+                        onRemindersClick = { navController.navigate(Destination.Reminders.route) { launchSingleTop = true } },
+                        onInsightsClick = { navController.navigate(Destination.Insights.route) { launchSingleTop = true } },
                         onAddIncomeClick = { navController.navigate(Destination.AddExpense.routeForIncome()) },
                         onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) },
                         onSeeAllTransactionsClick = { navController.navigate(Destination.Transactions.route) { launchSingleTop = true; restoreState = true } },
