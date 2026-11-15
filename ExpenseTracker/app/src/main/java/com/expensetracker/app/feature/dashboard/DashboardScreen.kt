@@ -161,7 +161,7 @@ fun DashboardScreen(
             contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item { HomeHeader(onSeeAllTransactionsClick, onRemindersClick, onRemindersClick) }
+            item { HomeHeader(onSeeAllTransactionsClick, onRemindersClick) }
             item { GreetingBlock() }
             item { MonthCalendar(uiState.yearMonth, uiState.selectedDate, uiState.daysWithTransactions, viewModel::onPreviousMonth, viewModel::onNextMonth, viewModel::onSelectDate) }
             item { SpendingOverviewCard(uiState, viewModel::onRemainingClick) }
