@@ -144,7 +144,7 @@ fun DashboardScreen(
     }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFFF7F8FF),
+        containerColor = RefCanvas,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
@@ -158,7 +158,7 @@ fun DashboardScreen(
         },
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFF7F8FF)).padding(innerPadding),
+            modifier = Modifier.fillMaxSize().background(RefCanvas).padding(innerPadding),
             contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -200,8 +200,11 @@ fun DashboardScreen(
 }
 
 private val RefBlue = Color(0xFF2852B8)
-private val RefPaleBlue = Color(0xFFE8EEFF)
-private val RefCard = Color(0xFFFCFCFF)
+private val RefPaleBlue = Color(0xFFE5ECFF)
+private val RefCard = Color(0xFFFEFDFF)
+private val RefInk = Color(0xFF111827)
+private val RefMuted = Color(0xFF4B5568)
+private val RefCanvas = Color(0xFFF7F7FF)
 
 @Composable
 private fun HomeHeader(onSearch: () -> Unit, onNotifications: () -> Unit, onProfile: () -> Unit) {
@@ -211,8 +214,8 @@ private fun HomeHeader(onSearch: () -> Unit, onNotifications: () -> Unit, onProf
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text("FinTrack", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color(0xFF12182A))
-            Text("Expense Tracker", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4E5668))
+            Text("FinTrack", style = MaterialTheme.typography.titleLarge.copy(fontSize = 25.sp, lineHeight = 29.sp), fontWeight = FontWeight.ExtraBold, color = RefInk)
+            Text("Expense Tracker", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = RefMuted)
         }
         IconButton(onClick = onSearch) { Icon(Icons.Default.Search, "Search", tint = Color(0xFF151B2A), modifier = Modifier.size(26.dp)) }
         IconButton(onClick = onNotifications) { Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = Color(0xFF151B2A), modifier = Modifier.size(26.dp)) }
@@ -225,8 +228,8 @@ private fun HomeHeader(onSearch: () -> Unit, onNotifications: () -> Unit, onProf
 @Composable
 private fun GreetingBlock() {
     Column(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Text("Good Afternoon, Vijay 👋", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color(0xFF111827))
-        Text("Here's your spending overview", style = MaterialTheme.typography.bodyLarge, color = Color(0xFF4D5669))
+        Text("Good Afternoon, Vijay 👋", style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 31.sp), fontWeight = FontWeight.ExtraBold, color = RefInk)
+        Text("Here's your spending overview", style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp), color = RefMuted)
     }
 }
 
@@ -252,7 +255,7 @@ private fun MonthCalendar(month: YearMonth, selectedDate: LocalDate, transaction
                 items(month.lengthOfMonth(), key = { month.atDay(it + 1).toEpochDay() }) { index ->
                     val date = month.atDay(index + 1)
                     val selected = date == selectedDate
-                    Surface(onClick = { onSelect(date) }, shape = RoundedCornerShape(18.dp), color = if (selected) RefBlue else Color(0xFFF7F8FD), shadowElevation = 1.dp, modifier = Modifier.width(61.dp).height(86.dp)) {
+                    Surface(onClick = { onSelect(date) }, shape = RoundedCornerShape(18.dp), color = if (selected) RefBlue else Color(0xFFF7F8FD), shadowElevation = 1.dp, modifier = Modifier.width(43.dp).height(76.dp)) {
                         Column(Modifier.fillMaxSize().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()), style = MaterialTheme.typography.labelMedium, color = if (selected) Color.White else Color(0xFF343B4B))
                             Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = if (selected) Color.White else Color(0xFF111827))
@@ -272,10 +275,10 @@ private fun SpendingOverviewCard(state: DashboardUiState, onBudgetClick: () -> U
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("This Month  ⌄", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF17213A))
-                    Text(state.totalSpentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color(0xFF111827))
-                    Text(if (state.effectiveBudgetMinor != null) "${(state.overallProgress.coerceIn(0f, 1f) * 100).toInt()}% of budget used" else "Set a monthly budget", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4E5668))
+                    Text(state.totalSpentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp, lineHeight = 42.sp), fontWeight = FontWeight.ExtraBold, color = RefInk)
+                    Text(if (state.effectiveBudgetMinor != null) "${(state.overallProgress.coerceIn(0f, 1f) * 100).toInt()}% of budget used" else "Set a monthly budget", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = RefMuted)
                 }
-                SpendingSparkline(Modifier.width(125.dp).height(75.dp))
+                SpendingSparkline(Modifier.width(150.dp).height(82.dp))
             }
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(19.dp)).background(Color(0xFFF9FAFF)).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 SummaryColumn("Income", state.totalIncomeMinor, Icons.Default.ArrowDownward, Color(0xFF27833F), Modifier.weight(1f))
