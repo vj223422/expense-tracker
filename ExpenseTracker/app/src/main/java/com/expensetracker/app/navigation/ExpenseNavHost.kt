@@ -137,8 +137,8 @@ fun ExpenseTrackerApp(
             bottomBar = {
                 if (showChrome) {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 0.dp,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 3.dp,
                     ) {
                         bottomNavItems.forEach { item ->
                             val selected = backStackEntry?.destination?.hierarchy?.any { it.route == item.destination.route } == true
@@ -152,7 +152,7 @@ fun ExpenseTrackerApp(
                                     }
                                 },
                                 icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = item.label) },
-                                label = { Text(item.label, style = MaterialTheme.typography.labelMedium) },
+                                label = { Text(item.label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
                                 alwaysShowLabel = true,
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = MaterialTheme.colorScheme.primary,

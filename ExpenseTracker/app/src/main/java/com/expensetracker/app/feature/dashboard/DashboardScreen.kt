@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -34,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -43,6 +45,7 @@ import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -107,11 +110,11 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
         is DashboardEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
         is DashboardEffect.ShowError -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
     } } }
-    Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
+    Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, floatingActionButton = { ExtendedFloatingActionButton(onClick = onAddExpenseClick, icon = { Icon(Icons.Default.Add, contentDescription = null) }, text = { Text("Add expense", maxLines = 1) }) }) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFFAF6EF)).padding(innerPadding),
-            contentPadding = PaddingValues(start = 18.dp, top = 10.dp, end = 18.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(innerPadding),
+            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 104.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item { DashboardGreeting() }
             item { MonthSelector(uiState.yearMonth, viewModel::onPreviousMonth, viewModel::onNextMonth) }
@@ -158,17 +161,17 @@ private fun DashboardGreeting() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Good evening", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Track  •  Split  •  Save", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Good evening", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Track  •  Split  •  Save", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Surface(
             shape = CircleShape,
-            color = Color(0xFFFFF0CF),
+            color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.size(46.dp),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.CalendarMonth, contentDescription = "Calendar", tint = Color(0xFF9A7439), modifier = Modifier.size(22.dp))
+                Icon(Icons.Outlined.CalendarMonth, contentDescription = "Calendar", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(22.dp))
             }
         }
     }
@@ -178,15 +181,15 @@ private fun DashboardGreeting() {
 private fun MonthSelector(yearMonth: YearMonth, onPreviousMonth: () -> Unit, onNextMonth: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = Color(0xFFF2EDE4),
-        modifier = Modifier.border(1.dp, Color(0xFFE7DED0), RoundedCornerShape(18.dp)),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
     ) {
         Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             IconButton(onClick = onPreviousMonth) { Icon(Icons.Default.ChevronLeft, "Previous month") }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(19.dp), tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(9.dp))
-                Text(yearMonth.toDisplayString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(yearMonth.toDisplayString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             IconButton(onClick = onNextMonth) { Icon(Icons.Default.ChevronRight, "Next month") }
         }
@@ -199,85 +202,62 @@ private fun CalendarWeekStrip(
     daysWithTransactions: Set<LocalDate>,
     onSelectDate: (LocalDate) -> Unit,
 ) {
-    val weekStart = selectedDate.minusDays((selectedDate.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
+    val month = YearMonth.from(selectedDate)
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = selectedDate.dayOfMonth - 1,
+    )
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(Unit) {
-                var dragDistance = 0f
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, delta -> dragDistance += delta },
-                    onDragEnd = {
-                        when {
-                            dragDistance < -48f -> onSelectDate(selectedDate.plusDays(7))
-                            dragDistance > 48f -> onSelectDate(selectedDate.minusDays(7))
-                        }
-                        dragDistance = 0f
-                    },
-                    onDragCancel = { dragDistance = 0f },
-                )
-            },
-        contentAlignment = Alignment.Center,
+    // Preserve the scroll position while browsing; only reposition when month changes.
+    LaunchedEffect(month) {
+        listState.animateScrollToItem(selectedDate.dayOfMonth - 1)
+    }
+
+
+    LazyRow(
+        state = listState,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        AnimatedContent(
-            targetState = weekStart,
-            transitionSpec = {
-                val direction = if (targetState.isAfter(initialState)) 1 else -1
-                (
-                    slideInHorizontally(
-                        animationSpec = tween(260, easing = FastOutSlowInEasing),
-                    ) { fullWidth -> direction * fullWidth } + fadeIn(tween(180))
-                ).togetherWith(
-                    slideOutHorizontally(
-                        animationSpec = tween(260, easing = FastOutSlowInEasing),
-                    ) { fullWidth -> -direction * fullWidth } + fadeOut(tween(180))
-                )
-            },
-            label = "calendar-week-transition",
-        ) { displayedWeekStart ->
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
+        items(
+            count = month.lengthOfMonth(),
+            key = { index -> month.atDay(index + 1).toEpochDay() },
+        ) { index ->
+            val date = month.atDay(index + 1)
+            val selected = date == selectedDate
+            Column(
+                Modifier
+                    .width(46.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow)
+                    .clickable { onSelectDate(date) }
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(7.dp),
             ) {
-                (0L..6L).forEach { offset ->
-                    val date = displayedWeekStart.plusDays(offset)
-                    val selected = date == selectedDate
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(if (selected) Color(0xFFF2C968) else Color(0xFFFFFDFA))
-                            .clickable { onSelectDate(date) }
-                            .padding(vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(7.dp),
-                    ) {
-                        Text(
-                            date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (selected) Color(0xFF4A3210) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            date.dayOfMonth.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = if (selected) Color(0xFF39264F) else MaterialTheme.colorScheme.onSurface,
-                        )
-                        Box(
-                            Modifier
-                                .size(5.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (date in daysWithTransactions) {
-                                        if (selected) Color(0xFF39264F) else Color(0xFFFFA62B)
-                                    } else {
-                                        Color.Transparent
-                                    },
-                                ),
-                        )
-                    }
-                }
+                Text(
+                    date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                )
+                Box(
+                    Modifier
+                        .size(5.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (date in daysWithTransactions) {
+                                if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.tertiary
+                            } else {
+                                Color.Transparent
+                            },
+                        ),
+                )
             }
         }
     }
@@ -287,27 +267,28 @@ private fun CalendarWeekStrip(
 private fun DailyExpenseCard(date: LocalDate, spentMinor: Long) {
     Surface(
         shape = RoundedCornerShape(26.dp),
-        color = Color.Transparent,
-        shadowElevation = 2.dp,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
     ) {
         Row(
             Modifier.fillMaxWidth()
-                .background(Brush.linearGradient(listOf(Color(0xFFFFF0D1), Color(0xFFF7E5BE))))
-                .padding(horizontal = 18.dp, vertical = 18.dp),
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.CalendarMonth, null, tint = Color(0xFF6E5735), modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.CalendarMonth, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleSmall, color = Color(0xFF715B3A), fontWeight = FontWeight.SemiBold)
+                    Text(date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color(0xFF30291F))
-                Text("Total expense", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF715B3A))
+                Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text("Total expense", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
-            Surface(shape = CircleShape, color = Color.White.copy(alpha = .55f), modifier = Modifier.size(48.dp)) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, modifier = Modifier.size(48.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.ReceiptLong, null, tint = Color(0xFF70451D), modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -323,9 +304,9 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
 
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = Color(0xFFFFFDFA),
-        tonalElevation = 1.dp,
-        shadowElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
     ) {
         Column(
             Modifier
@@ -344,14 +325,14 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFFE2F3E9),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     modifier = Modifier.size(58.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Default.Wallet,
                             contentDescription = null,
-                            tint = Color(0xFF21834A),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.size(29.dp),
                         )
                     }
@@ -370,7 +351,7 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                             amountMinor = remaining,
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (remaining >= 0L) Color(0xFF21834A) else Color(0xFFC34A3A),
+                                color = if (remaining >= 0L) LocalExtendedColors.current.safe else MaterialTheme.colorScheme.error,
                             ),
                         )
                     } else {
@@ -378,7 +359,7 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                             "Set monthly budget",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF21834A),
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -388,7 +369,7 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                 Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(Color(0xFFECE5DA)),
+                    .background(MaterialTheme.colorScheme.outlineVariant),
             )
 
             Row(
@@ -406,14 +387,14 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                     ) {
                         Surface(
                             shape = CircleShape,
-                            color = Color(0xFFFFF0D9),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
                             modifier = Modifier.size(32.dp),
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Default.Wallet,
                                     contentDescription = null,
-                                    tint = Color(0xFFC18422),
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
                                     modifier = Modifier.size(17.dp),
                                 )
                             }
@@ -438,7 +419,7 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                     Modifier
                         .width(1.dp)
                         .height(62.dp)
-                        .background(Color(0xFFECE5DA)),
+                        .background(MaterialTheme.colorScheme.outlineVariant),
                 )
 
                 Column(
@@ -451,14 +432,14 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                     ) {
                         Surface(
                             shape = CircleShape,
-                            color = Color(0xFFFFF0D9),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
                             modifier = Modifier.size(32.dp),
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Default.ReceiptLong,
                                     contentDescription = null,
-                                    tint = Color(0xFFE09A20),
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
                                     modifier = Modifier.size(17.dp),
                                 )
                             }
@@ -485,8 +466,8 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                         .fillMaxWidth()
                         .height(9.dp)
                         .clip(CircleShape),
-                    color = Color(0xFFF2A000),
-                    trackColor = Color(0xFFF0ECE6),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -610,8 +591,8 @@ private fun TransactionActionButtons(
     onAddIncome: () -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        TransactionActionButton("Add expense", Icons.Default.ArrowDownward, onAddExpense, Modifier.weight(1f), Color(0xFFFFE4D8), Color(0xFF9D482C))
-        TransactionActionButton("Add income", Icons.Default.ArrowUpward, onAddIncome, Modifier.weight(1f), Color(0xFFDDF2E8), Color(0xFF246A53))
+        TransactionActionButton("Add expense", Icons.Default.ArrowDownward, onAddExpense, Modifier.weight(1f), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+        TransactionActionButton("Add income", Icons.Default.ArrowUpward, onAddIncome, Modifier.weight(1f), MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
     }
 }
 
@@ -639,4 +620,4 @@ private fun TransactionActionButton(
 private fun SectionTitle(title: String, action: String, onClick: () -> Unit) { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold); TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 4.dp)) { Text(action, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold) } } }
 
 @Composable
-private fun CategoryCard(category: ExpenseCategory, amountMinor: Long, totalSpentMinor: Long) { val categoryColor = category.color(); val share = if (totalSpentMinor > 0) (amountMinor.toDouble() / totalSpentMinor).coerceIn(0.0, 1.0) else 0.0; Surface(modifier = Modifier.width(138.dp), shape = RoundedCornerShape(20.dp), color = categoryColor.copy(alpha = .08f)) { Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) { Surface(Modifier.size(36.dp), shape = CircleShape, color = categoryColor.copy(alpha = .12f)) { Box(contentAlignment = Alignment.Center) { Text(category.displayName.take(1), color = categoryColor, fontWeight = FontWeight.Bold) } }; Text(category.displayName, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(amountMinor.formatAsCurrency(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold); Text("${(share * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant); LinearProgressIndicator(progress = { share.toFloat() }, modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape), color = categoryColor, trackColor = categoryColor.copy(alpha = .12f)) } } }
+private fun CategoryCard(category: ExpenseCategory, amountMinor: Long, totalSpentMinor: Long) { val categoryColor = category.color(); val share = if (totalSpentMinor > 0) (amountMinor.toDouble() / totalSpentMinor).coerceIn(0.0, 1.0) else 0.0; Surface(modifier = Modifier.width(138.dp), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) { Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) { Surface(Modifier.size(36.dp), shape = CircleShape, color = categoryColor.copy(alpha = .12f)) { Box(contentAlignment = Alignment.Center) { Text(category.displayName.take(1), color = categoryColor, fontWeight = FontWeight.Bold) } }; Text(category.displayName, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(amountMinor.formatAsCurrency(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold); Text("${(share * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant); LinearProgressIndicator(progress = { share.toFloat() }, modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape), color = categoryColor, trackColor = categoryColor.copy(alpha = .12f)) } } }
