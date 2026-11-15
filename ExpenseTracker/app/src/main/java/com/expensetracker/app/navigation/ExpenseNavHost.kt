@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -139,8 +140,8 @@ fun ExpenseTrackerApp(
             bottomBar = {
                 if (showChrome) {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        tonalElevation = 3.dp,
+                        containerColor = Color(0xFFFEFDFF),
+                        tonalElevation = 0.dp,
                     ) {
                         bottomNavItems.forEach { item ->
                             val selected = backStackEntry?.destination?.hierarchy?.any { it.route == item.destination.route } == true
@@ -159,9 +160,9 @@ fun ExpenseTrackerApp(
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = MaterialTheme.colorScheme.primary,
                                     selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    indicatorColor = Color(0xFFC8D8FF),
+                                    unselectedIconColor = Color(0xFF3D4658),
+                                    unselectedTextColor = Color(0xFF3D4658),
                                 ),
                             )
                         }
