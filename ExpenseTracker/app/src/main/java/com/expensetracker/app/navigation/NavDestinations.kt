@@ -1,23 +1,27 @@
 package com.expensetracker.app.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.LocalGasStation
-
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.ReceiptLong
-import androidx.compose.material.icons.outlined.LocalGasStation
-
+import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Destination(val route: String) {
     data object Dashboard : Destination("dashboard")
     data object Transactions : Destination("transactions")
-    data object Reminders : Destination("reminders")
+    data object Insights : Destination("insights")
     data object Budgets : Destination("budgets")
+    data object More : Destination("more")
+    data object Reminders : Destination("reminders")
     data object Settings : Destination("settings")
     data object FuelTracker : Destination("fuel_tracker")
 
@@ -41,6 +45,7 @@ data class BottomNavItem(
 val bottomNavItems = listOf(
     BottomNavItem(Destination.Dashboard, "Home", Icons.Filled.Home, Icons.Outlined.Home),
     BottomNavItem(Destination.Transactions, "Transactions", Icons.Filled.ReceiptLong, Icons.Outlined.ReceiptLong),
-    BottomNavItem(Destination.Reminders, "Reminders", Icons.Filled.EventNote, Icons.Outlined.EventNote),
-    BottomNavItem(Destination.FuelTracker, "Fuel", Icons.Filled.LocalGasStation, Icons.Outlined.LocalGasStation),
+    BottomNavItem(Destination.Insights, "Insights", Icons.Filled.BarChart, Icons.Outlined.BarChart),
+    BottomNavItem(Destination.Budgets, "Goals", Icons.Filled.TrackChanges, Icons.Outlined.TrackChanges),
+    BottomNavItem(Destination.More, "More", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz),
 )

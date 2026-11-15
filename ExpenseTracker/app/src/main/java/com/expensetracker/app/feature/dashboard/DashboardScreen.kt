@@ -1,5 +1,14 @@
 package com.expensetracker.app.feature.dashboard
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -84,6 +93,7 @@ import com.expensetracker.app.core.designsystem.DonutSegment
 import com.expensetracker.app.core.designsystem.EmptyState
 import com.expensetracker.app.core.designsystem.SwipeToDeleteExpenseItem
 import com.expensetracker.app.core.designsystem.color
+import com.expensetracker.app.core.designsystem.icon
 import com.expensetracker.app.core.theme.LocalExtendedColors
 import com.expensetracker.app.core.theme.LocalReducedMotion
 import com.expensetracker.app.core.theme.MotionDurations
@@ -101,44 +111,75 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit, onEditExpenseClick: (Long) -> Unit, onSeeAllTransactionsClick: () -> Unit, viewModel: DashboardViewModel = koinViewModel()) {
+fun DashboardScreen(
+    onAddExpenseClick: () -> Unit,
+    onAddIncomeClick: () -> Unit,
+    onEditExpenseClick: (Long) -> Unit,
+    onSeeAllTransactionsClick: () -> Unit,
+    onFuelClick: () -> Unit = {},
+    onRemindersClick: () -> Unit = {},
+    onInsightsClick: () -> Unit = onSeeAllTransactionsClick,
+    onMoreClick: () -> Unit = onSeeAllTransactionsClick,
+    viewModel: DashboardViewModel = koinViewModel(),
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val showBudgetEditor by viewModel.showBudgetEditor.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(Unit) { viewModel.effects.collect { effect -> when (effect) {
-        is DashboardEffect.ShowUndoDelete -> { val label = effect.expense.note.ifBlank { effect.expense.category.displayName }; val result = snackbarHostState.showSnackbar(message = "Deleted \"$label\"", actionLabel = "Undo", duration = SnackbarDuration.Short); if (result == SnackbarResult.ActionPerformed) viewModel.onUndoDelete(effect.expense) }
-        is DashboardEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
-        is DashboardEffect.ShowError -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
-    } } }
-    Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, floatingActionButton = { ExtendedFloatingActionButton(onClick = onAddExpenseClick, icon = { Icon(Icons.Default.Add, contentDescription = null) }, text = { Text("Add expense", maxLines = 1) }) }) { innerPadding ->
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is DashboardEffect.ShowUndoDelete -> {
+                    val label = effect.expense.note.ifBlank { effect.expense.category.displayName }
+                    val result = snackbarHostState.showSnackbar("Deleted \"$label\"", "Undo", duration = SnackbarDuration.Short)
+                    if (result == SnackbarResult.ActionPerformed) viewModel.onUndoDelete(effect.expense)
+                }
+                is DashboardEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is DashboardEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
+            }
+        }
+    }
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color(0xFFF7F8FF),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            androidx.compose.material3.FloatingActionButton(
+                onClick = onAddExpenseClick,
+                containerColor = Color(0xFF2852B8),
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier.size(66.dp),
+            ) { Icon(Icons.Default.Add, "Add expense", modifier = Modifier.size(32.dp)) }
+        },
+    ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(innerPadding),
-            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 104.dp),
+            modifier = Modifier.fillMaxSize().background(Color(0xFFF7F8FF)).padding(innerPadding),
+            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item { DashboardGreeting() }
-            item { MonthSelector(uiState.yearMonth, viewModel::onPreviousMonth, viewModel::onNextMonth) }
-            item { CalendarWeekStrip(uiState.selectedDate, uiState.daysWithTransactions, viewModel::onSelectDate) }
-            item { DailyExpenseCard(uiState.selectedDate, uiState.selectedDaySpentMinor) }
-            item { LifetimeSummaryCard(uiState, onRemainingClick = viewModel::onRemainingClick) }
-            item { TransactionActionButtons(onAddExpenseClick, onAddIncomeClick) }
-            val topCategories = uiState.categorySpends.take(5)
-            if (topCategories.isNotEmpty()) {
-                item { SectionTitle("Spending categories", "See all", onSeeAllTransactionsClick) }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
-                        items(topCategories, key = { it.category.name }) { spend ->
-                            CategoryCard(spend.category, spend.spentMinor, uiState.totalSpentMinor)
-                        }
-                    }
+            item { HomeHeader(onSeeAllTransactionsClick, onRemindersClick, onProfile = onMoreClick) }
+            item { GreetingBlock() }
+            item { MonthCalendar(uiState.yearMonth, uiState.selectedDate, uiState.daysWithTransactions, viewModel::onPreviousMonth, viewModel::onNextMonth, viewModel::onSelectDate) }
+            item { SpendingOverviewCard(uiState, viewModel::onRemainingClick) }
+            item { QuickActions(onAddExpenseClick, onFuelClick, onRemindersClick, onInsightsClick) }
+            item { CategoryOverview(uiState, onInsightsClick) }
+            item { SectionTitle("Recent Transactions", "See All", onSeeAllTransactionsClick) }
+            if (uiState.recentExpenses.isEmpty() && !uiState.isLoading) {
+                item { EmptyState(icon = Icons.Outlined.ReceiptLong, title = "No transactions yet", message = "Your recent expenses and income will appear here.") }
+            } else {
+                items(uiState.recentExpenses.take(5), key = { it.id }) { expense ->
+                    SwipeToDeleteExpenseItem(expense = expense, onDelete = viewModel::onDeleteExpense, onClick = { onEditExpenseClick(expense.id) })
                 }
             }
-            item { SectionTitle("Transactions · " + uiState.selectedDate.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())), "View all", onSeeAllTransactionsClick) }
-            if (uiState.selectedDayExpenses.isEmpty() && !uiState.isLoading) {
-                item { EmptyState(icon = Icons.Outlined.ReceiptLong, title = "No transactions for this day", message = "Choose another date or add an expense or income.") }
-            } else {
-                items(uiState.selectedDayExpenses, key = { it.id }) { expense ->
-                    SwipeToDeleteExpenseItem(expense = expense, onDelete = viewModel::onDeleteExpense, onClick = { onEditExpenseClick(expense.id) })
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = onAddIncomeClick, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.ArrowDownward, null); Spacer(Modifier.width(6.dp)); Text("Add income")
+                    }
+                    OutlinedButton(onClick = onSeeAllTransactionsClick, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.ReceiptLong, null); Spacer(Modifier.width(6.dp)); Text("Transactions")
+                    }
                 }
             }
         }
@@ -152,6 +193,199 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
         onClear = viewModel::onClearBudget,
         onDismiss = viewModel::onDismissBudgetEditor,
     )
+}
+
+private val RefBlue = Color(0xFF2852B8)
+private val RefPaleBlue = Color(0xFFE8EEFF)
+private val RefCard = Color(0xFFFCFCFF)
+
+@Composable
+private fun HomeHeader(onSearch: () -> Unit, onNotifications: () -> Unit, onProfile: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(shape = RoundedCornerShape(13.dp), color = RefBlue, modifier = Modifier.size(46.dp)) {
+            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.BarChart, null, tint = Color.White, modifier = Modifier.size(29.dp)) }
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text("FinTrack", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color(0xFF12182A))
+            Text("Expense Tracker", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4E5668))
+        }
+        IconButton(onClick = onSearch) { Icon(Icons.Default.Search, "Search", tint = Color(0xFF151B2A), modifier = Modifier.size(26.dp)) }
+        IconButton(onClick = onNotifications) { Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = Color(0xFF151B2A), modifier = Modifier.size(26.dp)) }
+        Surface(onClick = onProfile, shape = CircleShape, color = RefPaleBlue, modifier = Modifier.size(42.dp)) {
+            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, "Profile", tint = RefBlue, modifier = Modifier.size(24.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun GreetingBlock() {
+    Column(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text("Good Afternoon, Vijay 👋", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color(0xFF111827))
+        Text("Here's your spending overview", style = MaterialTheme.typography.bodyLarge, color = Color(0xFF4D5669))
+    }
+}
+
+@Composable
+private fun MonthCalendar(month: YearMonth, selectedDate: LocalDate, transactionDates: Set<LocalDate>, onPrevious: () -> Unit, onNext: () -> Unit, onSelect: (LocalDate) -> Unit) {
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedDate.dayOfMonth - 1)
+    LaunchedEffect(month) { listState.animateScrollToItem(selectedDate.dayOfMonth - 1) }
+    Surface(shape = RoundedCornerShape(25.dp), color = RefCard, shadowElevation = 2.dp) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                IconButton(onClick = onPrevious) { Icon(Icons.Default.ChevronLeft, "Previous month") }
+                Surface(shape = CircleShape, color = RefPaleBlue) {
+                    Row(Modifier.padding(horizontal = 18.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.CalendarMonth, null, tint = RefBlue)
+                        Spacer(Modifier.width(8.dp))
+                        Text(month.format(DateTimeFormatter.ofPattern("MMM yyyy", Locale.getDefault())), fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.ExpandMore, null)
+                    }
+                }
+                IconButton(onClick = onNext) { Icon(Icons.Default.ChevronRight, "Next month") }
+            }
+            LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
+                items(month.lengthOfMonth(), key = { month.atDay(it + 1).toEpochDay() }) { index ->
+                    val date = month.atDay(index + 1)
+                    val selected = date == selectedDate
+                    Surface(onClick = { onSelect(date) }, shape = RoundedCornerShape(18.dp), color = if (selected) RefBlue else Color(0xFFF7F8FD), shadowElevation = 1.dp, modifier = Modifier.width(61.dp).height(86.dp)) {
+                        Column(Modifier.fillMaxSize().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()), style = MaterialTheme.typography.labelMedium, color = if (selected) Color.White else Color(0xFF343B4B))
+                            Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = if (selected) Color.White else Color(0xFF111827))
+                            Box(Modifier.size(7.dp).clip(CircleShape).background(if (selected) Color.White else if (date in transactionDates) Color(0xFF27833F) else Color.Transparent))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpendingOverviewCard(state: DashboardUiState, onBudgetClick: () -> Unit) {
+    Surface(shape = RoundedCornerShape(27.dp), color = Color(0xFFEAF0FF), shadowElevation = 1.dp) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("This Month  ⌄", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF17213A))
+                    Text(state.totalSpentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color(0xFF111827))
+                    Text(if (state.effectiveBudgetMinor != null) "${(state.overallProgress.coerceIn(0f, 1f) * 100).toInt()}% of budget used" else "Set a monthly budget", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4E5668))
+                }
+                SpendingSparkline(Modifier.width(125.dp).height(75.dp))
+            }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(19.dp)).background(Color(0xFFF9FAFF)).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                SummaryColumn("Income", state.totalIncomeMinor, Icons.Default.ArrowDownward, Color(0xFF27833F), Modifier.weight(1f))
+                Box(Modifier.width(1.dp).height(42.dp).background(Color(0xFFB9C2D6)))
+                SummaryColumn("Expense", state.totalSpentMinor, Icons.Default.ArrowUpward, Color(0xFFD94B55), Modifier.weight(1f))
+                Box(Modifier.width(1.dp).height(42.dp).background(Color(0xFFB9C2D6)))
+                Column(Modifier.weight(1f).clickable(onClick = onBudgetClick), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.TrackChanges, null, tint = RefBlue)
+                    Text("Budget", style = MaterialTheme.typography.labelMedium)
+                    Text(state.effectiveBudgetMinor?.formatAsCurrency() ?: "Set budget", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpendingSparkline(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val pts = listOf(
+            androidx.compose.ui.geometry.Offset(0f, size.height * .78f),
+            androidx.compose.ui.geometry.Offset(size.width * .18f, size.height * .48f),
+            androidx.compose.ui.geometry.Offset(size.width * .36f, size.height * .55f),
+            androidx.compose.ui.geometry.Offset(size.width * .54f, size.height * .30f),
+            androidx.compose.ui.geometry.Offset(size.width * .72f, size.height * .38f),
+            androidx.compose.ui.geometry.Offset(size.width * .88f, size.height * .12f),
+            androidx.compose.ui.geometry.Offset(size.width, size.height * .08f),
+        )
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(pts.first().x, pts.first().y)
+            for (i in 1 until pts.size) {
+                val p = pts[i]; val q = pts[i - 1]; val mid = (p.x + q.x) / 2f
+                cubicTo(mid, q.y, mid, p.y, p.x, p.y)
+            }
+        }
+        drawPath(path, RefBlue, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
+        drawCircle(RefBlue, 5.dp.toPx(), pts.last())
+        drawCircle(Color.White, 2.5.dp.toPx(), pts.last())
+    }
+}
+
+@Composable
+private fun SummaryColumn(label: String, amount: Long, icon: ImageVector, tint: Color, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Surface(shape = CircleShape, color = tint.copy(alpha = .13f)) { Icon(icon, null, tint = tint, modifier = Modifier.padding(6.dp).size(20.dp)) }
+        Text(label, style = MaterialTheme.typography.labelMedium, color = Color(0xFF30384A))
+        Text(amount.formatAsCurrency(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF111827), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun QuickActions(onAddExpense: () -> Unit, onFuel: () -> Unit, onReminders: () -> Unit, onInsights: () -> Unit) {
+    val actions = listOf(
+        Triple("Add Expense", Icons.Default.Add, onAddExpense),
+        Triple("Fuel Tracker", Icons.Default.LocalGasStation, onFuel),
+        Triple("Water Reminder", Icons.Outlined.WaterDrop, onReminders),
+        Triple("Reminders", Icons.Outlined.NotificationsNone, onReminders),
+        Triple("Reports", Icons.Default.BarChart, onInsights),
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        actions.forEachIndexed { index, item ->
+            Surface(onClick = item.third, modifier = Modifier.weight(1f).height(104.dp), shape = RoundedCornerShape(19.dp), color = if (index == 0) Color(0xFFDCE7FF) else Color(0xFFEFF1FC)) {
+                Column(Modifier.fillMaxSize().padding(horizontal = 2.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Icon(item.second, null, tint = RefBlue, modifier = Modifier.size(27.dp))
+                    Text(item.first, style = MaterialTheme.typography.labelMedium, color = Color(0xFF161D2D), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryOverview(state: DashboardUiState, onSeeAll: () -> Unit) {
+    Surface(shape = RoundedCornerShape(25.dp), color = RefCard, shadowElevation = 2.dp) {
+        Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            SectionTitle("Category Overview", "See All", onSeeAll)
+            val top = state.categorySpends.take(5)
+            if (top.isEmpty()) {
+                Text("Your category breakdown will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(.9f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                        CategoryDonutChart(
+                            segments = top.map { DonutSegment(it.spentMinor.toFloat(), it.category.color(), it.category.displayName) },
+                            modifier = Modifier.fillMaxSize(),
+                            strokeWidth = 18.dp,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(state.totalSpentMinor.formatAsCurrency(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                                Text("Spent", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        top.forEach { spend ->
+                            val percent = if (state.totalSpentMinor > 0L) spend.spentMinor * 100 / state.totalSpentMinor else 0L
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = RoundedCornerShape(9.dp), color = spend.category.color().copy(alpha = .13f)) {
+                                    Icon(spend.category.icon(), null, tint = spend.category.color(), modifier = Modifier.padding(6.dp).size(17.dp))
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(spend.category.displayName, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(spend.spentMinor.formatAsCurrency(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Text("${percent}%", style = MaterialTheme.typography.labelMedium, color = Color(0xFF4E5668))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
