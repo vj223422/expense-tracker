@@ -64,6 +64,7 @@ import com.expensetracker.app.data.prefs.ThemeMode
 import com.expensetracker.app.feature.addexpense.AddExpenseScreen
 import com.expensetracker.app.feature.budgets.BudgetsScreen
 import com.expensetracker.app.feature.dashboard.DashboardScreen
+import com.expensetracker.app.feature.dashboard.InsightsScreen
 import com.expensetracker.app.feature.profileswitcher.ProfileSwitcherViewModel
 import com.expensetracker.app.feature.reminders.RemindersScreen
 import com.expensetracker.app.feature.settings.SettingsScreen
@@ -90,6 +91,7 @@ fun ExpenseTrackerApp(
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
         val showChrome = currentRoute != Destination.AddExpense.route
+        val showTopBar = showChrome && currentRoute != Destination.Dashboard.route
         var fuelAddRequested by rememberSaveable { mutableStateOf(false) }
 
         LaunchedEffect(notificationNavigationRequest) {
@@ -176,9 +178,9 @@ fun ExpenseTrackerApp(
                         onSeeAllTransactionsClick = { navController.navigate(Destination.Transactions.route) { launchSingleTop = true; restoreState = true } },
                     )
                 }
-                composable(Destination.Transactions.route) { TransactionsScreen(onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) }) }
+                composable(Destination.Transactions.route) { TransactionsScreen(onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) }) }\n                composable(Destination.Insights.route) { InsightsScreen() }
                 composable(Destination.Reminders.route) { RemindersScreen() }
-                composable(Destination.Budgets.route) { BudgetsScreen() }
+                composable(Destination.Budgets.route) { BudgetsScreen() }\n                composable(Destination.More.route) { SettingsScreen(onFuelTrackerClick = { navController.navigate(Destination.FuelTracker.route) { launchSingleTop = true } }) }
                 composable(Destination.Settings.route) {
                     SettingsScreen(
                         onFuelTrackerClick = {
