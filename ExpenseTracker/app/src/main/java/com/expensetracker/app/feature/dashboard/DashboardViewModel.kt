@@ -98,8 +98,8 @@ class DashboardViewModel(
                     // Show both outgoing and incoming transactions together, newest first.
                     // Use the exact transaction timestamp as the secondary sort key.
                     recentExpenses = calendarExpenses
-                        .filter { it.date == selectedDay }
-                        .sortedByDescending { it.createdAtEpochMillis },
+                        .sortedByDescending { it.createdAtEpochMillis }
+                        .take(5),
                     selectedDate = selectedDay,
                     selectedDaySpentMinor = calendarExpenses.filter { it.date == selectedDay && !it.isIncome }.sumOf { it.amountMinor },
                     selectedDayExpenses = calendarExpenses.filter { it.date == selectedDay }
