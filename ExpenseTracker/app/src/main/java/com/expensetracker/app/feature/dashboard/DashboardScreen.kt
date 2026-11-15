@@ -123,6 +123,7 @@ fun DashboardScreen(
     onFuelClick: () -> Unit = {},
     onRemindersClick: () -> Unit = {},
     onInsightsClick: () -> Unit = onSeeAllTransactionsClick,
+    onMoreClick: () -> Unit = onSeeAllTransactionsClick,
     viewModel: DashboardViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -161,7 +162,7 @@ fun DashboardScreen(
             contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item { HomeHeader(onSeeAllTransactionsClick, onRemindersClick, onProfile = onInsightsClick) }
+            item { HomeHeader(onSeeAllTransactionsClick, onRemindersClick, onProfile = onMoreClick) }
             item { GreetingBlock() }
             item { MonthCalendar(uiState.yearMonth, uiState.selectedDate, uiState.daysWithTransactions, viewModel::onPreviousMonth, viewModel::onNextMonth, viewModel::onSelectDate) }
             item { SpendingOverviewCard(uiState, viewModel::onRemainingClick) }
