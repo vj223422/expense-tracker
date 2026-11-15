@@ -161,7 +161,7 @@ fun DashboardScreen(
             contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item { HomeHeader(onSeeAllTransactionsClick, onRemindersClick) }
+            item { HomeHeader(onSeeAllTransactionsClick, onRemindersClick, onProfile = onInsightsClick) }
             item { GreetingBlock() }
             item { MonthCalendar(uiState.yearMonth, uiState.selectedDate, uiState.daysWithTransactions, viewModel::onPreviousMonth, viewModel::onNextMonth, viewModel::onSelectDate) }
             item { SpendingOverviewCard(uiState, viewModel::onRemainingClick) }
@@ -203,7 +203,7 @@ private val RefPaleBlue = Color(0xFFE8EEFF)
 private val RefCard = Color(0xFFFCFCFF)
 
 @Composable
-private fun HomeHeader(onSearch: () -> Unit, onNotifications: () -> Unit) {
+private fun HomeHeader(onSearch: () -> Unit, onNotifications: () -> Unit, onProfile: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Surface(shape = RoundedCornerShape(13.dp), color = RefBlue, modifier = Modifier.size(46.dp)) {
             Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.BarChart, null, tint = Color.White, modifier = Modifier.size(29.dp)) }
@@ -215,7 +215,7 @@ private fun HomeHeader(onSearch: () -> Unit, onNotifications: () -> Unit) {
         }
         IconButton(onClick = onSearch) { Icon(Icons.Default.Search, "Search", tint = Color(0xFF151B2A), modifier = Modifier.size(26.dp)) }
         IconButton(onClick = onNotifications) { Icon(Icons.Outlined.NotificationsNone, "Notifications", tint = Color(0xFF151B2A), modifier = Modifier.size(26.dp)) }
-        Surface(onClick = onNotifications, shape = CircleShape, color = RefPaleBlue, modifier = Modifier.size(42.dp)) {
+        Surface(onClick = onProfile, shape = CircleShape, color = RefPaleBlue, modifier = Modifier.size(42.dp)) {
             Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, "Profile", tint = RefBlue, modifier = Modifier.size(24.dp)) }
         }
     }
