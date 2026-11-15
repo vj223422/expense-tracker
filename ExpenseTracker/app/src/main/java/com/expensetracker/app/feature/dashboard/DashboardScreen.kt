@@ -97,6 +97,7 @@ import com.expensetracker.app.core.designsystem.DonutSegment
 import com.expensetracker.app.core.designsystem.EmptyState
 import com.expensetracker.app.core.designsystem.SwipeToDeleteExpenseItem
 import com.expensetracker.app.core.designsystem.color
+import com.expensetracker.app.core.designsystem.icon
 import com.expensetracker.app.core.theme.LocalExtendedColors
 import com.expensetracker.app.core.theme.LocalReducedMotion
 import com.expensetracker.app.core.theme.MotionDurations
