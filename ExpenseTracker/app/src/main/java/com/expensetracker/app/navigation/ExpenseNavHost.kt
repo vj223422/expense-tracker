@@ -181,9 +181,11 @@ fun ExpenseTrackerApp(
                         onSeeAllTransactionsClick = { navController.navigate(Destination.Transactions.route) { launchSingleTop = true; restoreState = true } },
                     )
                 }
-                composable(Destination.Transactions.route) { TransactionsScreen(onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) }) }\n                composable(Destination.Insights.route) { InsightsScreen() }
+                composable(Destination.Transactions.route) { TransactionsScreen(onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) }) }
+                composable(Destination.Insights.route) { InsightsScreen() }
                 composable(Destination.Reminders.route) { RemindersScreen() }
-                composable(Destination.Budgets.route) { BudgetsScreen() }\n                composable(Destination.More.route) { SettingsScreen(onFuelTrackerClick = { navController.navigate(Destination.FuelTracker.route) { launchSingleTop = true } }) }
+                composable(Destination.Budgets.route) { BudgetsScreen() }
+                composable(Destination.More.route) { SettingsScreen(onFuelTrackerClick = { navController.navigate(Destination.FuelTracker.route) { launchSingleTop = true } }) }
                 composable(Destination.Settings.route) {
                     SettingsScreen(
                         onFuelTrackerClick = {
