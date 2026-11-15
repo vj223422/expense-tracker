@@ -176,6 +176,7 @@ fun ExpenseTrackerApp(
                         onFuelClick = { navController.navigate(Destination.FuelTracker.route) { launchSingleTop = true } },
                         onRemindersClick = { navController.navigate(Destination.Reminders.route) { launchSingleTop = true } },
                         onInsightsClick = { navController.navigate(Destination.Insights.route) { launchSingleTop = true } },
+                        onMoreClick = { navController.navigate(Destination.More.route) { launchSingleTop = true } },
                         onAddIncomeClick = { navController.navigate(Destination.AddExpense.routeForIncome()) },
                         onEditExpenseClick = { navController.navigate(Destination.AddExpense.routeForEdit(it)) },
                         onSeeAllTransactionsClick = { navController.navigate(Destination.Transactions.route) { launchSingleTop = true; restoreState = true } },
