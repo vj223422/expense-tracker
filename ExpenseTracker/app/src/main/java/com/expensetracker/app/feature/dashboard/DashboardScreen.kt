@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -108,10 +110,10 @@ fun DashboardScreen(onAddExpenseClick: () -> Unit, onAddIncomeClick: () -> Unit,
         is DashboardEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
         is DashboardEffect.ShowError -> snackbarHostState.showSnackbar(effect.message, duration = SnackbarDuration.Short)
     } } }
-    Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
+    Scaffold(modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, floatingActionButton = { ExtendedFloatingActionButton(onClick = onAddExpenseClick, icon = { Icon(Icons.Default.Add, contentDescription = null) }, text = { Text("Add expense", maxLines = 1) }) }) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(innerPadding),
-            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 28.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 104.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item { DashboardGreeting() }
@@ -159,9 +161,9 @@ private fun DashboardGreeting() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Good evening", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Track  •  Split  •  Save", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Good evening", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Track  •  Split  •  Save", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Surface(
             shape = CircleShape,
@@ -187,7 +189,7 @@ private fun MonthSelector(yearMonth: YearMonth, onPreviousMonth: () -> Unit, onN
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(19.dp), tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(9.dp))
-                Text(yearMonth.toDisplayString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(yearMonth.toDisplayString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             IconButton(onClick = onNextMonth) { Icon(Icons.Default.ChevronRight, "Next month") }
         }
@@ -279,7 +281,7 @@ private fun DailyExpenseCard(date: LocalDate, spentMinor: Long) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.CalendarMonth, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.SemiBold)
+                    Text(date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 Text("Total expense", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF715B3A))
