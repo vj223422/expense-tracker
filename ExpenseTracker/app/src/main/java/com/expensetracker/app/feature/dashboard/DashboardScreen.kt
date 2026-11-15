@@ -284,7 +284,7 @@ private fun DailyExpenseCard(date: LocalDate, spentMinor: Long) {
                     Text(date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Text(spentMinor.formatAsCurrency(), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Text("Total expense", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF715B3A))
+                Text("Total expense", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, modifier = Modifier.size(48.dp)) {
                 Box(contentAlignment = Alignment.Center) {
@@ -419,7 +419,7 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                     Modifier
                         .width(1.dp)
                         .height(62.dp)
-                        .background(Color(0xFFECE5DA)),
+                        .background(MaterialTheme.colorScheme.outlineVariant),
                 )
 
                 Column(
@@ -432,7 +432,7 @@ private fun LifetimeSummaryCard(uiState: DashboardUiState, onRemainingClick: () 
                     ) {
                         Surface(
                             shape = CircleShape,
-                            color = Color(0xFFFFF0D9),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
                             modifier = Modifier.size(32.dp),
                         ) {
                             Box(contentAlignment = Alignment.Center) {
