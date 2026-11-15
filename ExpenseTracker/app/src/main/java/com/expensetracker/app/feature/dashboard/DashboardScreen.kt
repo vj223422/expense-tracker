@@ -322,10 +322,15 @@ private fun SpendingSparkline(modifier: Modifier = Modifier) {
 
 @Composable
 private fun SummaryColumn(label: String, amount: Long, icon: ImageVector, tint: Color, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Surface(shape = CircleShape, color = tint.copy(alpha = .13f)) { Icon(icon, null, tint = tint, modifier = Modifier.padding(6.dp).size(20.dp)) }
-        Text(label, style = MaterialTheme.typography.labelMedium, color = Color(0xFF30384A))
-        Text(amount.formatAsCurrency(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF111827), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Row(modifier.padding(horizontal = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        Surface(shape = CircleShape, color = tint.copy(alpha = .13f)) {
+            Icon(icon, null, tint = tint, modifier = Modifier.padding(7.dp).size(19.dp))
+        }
+        Spacer(Modifier.width(6.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp), color = Color(0xFF30384A), maxLines = 1)
+            Text(amount.formatAsCurrency(), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold, color = RefInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
@@ -362,7 +367,10 @@ private fun CategoryOverview(state: DashboardUiState, onSeeAll: () -> Unit) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(.9f).aspectRatio(1f), contentAlignment = Alignment.Center) {
                         CategoryDonutChart(
-                            segments = top.map { DonutSegment(it.spentMinor.toFloat(), it.category.color(), it.category.displayName) },
+                            segments = top.mapIndexed { index, spend ->
+                                val chartColors = listOf(Color(0xFF79C85A), Color(0xFF9A75DC), Color(0xFFF5BE36), Color(0xFFEF737A), Color(0xFF72A9E8))
+                                DonutSegment(spend.spentMinor.toFloat(), chartColors[index % chartColors.size], spend.category.displayName)
+                            },
                             modifier = Modifier.fillMaxSize(),
                             strokeWidth = 18.dp,
                         ) {
